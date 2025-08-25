@@ -1,0 +1,883 @@
+{
+  "Cardio": [
+    {
+      "id": 1,
+      "name": "Jumping Jacks",
+      "description": "Full body cardio.",
+      "duration": "5 mins",
+      "image": "https://example.com/jumpingjacks.png",
+      "icon": "🏃‍♂️",
+      "color": "#FFCCCC",
+      "steps": [
+        "Stand upright with feet together, arms at your sides.",
+        "Jump your feet out to the sides while raising your arms above your head.",
+        "Jump back to the starting position.",
+        "Repeat continuously for the duration."
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Burpees",
+      "description": "High-intensity full-body workout.",
+      "duration": "8 mins",
+      "image": "https://example.com/burpees.png",
+      "icon": "💥",
+      "color": "#FFD700",
+      "steps": [
+        "Start in a standing position.",
+        "Drop into a squat position and place your hands on the ground.",
+        "Kick your feet back into a plank position.",
+        "Immediately return your feet to the squat position.",
+        "Jump up from the squat and reach your arms overhead.",
+        "Repeat."
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Mountain Climbers",
+      "description": "Cardio & core workout.",
+      "duration": "6 mins",
+      "image": "https://example.com/mountain.png",
+      "icon": "⛰️",
+      "color": "#FFA07A",
+      "steps": [
+        "Start in a plank position.",
+        "Bring your right knee towards your chest.",
+        "Switch legs quickly, bringing your left knee forward as your right goes back.",
+        "Continue alternating legs at a fast pace."
+      ]
+    },
+    {
+      "id": 4,
+      "name": "High Knees",
+      "description": "Cardio and leg strength.",
+      "duration": "5 mins",
+      "image": "https://example.com/highknees.png",
+      "icon": "🦵",
+      "color": "#FF6347",
+      "steps": [
+        "Stand upright with feet hip-width apart.",
+        "Lift your knees towards your chest as high as possible, one at a time.",
+        "Pump your arms as you move.",
+        "Maintain a fast pace throughout."
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Running in Place",
+      "description": "Easy cardio warm-up.",
+      "duration": "10 mins",
+      "image": "https://example.com/runplace.png",
+      "icon": "🏃‍♀️",
+      "color": "#FFDAB9",
+      "steps": [
+        "Stand upright with feet shoulder-width apart.",
+        "Lift your knees and run in place.",
+        "Swing your arms naturally.",
+        "Keep a steady pace for the duration."
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Skater Jumps",
+      "description": "Side-to-side cardio.",
+      "duration": "6 mins",
+      "image": "https://example.com/skater.png",
+      "icon": "⛸️",
+      "color": "#F0E68C",
+      "steps": [
+        "Stand on your right leg with left leg bent behind you.",
+        "Jump sideways to the left, landing on your left leg.",
+        "Swing your right leg behind you and arms for balance.",
+        "Continue jumping side to side."
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Jump Rope",
+      "description": "Classic cardio workout.",
+      "duration": "8 mins",
+      "image": "https://example.com/jumprope.png",
+      "icon": "🤸‍♂️",
+      "color": "#E6E6FA",
+      "steps": [
+        "Hold the rope handles in each hand.",
+        "Swing the rope over your head and jump as it passes your feet.",
+        "Keep a steady rhythm and pace.",
+        "Continue for the set duration."
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Butt Kicks",
+      "description": "Legs & cardio focus.",
+      "duration": "5 mins",
+      "image": "https://example.com/buttkicks.png",
+      "icon": "🍑",
+      "color": "#F5DEB3",
+      "steps": [
+        "Stand upright with feet hip-width apart.",
+        "Kick your heels up towards your glutes alternately.",
+        "Pump your arms naturally.",
+        "Keep moving at a consistent pace."
+      ]
+    },
+    {
+      "id": 9,
+      "name": "Sprint Intervals",
+      "description": "Intense cardio bursts.",
+      "duration": "10 mins",
+      "image": "https://example.com/sprint.png",
+      "icon": "⚡",
+      "color": "#FF4500",
+      "steps": [
+        "Sprint at maximum effort for 30 seconds.",
+        "Walk or jog for 1 minute to recover.",
+        "Repeat the sprint/rest cycle for the duration."
+      ]
+    },
+    {
+      "id": 10,
+      "name": "Side Shuffles",
+      "description": "Agility & cardio.",
+      "duration": "7 mins",
+      "image": "https://example.com/sideshuffle.png",
+      "icon": "↔️",
+      "color": "#98FB98",
+      "steps": [
+        "Stand with knees slightly bent.",
+        "Shuffle to the right quickly for 3-5 steps.",
+        "Shuffle back to the left.",
+        "Keep your torso low and move quickly."
+      ]
+    }
+  ],
+  "Back": [
+    {
+      "id": 11,
+      "name": "Pull Ups",
+      "description": "Strengthen back & biceps.",
+      "duration": "10 mins",
+      "image": "https://example.com/pullups.png",
+      "icon": "💪",
+      "color": "#CCE5FF",
+      "steps": [
+        "Grab a pull-up bar with palms facing away from you.",
+        "Hang with arms fully extended.",
+        "Pull your body up until your chin is over the bar.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 12,
+      "name": "Deadlift",
+      "description": "Build overall back strength.",
+      "duration": "12 mins",
+      "image": "https://example.com/deadlift.png",
+      "icon": "🏋️‍♂️",
+      "color": "#ADD8E6",
+      "steps": [
+        "Stand with feet hip-width apart, barbell in front.",
+        "Bend at hips and knees to grab the bar.",
+        "Lift the bar by straightening your legs and back.",
+        "Lower it slowly back to the ground and repeat."
+      ]
+    },
+    {
+      "id": 13,
+      "name": "Bent Over Rows",
+      "description": "Target upper back muscles.",
+      "duration": "10 mins",
+      "image": "https://example.com/bentrows.png",
+      "icon": "🏋️‍♂️",
+      "color": "#B0E0E6",
+      "steps": [
+        "Hold dumbbells in both hands.",
+        "Bend forward at the waist, keeping your back straight.",
+        "Pull dumbbells to your torso.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 14,
+      "name": "Lat Pulldown",
+      "description": "Focus on lats and upper back.",
+      "duration": "8 mins",
+      "image": "https://example.com/latpulldown.png",
+      "icon": "💪",
+      "color": "#87CEFA",
+      "steps": [
+        "Sit at lat pulldown machine, grab bar wider than shoulders.",
+        "Pull the bar to your chest.",
+        "Slowly return to starting position.",
+        "Repeat."
+      ]
+    },
+    {
+      "id": 15,
+      "name": "Superman",
+      "description": "Strengthen lower back.",
+      "duration": "5 mins",
+      "image": "https://example.com/superman.png",
+      "icon": "🦸‍♂️",
+      "color": "#AFEEEE",
+      "steps": [
+        "Lie face down on the floor, arms extended forward.",
+        "Lift arms, chest, and legs off the ground.",
+        "Hold for 2-3 seconds.",
+        "Lower and repeat."
+      ]
+    },
+    {
+      "id": 16,
+      "name": "Seated Rows",
+      "description": "Back & bicep exercise.",
+      "duration": "10 mins",
+      "image": "https://example.com/seatedrows.png",
+      "icon": "🏋️",
+      "color": "#B0C4DE",
+      "steps": [
+        "Sit at row machine, feet on footrest.",
+        "Grab handles and pull towards your torso.",
+        "Squeeze shoulder blades together.",
+        "Return slowly and repeat."
+      ]
+    },
+    {
+      "id": 17,
+      "name": "Reverse Fly",
+      "description": "Strengthen rear delts & upper back.",
+      "duration": "8 mins",
+      "image": "https://example.com/reversefly.png",
+      "icon": "🕊️",
+      "color": "#ADD8E6",
+      "steps": [
+        "Hold dumbbells, bend slightly at waist.",
+        "Raise arms to side until level with shoulders.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 18,
+      "name": "Chin Ups",
+      "description": "Back & biceps focus.",
+      "duration": "10 mins",
+      "image": "https://example.com/chinups.png",
+      "icon": "💪",
+      "color": "#87CEEB",
+      "steps": [
+        "Grab bar with palms facing you.",
+        "Pull body up until chin reaches the bar.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 19,
+      "name": "Good Mornings",
+      "description": "Lower back & hamstring exercise.",
+      "duration": "8 mins",
+      "image": "https://example.com/goodmornings.png",
+      "icon": "🌅",
+      "color": "#B0E0E6",
+      "steps": [
+        "Stand with feet shoulder-width apart, bar on shoulders.",
+        "Hinge at hips keeping back straight, bend forward.",
+        "Return to upright position and repeat."
+      ]
+    },
+    {
+      "id": 20,
+      "name": "Hyperextensions",
+      "description": "Lower back strengthening.",
+      "duration": "7 mins",
+      "image": "https://example.com/hyperextensions.png",
+      "icon": "🛡️",
+      "color": "#AFEEEE",
+      "steps": [
+        "Lie face down on hyperextension bench.",
+        "Cross arms over chest.",
+        "Lift upper body until spine is in line with legs.",
+        "Lower slowly and repeat."
+      ]
+    }
+  ],
+  "Chest": [
+    {
+      "id": 21,
+      "name": "Push Ups",
+      "description": "Strengthen chest, shoulders, and triceps.",
+      "duration": "10 mins",
+      "image": "https://example.com/pushup.png",
+      "icon": "🏋️‍♂️",
+      "color": "#FFB6C1",
+      "steps": [
+        "Start in a plank position with hands shoulder-width apart.",
+        "Lower your body until your chest nearly touches the floor.",
+        "Push back up to the starting position.",
+        "Repeat for the duration."
+      ]
+    },
+    {
+      "id": 22,
+      "name": "Bench Press",
+      "description": "Build chest muscles with weights.",
+      "duration": "12 mins",
+      "image": "https://example.com/benchpress.png",
+      "icon": "💪",
+      "color": "#FF69B4",
+      "steps": [
+        "Lie on the bench with feet flat on the floor.",
+        "Grab the barbell with hands slightly wider than shoulder-width.",
+        "Lower the bar to your chest.",
+        "Press it back up until arms are extended.",
+        "Repeat."
+      ]
+    },
+    {
+      "id": 23,
+      "name": "Incline Dumbbell Press",
+      "description": "Upper chest focus.",
+      "duration": "10 mins",
+      "image": "https://example.com/inclinedumbbell.png",
+      "icon": "🏋️",
+      "color": "#FFC0CB",
+      "steps": [
+        "Set bench to 30-45 degrees incline.",
+        "Hold dumbbells at chest level.",
+        "Press dumbbells upward until arms are extended.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 24,
+      "name": "Chest Fly",
+      "description": "Stretch and strengthen chest.",
+      "duration": "8 mins",
+      "image": "https://example.com/chestfly.png",
+      "icon": "🦋",
+      "color": "#FFB6C1",
+      "steps": [
+        "Lie on a flat bench with dumbbells in each hand.",
+        "Extend arms above chest, palms facing each other.",
+        "Lower arms wide until chest stretches.",
+        "Bring arms back together and repeat."
+      ]
+    },
+    {
+      "id": 25,
+      "name": "Cable Crossover",
+      "description": "Isolate chest muscles.",
+      "duration": "10 mins",
+      "image": "https://example.com/cablecrossover.png",
+      "icon": "🔗",
+      "color": "#FF69B4",
+      "steps": [
+        "Stand in the middle of cable machine.",
+        "Grab handles with each hand.",
+        "Pull handles together in front of chest.",
+        "Return slowly and repeat."
+      ]
+    },
+    {
+      "id": 26,
+      "name": "Incline Push Ups",
+      "description": "Upper chest activation.",
+      "duration": "7 mins",
+      "image": "https://example.com/inclinepushup.png",
+      "icon": "📈",
+      "color": "#FFC0CB",
+      "steps": [
+        "Place hands on elevated surface (bench).",
+        "Lower chest to bench and push back up.",
+        "Repeat for duration."
+      ]
+    },
+    {
+      "id": 27,
+      "name": "Decline Push Ups",
+      "description": "Lower chest focus.",
+      "duration": "7 mins",
+      "image": "https://example.com/declinepushup.png",
+      "icon": "📉",
+      "color": "#FFB6C1",
+      "steps": [
+        "Place feet on elevated surface.",
+        "Lower chest to floor and push up.",
+        "Repeat for duration."
+      ]
+    },
+    {
+      "id": 28,
+      "name": "Diamond Push Ups",
+      "description": "Chest and triceps.",
+      "duration": "6 mins",
+      "image": "https://example.com/diamondpushup.png",
+      "icon": "💎",
+      "color": "#FF69B4",
+      "steps": [
+        "Place hands together under chest forming a diamond.",
+        "Lower chest to hands and push up.",
+        "Repeat."
+      ]
+    },
+    {
+      "id": 29,
+      "name": "Pec Deck Machine",
+      "description": "Chest isolation.",
+      "duration": "10 mins",
+      "image": "https://example.com/pecdeck.png",
+      "icon": "🛋️",
+      "color": "#FFC0CB",
+      "steps": [
+        "Sit at the machine with back against pad.",
+        "Place forearms on pads and bring arms together.",
+        "Return slowly and repeat."
+      ]
+    },
+    {
+      "id": 30,
+      "name": "Push Up with Rotation",
+      "description": "Chest + core rotation.",
+      "duration": "8 mins",
+      "image": "https://example.com/pushuprotation.png",
+      "icon": "🔄",
+      "color": "#FFB6C1",
+      "steps": [
+        "Do a regular push-up.",
+        "Rotate your body to one side, lifting one arm up.",
+        "Return to push-up and rotate to other side.",
+        "Repeat."
+      ]
+    }
+  ],
+  "Legs": [
+    {
+      "id": 31,
+      "name": "Squats",
+      "description": "Build leg muscles and improve balance.",
+      "duration": "12 mins",
+      "image": "https://example.com/squat.png",
+      "icon": "🦵",
+      "color": "#98FB98",
+      "steps": [
+        "Stand with feet shoulder-width apart.",
+        "Lower body until thighs are parallel to floor.",
+        "Push through heels to return to start.",
+        "Repeat."
+      ]
+    },
+    {
+      "id": 32,
+      "name": "Lunges",
+      "description": "Strengthen legs and glutes.",
+      "duration": "10 mins",
+      "image": "https://example.com/lunges.png",
+      "icon": "🚶",
+      "color": "#90EE90",
+      "steps": [
+        "Step forward with one leg.",
+        "Lower body until front thigh is parallel to floor.",
+        "Push back to starting position.",
+        "Switch legs and repeat."
+      ]
+    },
+    {
+      "id": 33,
+      "name": "Leg Press",
+      "description": "Strengthen quads, hamstrings, glutes.",
+      "duration": "10 mins",
+      "image": "https://example.com/legpress.png",
+      "icon": "🦿",
+      "color": "#32CD32",
+      "steps": [
+        "Sit on leg press machine, feet shoulder-width on platform.",
+        "Push platform away, extending legs without locking knees.",
+        "Return slowly and repeat."
+      ]
+    },
+    {
+      "id": 34,
+      "name": "Calf Raises",
+      "description": "Build calf muscles.",
+      "duration": "6 mins",
+      "image": "https://example.com/calfraises.png",
+      "icon": "🐐",
+      "color": "#7CFC00",
+      "steps": [
+        "Stand upright on edge of step.",
+        "Lift heels as high as possible.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 35,
+      "name": "Glute Bridges",
+      "description": "Strengthen glutes and lower back.",
+      "duration": "8 mins",
+      "image": "https://example.com/glutebridges.png",
+      "icon": "🍑",
+      "color": "#ADFF2F",
+      "steps": [
+        "Lie on back, knees bent, feet flat.",
+        "Lift hips until shoulders-knees-hips form a line.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 36,
+      "name": "Step Ups",
+      "description": "Legs & balance.",
+      "duration": "10 mins",
+      "image": "https://example.com/stepups.png",
+      "icon": "🪜",
+      "color": "#32CD32",
+      "steps": [
+        "Step onto a sturdy platform with right foot.",
+        "Bring left foot up, stand tall.",
+        "Step down with right foot, then left.",
+        "Repeat switching leading leg."
+      ]
+    },
+    {
+      "id": 37,
+      "name": "Bulgarian Split Squats",
+      "description": "Leg & glute strength.",
+      "duration": "10 mins",
+      "image": "https://example.com/bulgariansplit.png",
+      "icon": "🦵",
+      "color": "#90EE90",
+      "steps": [
+        "Stand a few feet in front of bench, one foot on bench behind you.",
+        "Lower body until front thigh parallel to floor.",
+        "Push back to start and repeat."
+      ]
+    },
+    {
+      "id": 38,
+      "name": "Leg Extensions",
+      "description": "Isolate quads.",
+      "duration": "8 mins",
+      "image": "https://example.com/legextensions.png",
+      "icon": "🦿",
+      "color": "#7CFC00",
+      "steps": [
+        "Sit on leg extension machine.",
+        "Extend legs until parallel to floor.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 39,
+      "name": "Hamstring Curls",
+      "description": "Target hamstrings.",
+      "duration": "8 mins",
+      "image": "https://example.com/hamstringcurls.png",
+      "icon": "🦵",
+      "color": "#32CD32",
+      "steps": [
+        "Lie face down on hamstring curl machine.",
+        "Curl legs towards glutes.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 40,
+      "name": "Side Lunges",
+      "description": "Inner thighs & legs.",
+      "duration": "8 mins",
+      "image": "https://example.com/sidelunges.png",
+      "icon": "↔️",
+      "color": "#ADFF2F",
+      "steps": [
+        "Stand with feet hip-width apart.",
+        "Step to right, bend right knee, keep left leg straight.",
+        "Push back to center and switch sides.",
+        "Repeat."
+      ]
+    }
+  ],
+  "Biceps": [
+    {
+      "id": 41,
+      "name": "Bicep Curls",
+      "description": "Build arm strength and size.",
+      "duration": "8 mins",
+      "image": "https://example.com/bicepcurls.png",
+      "icon": "💪",
+      "color": "#FFA500",
+      "steps": [
+        "Stand with dumbbells in each hand, arms at sides.",
+        "Curl dumbbells toward shoulders.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 42,
+      "name": "Hammer Curls",
+      "description": "Target brachialis and biceps.",
+      "duration": "8 mins",
+      "image": "https://example.com/hammercurls.png",
+      "icon": "🔨",
+      "color": "#FF8C00",
+      "steps": [
+        "Hold dumbbells with palms facing each other.",
+        "Curl dumbbells toward shoulders.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 43,
+      "name": "Concentration Curls",
+      "description": "Isolate biceps.",
+      "duration": "7 mins",
+      "image": "https://example.com/concentrationcurls.png",
+      "icon": "🎯",
+      "color": "#FFA07A",
+      "steps": [
+        "Sit on bench, hold dumbbell with one hand.",
+        "Rest elbow on inner thigh.",
+        "Curl dumbbell slowly, squeeze bicep.",
+        "Lower and repeat."
+      ]
+    },
+    {
+      "id": 44,
+      "name": "Preacher Curls",
+      "description": "Bicep isolation.",
+      "duration": "8 mins",
+      "image": "https://example.com/preachercurls.png",
+      "icon": "✝️",
+      "color": "#FFD700",
+      "steps": [
+        "Sit on preacher bench, arms over pad holding dumbbells.",
+        "Curl weights towards shoulders.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 45,
+      "name": "Cable Curls",
+      "description": "Constant tension on biceps.",
+      "duration": "8 mins",
+      "image": "https://example.com/cablecurls.png",
+      "icon": "🔗",
+      "color": "#FFA500",
+      "steps": [
+        "Stand at cable machine with bar attachment.",
+        "Curl bar toward shoulders.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 46,
+      "name": "Incline Dumbbell Curls",
+      "description": "Stretch biceps fully.",
+      "duration": "8 mins",
+      "image": "https://example.com/inclinedumbbellcurls.png",
+      "icon": "🛋️",
+      "color": "#FF8C00",
+      "steps": [
+        "Sit on incline bench holding dumbbells.",
+        "Curl arms toward shoulders slowly.",
+        "Lower and repeat."
+      ]
+    },
+    {
+      "id": 47,
+      "name": "Zottman Curls",
+      "description": "Biceps and forearms.",
+      "duration": "7 mins",
+      "image": "https://example.com/zottmancurls.png",
+      "icon": "🔄",
+      "color": "#FFD700",
+      "steps": [
+        "Curl dumbbells with palms up.",
+        "Rotate wrists palms down at top.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 48,
+      "name": "Reverse Curls",
+      "description": "Forearm & biceps.",
+      "duration": "7 mins",
+      "image": "https://example.com/reverscurls.png",
+      "icon": "🔄",
+      "color": "#FFA07A",
+      "steps": [
+        "Hold dumbbells with palms facing down.",
+        "Curl weights toward shoulders.",
+        "Lower slowly and repeat."
+      ]
+    },
+    {
+      "id": 49,
+      "name": "21s Curls",
+      "description": "Partial & full range bicep curls.",
+      "duration": "6 mins",
+      "image": "https://example.com/21s.png",
+      "icon": "2️⃣1️⃣",
+      "color": "#FFA500",
+      "steps": [
+        "Perform 7 partial bottom curls, 7 partial top curls, 7 full curls.",
+        "Repeat sequence."
+      ]
+    },
+    {
+      "id": 50,
+      "name": "Cross-body Hammer Curls",
+      "description": "Biceps & forearms focus.",
+      "duration": "7 mins",
+      "image": "https://example.com/crossbody.png",
+      "icon": "💪",
+      "color": "#FF8C00",
+      "steps": [
+        "Hold dumbbell in right hand.",
+        "Curl across body to left shoulder.",
+        "Switch sides and repeat."
+      ]
+    }
+  ],
+  "Triceps": [
+    {
+      "id": 51,
+      "name": "Tricep Dips",
+      "description": "Tone and strengthen triceps.",
+      "duration": "7 mins",
+      "image": "https://example.com/tricepdips.png",
+      "icon": "💪",
+      "color": "#FF6347",
+      "steps": [
+        "Place hands behind on bench, feet forward.",
+        "Lower body by bending elbows.",
+        "Push back up and repeat."
+      ]
+    },
+    {
+      "id": 52,
+      "name": "Overhead Tricep Extension",
+      "description": "Isolate triceps.",
+      "duration": "8 mins",
+      "image": "https://example.com/overheadtricep.png",
+      "icon": "🆙",
+      "color": "#FF4500",
+      "steps": [
+        "Hold dumbbell overhead with both hands.",
+        "Lower behind head by bending elbows.",
+        "Raise back and repeat."
+      ]
+    },
+    {
+      "id": 53,
+      "name": "Tricep Kickbacks",
+      "description": "Back of arms.",
+      "duration": "8 mins",
+      "image": "https://example.com/kickbacks.png",
+      "icon": "👟",
+      "color": "#FF7F50",
+      "steps": [
+        "Hold dumbbells, bend torso forward.",
+        "Push dumbbells backward, extending arms fully.",
+        "Return slowly and repeat."
+      ]
+    },
+    {
+      "id": 54,
+      "name": "Close-grip Bench Press",
+      "description": "Triceps & chest.",
+      "duration": "10 mins",
+      "image": "https://example.com/closebench.png",
+      "icon": "🏋️‍♂️",
+      "color": "#FF6347",
+      "steps": [
+        "Lie on bench, grip bar narrower than shoulder width.",
+        "Lower to chest and push back up.",
+        "Repeat."
+      ]
+    },
+    {
+      "id": 55,
+      "name": "Skull Crushers",
+      "description": "Triceps isolation.",
+      "duration": "8 mins",
+      "image": "https://example.com/skullcrushers.png",
+      "icon": "💀",
+      "color": "#FF4500",
+      "steps": [
+        "Lie on bench with barbell/dumbbells.",
+        "Lower weight toward forehead.",
+        "Extend arms back to start."
+      ]
+    },
+    {
+      "id": 56,
+      "name": "Rope Pushdowns",
+      "description": "Triceps machine exercise.",
+      "duration": "8 mins",
+      "image": "https://example.com/ropepushdown.png",
+      "icon": "🔗",
+      "color": "#FF7F50",
+      "steps": [
+        "Stand at cable machine, grab rope with palms facing each other.",
+        "Push rope down until arms fully extended.",
+        "Return slowly and repeat."
+      ]
+    },
+    {
+      "id": 57,
+      "name": "Diamond Push Ups",
+      "description": "Triceps + chest.",
+      "duration": "6 mins",
+      "image": "https://example.com/diamondpushup.png",
+      "icon": "💎",
+      "color": "#FF6347",
+      "steps": [
+        "Hands together under chest forming diamond.",
+        "Lower chest to hands and push up.",
+        "Repeat."
+      ]
+    },
+    {
+      "id": 58,
+      "name": "Bench Dips with Feet Elevated",
+      "description": "Triceps intensity.",
+      "duration": "7 mins",
+      "image": "https://example.com/benchdips.png",
+      "icon": "🪑",
+      "color": "#FF4500",
+      "steps": [
+        "Place hands behind on bench, feet on elevated surface.",
+        "Lower and raise body by bending elbows.",
+        "Repeat."
+      ]
+    },
+    {
+      "id": 59,
+      "name": "One Arm Overhead Extension",
+      "description": "Single arm triceps isolation.",
+      "duration": "7 mins",
+      "image": "https://example.com/onearmtricep.png",
+      "icon": "1️⃣",
+      "color": "#FF7F50",
+      "steps": [
+        "Hold dumbbell in one hand overhead.",
+        "Lower behind head and raise.",
+        "Switch arms and repeat."
+      ]
+    },
+    {
+      "id": 60,
+      "name": "Tricep Punches",
+      "description": "Light triceps activation.",
+      "duration": "5 mins",
+      "image": "https://example.com/triceppunches.png",
+      "icon": "🥊",
+      "color": "#FF6347",
+      "steps": [
+        "Hold dumbbells at sides.",
+        "Punch arms backward extending fully.",
+        "Return and repeat."
+      ]
+    }
+  ]
+}
