@@ -49,7 +49,7 @@ const Navbar = () => {
       initial={{ y: -60, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
-      className={`shadow-md fixed w-full top-0 left-0 z-50 transition-colors duration-200 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+      className={`shadow-md  w-full top-0 left-0 z-50 transition-colors duration-200 ${darkMode ? "bg-gray-800" : "bg-white"}`}
     >
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}

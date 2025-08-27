@@ -5,7 +5,7 @@ import {
   Dumbbell, Utensils, BarChart3, Clock, Target, Award, Heart,
   Flame, ChevronRight, Plus, Moon, Sun
 } from 'lucide-react';
-import UserTaskBoard from '../../components/userComponents/UserTaskBoard';
+import UserTaskBoard from '../../components/userComponents/userTaskBoard';
 import { useTheme } from '../../context/ThemeContext';
 
 // Animation variants
@@ -69,7 +69,7 @@ const WorkoutPlanCard = ({ title, time, exercises, progress, color, delay = 0 })
         </div>
         <div className={`w-full rounded-full h-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
           <motion.div
-            className={`h-2 rounded-full ${progress >= 70 ? 'bg-green-500' : progress >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
+            className={`h-2 rounded-full ${progress >= 70 ? 'bg-green-500' : progress >= 45 ? 'bg-yellow-500' : 'bg-red-500'}`}
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
             transition={{ duration: 1, delay: 0.2 }}
