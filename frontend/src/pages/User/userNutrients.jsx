@@ -2,24 +2,16 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';// eslint-disable-line no-unused-vars
 import {
     Utensils, Plus, Search, Filter, Apple, Carrot, Drumstick, GlassWater,
-
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
 import NutritionCard from '../../components/userComponents/userNutrientsCard';
 
-// Nutrition Card Component
-
-// Add Food Modal Component
 const AddFoodModal = ({ isOpen, onClose, onAdd }) => {
     const { darkMode } = useTheme();
     const [formData, setFormData] = useState({
-        food: '',
-        calories: '',
-        protein: '',
-        carbs: '',
-        fat: ''
+        food: '', calories: '', protein: '', carbs: '', fat: ''
     });
 
     const handleSubmit = (e) => {
@@ -31,7 +23,6 @@ const AddFoodModal = ({ isOpen, onClose, onAdd }) => {
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             date: new Date().toLocaleDateString()
         });
-
         setFormData({ food: '', calories: '', protein: '', carbs: '', fat: '' });
         onClose();
     };
@@ -43,7 +34,7 @@ const AddFoodModal = ({ isOpen, onClose, onAdd }) => {
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className={`w-full max-w-md p-6 rounded-xl shadow-xl ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
+                className={`w-full max-w-md p-6 rounded-xl shadow-xl transition-colors duration-200 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
             >
                 <h2 className={`text-xl font-bold mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>Add Food</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -58,25 +49,22 @@ const AddFoodModal = ({ isOpen, onClose, onAdd }) => {
                             required
                         />
                     </div>
-
-
-                    <div className="grid grid-cols-3 gap-3">
-                        {['calories', 'protein', 'carbs', 'fat'].map((nutrient) => (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {['calories', 'protein', 'carbs', 'fat'].map(nutrient => (
                             <div key={nutrient}>
                                 <label className={`block mb-1 text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                    {nutrient.charAt(0).toUpperCase() + nutrient.slice(1)} (g)
+                                    {nutrient.charAt(0).toUpperCase() + nutrient.slice(1)}
                                 </label>
                                 <input
                                     type="number"
                                     value={formData[nutrient]}
                                     onChange={(e) => setFormData({ ...formData, [nutrient]: e.target.value })}
                                     placeholder="0"
-                                    className={`w-full px-3 py-2 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-700 text-gray-200' : 'bg-gray-50 border-gray-300 text-gray-800'}`}
+                                    className={`w-full px-3 py-2 rounded-lg border transition-colors duration-200 ${darkMode ? 'bg-gray-700 border-gray-700 text-gray-200' : 'bg-gray-50 border-gray-300 text-gray-800'}`}
                                 />
                             </div>
                         ))}
                     </div>
-
                     <div className="flex justify-end space-x-3 mt-4">
                         <button
                             type="button"
@@ -85,7 +73,7 @@ const AddFoodModal = ({ isOpen, onClose, onAdd }) => {
                         >
                             Cancel
                         </button>
-                        <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Add Food</button>
+                        <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Add Food</button>
                     </div>
                 </form>
             </motion.div>
@@ -96,7 +84,7 @@ const AddFoodModal = ({ isOpen, onClose, onAdd }) => {
 const UserNutrients = () => {
     const { darkMode } = useTheme();
     const navigate = useNavigate();
-    const handleBack = () => navigate(-1);
+    const handleBack = () => navigate("/home");
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedMeal, setSelectedMeal] = useState('all');
@@ -116,7 +104,6 @@ const UserNutrients = () => {
         { id: 'dinner', name: 'Dinner', icon: <Drumstick size={18} /> },
         { id: 'snack', name: 'Snacks', icon: <GlassWater size={18} /> },
     ];
-
 
     const getMealType = (hours) => {
         if (hours >= 5 && hours < 11) return 'breakfast';
@@ -156,32 +143,43 @@ const UserNutrients = () => {
     }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
     return (
-        <div className={`min-h-screen pb-10 transition-colors duration-300 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-            {/* Back Button */}
-
-
+        <div className={`min-h-screen pb-10 transition-colors duration-200 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
             <div className="container mx-auto px-4 pt-6">
                 {/* Header */}
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-                   
-                    
-                     <button
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }}
+                    className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                >
+                    {/* Back Button */}
+                    <button
                         onClick={handleBack}
-                        aria-label="Go Back"
-                        className={`flex top-30 left-4 z-40 sm:flex items-center px-6 py-6 space-x-3 mt-3 rounded-md shadow-md border transition-all duration-200
-          ${darkMode ? 'bg-gray-800 text-gray-200 border-gray-700 hover:bg-gray-700' : 'bg-white text-gray-800 border-gray-200 hover:bg-gray-100'}`}
+                        className={`flex items-center px-4 py-2 rounded-lg transition-all duration-200 
+          ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-800 hover:bg-gray-100"} 
+          focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 hover:scale-105`}
                     >
-                        <FaArrowLeft size={16} />
+                        <FaArrowLeft size={16} className="mr-2" />
+                        Back
                     </button>
-                        <h1 className={` flex text-2xl font-bold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>Nutrition Tracking</h1>
-                    <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>Track your meals and monitor your nutrition intake</p>
+
+                    {/* Title & Description */}
+                    <div className="flex flex-col items-center md:items-start text-center md:text-left gap-1">
+                        <h1
+                            className={`text-3xl font-extrabold ${darkMode ? "text-gray-200" : "text-gray-900"}`}
+                        >
+                            Nutrition Tracking
+                        </h1>
+                        <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                            Track your meals and monitor your nutrition intake
+                        </p>
+                    </div>
                 </motion.div>
 
                 {/* Stats */}
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={`rounded-xl p-6 mb-6 shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={`rounded-2xl p-6 mb-6 shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         {['calories', 'protein', 'carbs', 'fat'].map((nutrient, idx) => (
-                            <div key={nutrient} className={`text-center p-4 rounded-lg ${darkMode ? ['bg-blue-900', 'bg-green-900', 'bg-yellow-900', 'bg-red-900'][idx] : ['bg-blue-100', 'bg-green-100', 'bg-yellow-100', 'bg-red-100'][idx]}`}>
+                            <div key={nutrient} className={`text-center p-4 rounded-xl ${darkMode ? ['bg-blue-900', 'bg-green-900', 'bg-yellow-900', 'bg-red-900'][idx] : ['bg-blue-100', 'bg-green-100', 'bg-yellow-100', 'bg-red-100'][idx]} shadow-md`}>
                                 <p className={`text-sm font-medium ${darkMode ? ['text-blue-200', 'text-green-200', 'text-yellow-200', 'text-red-200'][idx] : ['text-blue-800', 'text-green-800', 'text-yellow-800', 'text-red-800'][idx]}`}>
                                     {nutrient.charAt(0).toUpperCase() + nutrient.slice(1)}
                                 </p>
@@ -194,7 +192,7 @@ const UserNutrients = () => {
                 </motion.div>
 
                 {/* Filters & Search */}
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className={`rounded-xl p-5 mb-6 shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className={`rounded-2xl p-6 mb-6 shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="relative flex-1">
                             <Search size={18} className={`absolute left-3 top-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
@@ -203,7 +201,7 @@ const UserNutrients = () => {
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 placeholder="Search foods..."
-                                className={`w-full pl-10 pr-4 py-2 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-700 text-gray-200' : 'bg-gray-50 border-gray-300 text-gray-800'}`}
+                                className={`w-full pl-10 pr-4 py-2 rounded-lg border transition-colors duration-200 ${darkMode ? 'bg-gray-700 border-gray-700 text-gray-200' : 'bg-gray-50 border-gray-300 text-gray-800'}`}
                             />
                         </div>
 
@@ -218,9 +216,8 @@ const UserNutrients = () => {
                             </select>
                         </div>
 
-                        <button onClick={() => setIsModalOpen(true)} className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                            <Plus size={18} />
-                            <span>Add Food</span>
+                        <button onClick={() => setIsModalOpen(true)} className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+                            <Plus size={18} /> Add Food
                         </button>
                     </div>
 
@@ -235,8 +232,7 @@ const UserNutrients = () => {
                                     : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     }`}
                             >
-                                {meal.icon}
-                                <span>{meal.name}</span>
+                                {meal.icon}<span>{meal.name}</span>
                             </button>
                         ))}
                     </div>
@@ -249,7 +245,7 @@ const UserNutrients = () => {
                     </h2>
 
                     {filteredFoods.length === 0 ? (
-                        <div className={`text-center py-10 rounded-xl shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                        <div className={`text-center py-10 rounded-xl shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                             <Utensils size={48} className={`mx-auto mb-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
                             <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>No foods found. Add your first meal!</p>
                         </div>

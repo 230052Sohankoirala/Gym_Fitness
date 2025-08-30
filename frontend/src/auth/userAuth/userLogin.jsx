@@ -1,16 +1,19 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars 
+import { motion } from "framer-motion";// eslint-disable-line no-unused-vars
 import { Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react";
 import login from "../../assets/Images/loginBG.d2986f65998a8b583e78.png";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Typewriter } from "react-simple-typewriter";
 import { FaArrowLeft } from "react-icons/fa";
+import { FaGoogle } from "react-icons/fa";
 
 const UserLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -45,10 +48,14 @@ const UserLogin = () => {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
+
     // simulate API
     setTimeout(() => {
       console.log("Login data:", formData);
       setIsSubmitting(false);
+
+      // navigate after success
+      navigate("/home");
     }, 1500);
   };
 
@@ -80,12 +87,14 @@ const UserLogin = () => {
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-indigo-50 to-purple-50 p-4">
-      {/* Left - Illustration */}
-      <div className="  ">
-        <Link to="/" className="text-gray-600 hover:text-gray-800 text-2xl">
+      {/* Back Button */}
+      <div className="absolute top-6 left-6 z-10">
+        <Link to="/" className="text-gray-600 hover:text-gray-800">
           <FaArrowLeft className="w-6 h-6" />
         </Link>
       </div>
+
+      {/* Left - Illustration */}
       <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12">
         <div className="relative w-full max-w-2xl">
           <motion.img
@@ -94,16 +103,18 @@ const UserLogin = () => {
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.8 }}
-            className="w-4/5 h-auto object-cover rounded-3xl shadow-2xl"
+            className="w-4/5 h-96 object-cover rounded-3xl shadow-2xl"
           />
 
           <motion.div
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.6 }}
-            className="absolute -bottom-6 -left-6 bg-white p-6 rounded-2xl shadow-xl max-w-sm"
+            className="absolute -bottom-6 -left-6 bg-white p-6 rounded-2xl shadow-xl max-w-sm  animate-bounce  duration-300"
           >
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">🔒 Secure Access</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              🔒 Secure Access
+            </h3>
             <p className="text-gray-600">
               Your data is protected with industry-standard encryption protocols.
             </p>
@@ -127,16 +138,15 @@ const UserLogin = () => {
             >
               <div className="text-2xl">👋</div>
             </motion.div>
-            <motion.h2 variants={itemVariants} className="text-3xl font-bold text-gray-800 mb-2">
+            <motion.h2
+              variants={itemVariants}
+              className="text-3xl font-bold text-gray-800 mb-2"
+            >
               Welcome Back
             </motion.h2>
             <motion.p variants={itemVariants} className="text-gray-600">
-
               <Typewriter
-                words={[
-                  "Unlock the Power of Fitness",
-                  "SignIn to Your Account",
-                ]}
+                words={["Unlock the Power of Fitness", "SignIn to Your Account"]}
                 loop={true}
                 cursor
                 cursorStyle="|"
@@ -145,15 +155,15 @@ const UserLogin = () => {
                 delaySpeed={1000}
               />
             </motion.p>
-
-
           </div>
 
           {/* Form */}
           <form className="space-y-3" onSubmit={handleSubmit}>
             {/* Email */}
             <motion.div variants={itemVariants}>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email
+              </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
                 <motion.input
@@ -177,7 +187,9 @@ const UserLogin = () => {
 
             {/* Password */}
             <motion.div variants={itemVariants}>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
                 <motion.input
@@ -211,7 +223,10 @@ const UserLogin = () => {
             </motion.div>
 
             {/* Remember + Forgot */}
-            <motion.div variants={itemVariants} className="flex items-center justify-between text-sm">
+            <motion.div
+              variants={itemVariants}
+              className="flex items-center justify-between text-sm"
+            >
               <label className="flex items-center text-gray-700">
                 <input
                   type="checkbox"
@@ -219,7 +234,10 @@ const UserLogin = () => {
                 />
                 <span className="ml-2">Remember me</span>
               </label>
-              <Link to="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500">
+              <Link
+                to="/forgot-password"
+                className="font-medium text-indigo-600 hover:text-indigo-500"
+              >
                 Forgot password?
               </Link>
             </motion.div>
@@ -242,7 +260,14 @@ const UserLogin = () => {
                     fill="none"
                     viewBox="0 0 24 24"
                   >
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
                     <path
                       className="opacity-75"
                       fill="currentColor"
@@ -255,13 +280,34 @@ const UserLogin = () => {
                 "Sign in"
               )}
             </motion.button>
+
+            {/* Divider */}
+            <div className="relative flex items-center mt-6">
+              <div className="flex-grow border-t border-gray-300"></div>
+              <span className="flex-shrink mx-4 text-gray-600 text-sm">Or continue with</span>
+              <div className="flex-grow border-t border-gray-300"></div>
+            </div>
+
+            {/* Google Sign In Button */}
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full flex items-center justify-center gap-3 py-3 mt-4 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <FaGoogle className="h-5 w-5 text-red-500" />
+              Sign in with Google
+            </motion.button>
           </form>
 
           {/* Footer */}
           <motion.div variants={itemVariants} className="mt-6 text-center">
             <p className="text-gray-600">
-              Don’t have an account?{" "}
-              <Link to="/register" className="font-semibold text-indigo-600 hover:text-indigo-500">
+              Don't have an account?{" "}
+              <Link
+                to="/register"
+                className="font-semibold text-indigo-600 hover:text-indigo-500"
+              >
                 Register
               </Link>
             </p>

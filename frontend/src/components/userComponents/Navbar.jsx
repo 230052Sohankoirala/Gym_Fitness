@@ -11,8 +11,8 @@ const links = [
   { name: "Workouts", to: "/workouts" },
   { name: "Nutrition", to: "/nutrition" },
   { name: "Progress", to: "/progress" },
-  { name: "Meals", to: "/nutrition" },
-  { name: "Class", to: "/progress" },
+  { name: "Meals", to: "/userMeals" },
+  { name: "Class", to: "/userClasses" },
 ];
 
 const Navbar = () => {
@@ -51,7 +51,7 @@ const Navbar = () => {
       transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
       className={`shadow-md  w-full top-0 left-0 z-50 transition-colors duration-200 ${darkMode ? "bg-gray-800" : "bg-white"}`}
     >
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
         {/* Logo */}
         <Link
           to="/home"
