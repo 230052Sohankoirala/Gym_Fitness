@@ -16,6 +16,7 @@ import RecentActivity from "./pages/User/RecentActivity";
 import UserMeals from "./pages/User/UserMeals";
 import UserClasses from "./pages/User/UserClasses";
 import ProfilePage from "./pages/User/userProfile/ProfilePage";
+import MessagePortal from "./components/userComponents/MessagePortal";
 
 
 
@@ -24,10 +25,12 @@ const Layout = ({ children }) => {
   const { darkMode } = useTheme();
 
   // Pages where we don't want to show Navbar
-  const noNavbarRoutes = ["/", "/login", "/register", "/userGoal", "/userInfo","/recentActivity"];
+  const noNavbarRoutes = ["/", "/login", "/register", "/userGoal", "/userInfo","/recentActivity","/chat/:trainerName"];
 
-  const showNavbar = !noNavbarRoutes.includes(location.pathname);
-
+  const showNavbar = !(
+  noNavbarRoutes.includes(location.pathname) || 
+  location.pathname.startsWith("/chat/")
+);
   return (
     <div
       className={`min-h-screen  text-gray-900 dark:text-gray-100 transition-colors duration-200 ${darkMode ? "bg-gray-900" : "bg-gray-100"
@@ -68,6 +71,9 @@ function App() {
 
             {/*ProfilesRoute*/}
             <Route path="/profile" element={<ProfilePage />} />
+
+            {/* Message */}
+             <Route path="/chat/:trainerName" element={<MessagePortal />} />
 
           </Routes>
         </Layout>

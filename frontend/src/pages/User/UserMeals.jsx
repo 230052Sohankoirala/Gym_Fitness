@@ -1809,7 +1809,8 @@ const UserMeals = () => {
             "vitamins": "Vitamin B1, Iron, Magnesium",
             "recipe": "Step 1: Cook oats in milk or water. Step 2: Top with sliced banana, almonds, and a sprinkle of cinnamon."
         }
-    ]; const handlePress = (food) => {
+    ]; 
+    const handlePress = (food) => {
         setSelectedFood(food);
         setModalVisible(true);
     };

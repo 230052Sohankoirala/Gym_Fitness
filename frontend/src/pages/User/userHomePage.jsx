@@ -11,7 +11,7 @@ import {
 import UserTaskBoard from '../../components/userComponents/userTaskBoard';
 import { useTheme } from '../../context/ThemeContext';
 import { Link } from 'react-router-dom';
-import { GiWaterDrop } from 'react-icons/gi';
+import { GiClassicalKnowledge, GiWaterDrop } from 'react-icons/gi';
 
 // Animation variants
 const cardVariants = {
@@ -196,11 +196,11 @@ const UserHomePage = () => {
       link: '/challenges'
     },
     {
-      icon: <CalendarDays size={20} />,
-      title: 'Schedule',
-      description: 'Plan your workouts',
+      icon: <GiClassicalKnowledge size={20} />,
+      title: 'Classes',
+      description: 'Find classes ',
       color: 'bg-indigo-500',
-      link: '/schedule'
+      link: '/userClasses'
     }
 
   ];

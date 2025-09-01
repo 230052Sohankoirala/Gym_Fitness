@@ -41,7 +41,7 @@ const ProfilePage = () => {
             icon: <Settings size={18} />,
             items: [
                 { name: "Edit Profile", url: "/editProfile", icon: <User size={16} /> },
-                { name: "Workout Preference", url: "/workoutPreference", icon: <Activity size={16} /> },
+               
                 { name: "Notifications", url: "/notifications", icon: <Bell size={16} /> },
             ],
         },
@@ -79,7 +79,7 @@ const ProfilePage = () => {
             icon: <HelpCircle size={18} />,
             items: [
                 { name: "Help Center", url: "/help", icon: <HelpCircle size={16} /> },
-                { name: "Redeem Promo", url: "/redeem", icon: <Tag size={16} /> },
+              
             ],
         },
     ];
