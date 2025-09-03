@@ -10,9 +10,10 @@ import {
 } from 'lucide-react';
 import UserTaskBoard from '../../components/userComponents/userTaskBoard';
 import { useTheme } from '../../context/ThemeContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { GiClassicalKnowledge, GiWaterDrop } from 'react-icons/gi';
-
+import workoutData from '../../data/workoutplans.json';
+import UserPlanCard from './UserPlanCard';
 // Animation variants
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -44,12 +45,27 @@ const StatsCard = ({ icon, value, label, color }) => {
 };
 
 // WorkoutPlanCard
-const WorkoutPlanCard = ({ title, time, exercises, progress, color }) => {
+const WorkoutPlanCard = ({ planName, exercises }) => {
   const { darkMode } = useTheme();
+  const navigate = useNavigate();
+
+  // count of exercises
+  const exerciseCount = exercises.length;
+
+  // derive approximate total time (sum of durations if numeric)
+  const totalTime = exercises.reduce((acc, ex) => {
+    const match = ex.duration.match(/\d+/);
+    return acc + (match ? parseInt(match[0]) : 0);
+  }, 0);
+
+  const handleClick = () => {
+    navigate(`/workoutPlan/${encodeURIComponent(planName)}`);
+  };
 
   return (
     <motion.div
-      className={`p-5 rounded-xl shadow-sm border transition-colors duration-200 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+      className={`p-5 rounded-xl shadow-sm border transition-colors duration-200 ${darkMode ? "bg-gray-800" : "bg-white"
+        }`}
       variants={cardVariants}
       initial="hidden"
       animate="visible"
@@ -57,40 +73,49 @@ const WorkoutPlanCard = ({ title, time, exercises, progress, color }) => {
     >
       <div className="flex justify-between items-start">
         <div>
-          <h3 className={`font-semibold text-lg ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{title}</h3>
-          <div className={`flex items-center mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          <h3
+            className={`font-semibold text-lg ${darkMode ? "text-gray-200" : "text-gray-800"
+              }`}
+          >
+            {planName}
+          </h3>
+          <div
+            className={`flex items-center mt-2 ${darkMode ? "text-gray-400" : "text-gray-500"
+              }`}
+          >
             <Clock size={16} className="mr-1" />
-            <span className="text-sm">{time}</span>
+            <span className="text-sm">{totalTime} mins</span>
           </div>
         </div>
-        <div className={`px-3 py-1 rounded-full text-xs font-medium ${color}`}>{progress}%</div>
-      </div>
-      <div className="mt-4">
-        <div className={`flex justify-between text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          <span>Progress</span>
-          <span>{progress}%</span>
-        </div>
-        <div className={`w-full rounded-full h-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-          <motion.div
-            className={`h-2 rounded-full ${progress >= 70 ? 'bg-green-500' : progress >= 45 ? 'bg-yellow-500' : 'bg-red-500'}`}
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}   // <-- fix here
-            transition={{ duration: 1 }}
-          />
-
+        <div
+          className={`px-3 py-1 rounded-full text-xs font-medium ${darkMode
+            ? "bg-blue-900 text-blue-200"
+            : "bg-blue-100 text-blue-800"
+            }`}
+        >
+          {exerciseCount} exercises
         </div>
       </div>
 
       <div className="mt-4 flex justify-between items-center">
-        <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          {exercises} exercises</span>
-        <button className="text-blue-600 dark:text-blue-400 text-sm font-medium flex items-center hover:text-blue-800 dark:hover:text-blue-300 transition-colors">
+        <span
+          className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"
+            }`}
+        >
+          Ready to train?
+        </span>
+        <button
+          className="text-blue-600 dark:text-blue-400 text-sm font-medium 
+          flex items-center hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+          onClick={handleClick}
+        >
           Continue <ChevronRight size={16} />
         </button>
       </div>
     </motion.div>
   );
 };
+
 
 
 // ActivityItem
@@ -122,9 +147,8 @@ const QuickAction = ({ icon, title, description, color, onClick }) => {
 
   return (
     <motion.div
-      className={`p-4 rounded-xl shadow-sm border transition-colors duration-200 cursor-pointer h-full ${
-        darkMode ? "bg-gray-800 hover:bg-gray-750" : "bg-white hover:bg-gray-50"
-      }`}
+      className={`p-4 rounded-xl shadow-sm border transition-colors duration-200 cursor-pointer h-full ${darkMode ? "bg-gray-800 hover:bg-gray-750" : "bg-white hover:bg-gray-50"
+        }`}
       variants={cardVariants}
       initial="hidden"
       animate="visible"
@@ -145,6 +169,7 @@ const UserHomePage = () => {
   const [activeTab, setActiveTab] = useState('today');
   const { darkMode } = useTheme();
 
+
   const userStats = [
     { icon: <Flame size={20} />, value: '2,347', label: 'Calories Burned', color: 'bg-orange-500' },
     { icon: <Target size={20} />, value: '78%', label: 'Goals Completed', color: 'bg-green-500' },
@@ -152,11 +177,7 @@ const UserHomePage = () => {
     { icon: <GiWaterDrop size={20} />, value: '4L', label: 'Water Intake Daily', color: 'bg-blue-500' },
   ];
 
-  const workoutPlans = [
-    { title: 'Upper Body Strength', time: '45 mins', exercises: 8, progress: 75, color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' },
-    { title: 'Cardio Blast', time: '30 mins', exercises: 5, progress: 40, color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' },
-    { title: 'Yoga & Flexibility', time: '60 mins', exercises: 10, progress: 20, color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100' }
-  ];
+
 
   const recentActivities = [
     { icon: <Dumbbell size={16} />, title: 'Chest Workout', time: 'Today, 9:30 AM', value: 45, unit: 'mins' },
@@ -229,11 +250,17 @@ const UserHomePage = () => {
             <div className={`rounded-xl shadow-sm p-5 border transition-colors duration-200 ${darkMode ? "bg-gray-800" : "bg-white"}`}>
               <div className="flex justify-between items-center mb-6">
                 <h2 className={`text-xl font-bold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>Your Workout Plans</h2>
-                <button className="text-blue-600 dark:text-blue-400 text-sm font-medium hover:text-blue-800 dark:hover:text-blue-300 transition-colors">View All</button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {workoutPlans.map((plan, i) => <WorkoutPlanCard key={i} {...plan} />)}
+                {Object.entries(workoutData.workoutPlans).map(([planName, exercises]) => (
+                  <WorkoutPlanCard
+                    key={planName}
+                    planName={planName}
+                    exercises={exercises}
+                  />
+                ))}
               </div>
+
             </div>
 
             <div className={`rounded-xl shadow-sm p-5 border transition-colors duration-200 ${darkMode ? "bg-gray-800" : "bg-white"}`}>

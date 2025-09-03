@@ -1,0 +1,364 @@
+{
+  "workoutPlans": {
+    "Upper Body Strength": [
+      {
+        "id": 1,
+        "name": "Push-Ups",
+        "description": "Classic upper-body move for chest, shoulders, and triceps.",
+        "duration": "7 mins",
+        "image": "https://example.com/images/pushups.png",
+        "icon": "💪",
+        "color": "#1E90FF",
+        "steps": [
+          "Hands under shoulders, body in straight line.",
+          "Lower chest toward floor, elbows ~45°.",
+          "Press back up and repeat."
+        ]
+      },
+      {
+        "id": 2,
+        "name": "Dumbbell Rows",
+        "description": "Strengthens lats and mid-back; core engaged.",
+        "duration": "8 mins",
+        "image": "https://example.com/images/dumbbell-row.png",
+        "icon": "🏋️‍♂️",
+        "color": "#1877F2",
+        "steps": [
+          "Hinge at hips, back flat.",
+          "Row weight to ribcage; squeeze shoulder blade.",
+          "Lower slowly; switch sides."
+        ]
+      },
+      {
+        "id": 3,
+        "name": "Shoulder Press",
+        "description": "Targets delts and triceps.",
+        "duration": "8 mins",
+        "image": "https://example.com/images/shoulder-press.png",
+        "icon": "🦾",
+        "color": "#3B82F6",
+        "steps": [
+          "Hold dumbbells at shoulders.",
+          "Press overhead without arching back.",
+          "Lower with control."
+        ]
+      },
+      {
+        "id": 4,
+        "name": "Incline Push-Ups",
+        "description": "Beginner-friendly chest press variation.",
+        "duration": "6 mins",
+        "image": "https://example.com/images/incline-pushup.png",
+        "icon": "📈",
+        "color": "#2563EB",
+        "steps": [
+          "Hands on bench/table.",
+          "Lower chest to edge; pause.",
+          "Press away to start."
+        ]
+      },
+      {
+        "id": 5,
+        "name": "Bicep Curls",
+        "description": "Isolates biceps with strict form.",
+        "duration": "6 mins",
+        "image": "https://example.com/images/bicep-curl.png",
+        "icon": "🌀",
+        "color": "#1D4ED8",
+        "steps": [
+          "Elbows pinned to sides.",
+          "Curl without swinging.",
+          "Lower slowly."
+        ]
+      }
+    ],
+    "Cardio Blast": [
+      {
+        "id": 6,
+        "name": "Jumping Jacks",
+        "description": "Full-body warm-up and cardio booster.",
+        "duration": "5 mins",
+        "image": "https://example.com/images/jumping-jacks.png",
+        "icon": "🏃‍♂️",
+        "color": "#FF4500",
+        "steps": [
+          "Jump feet wide, arms overhead.",
+          "Jump feet together, arms by sides.",
+          "Maintain steady pace."
+        ]
+      },
+      {
+        "id": 7,
+        "name": "High Knees",
+        "description": "Elevates heart rate; coordination work.",
+        "duration": "6 mins",
+        "image": "https://example.com/images/high-knees.png",
+        "icon": "⚡",
+        "color": "#FF6A00",
+        "steps": [
+          "Jog in place, knees to hip height.",
+          "Pump arms actively.",
+          "Keep quick rhythm."
+        ]
+      },
+      {
+        "id": 8,
+        "name": "Burpees",
+        "description": "Intense full-body cardio and strength.",
+        "duration": "7 mins",
+        "image": "https://example.com/images/burpee.png",
+        "icon": "🔥",
+        "color": "#FF7F50",
+        "steps": [
+          "Squat down, hands to floor.",
+          "Kick back to plank; optional push-up.",
+          "Jump up explosively."
+        ]
+      },
+      {
+        "id": 9,
+        "name": "Mountain Climbers",
+        "description": "Core-driven cardio move.",
+        "duration": "6 mins",
+        "image": "https://example.com/images/mountain-climbers.png",
+        "icon": "⛰️",
+        "color": "#FF8C00",
+        "steps": [
+          "From plank, drive one knee in.",
+          "Switch legs quickly.",
+          "Keep hips level."
+        ]
+      },
+      {
+        "id": 10,
+        "name": "Skater Hops",
+        "description": "Lateral cardio with balance challenge.",
+        "duration": "6 mins",
+        "image": "https://example.com/images/skater-hops.png",
+        "icon": "⛸️",
+        "color": "#FFA54F",
+        "steps": [
+          "Leap sideways to one foot.",
+          "Sweep trailing leg behind.",
+          "Alternate sides rhythmically."
+        ]
+      }
+    ],
+    "Yoga & Flexibility": [
+      {
+        "id": 11,
+        "name": "Sun Salutation A",
+        "description": "Flow warms body and mobilizes spine.",
+        "duration": "10 mins",
+        "image": "https://example.com/images/sun-salutation-a.png",
+        "icon": "🧘",
+        "color": "#6A5ACD",
+        "steps": [
+          "Inhale reach up; exhale fold.",
+          "Step to plank → cobra/up-dog.",
+          "Down-dog; step forward and rise."
+        ]
+      },
+      {
+        "id": 12,
+        "name": "Down Dog to Plank Flow",
+        "description": "Shoulder strength and core control.",
+        "duration": "8 mins",
+        "image": "https://example.com/images/downdog-plank.png",
+        "icon": "🌊",
+        "color": "#7B68EE",
+        "steps": [
+          "From down-dog, shift to plank.",
+          "Hold 2–3 breaths.",
+          "Return to down-dog; repeat."
+        ]
+      },
+      {
+        "id": 13,
+        "name": "Warrior II Hold",
+        "description": "Hip opener; leg/shoulder endurance.",
+        "duration": "8 mins",
+        "image": "https://example.com/images/warrior-ii.png",
+        "icon": "🛡️",
+        "color": "#5B5FEF",
+        "steps": [
+          "Step wide; front foot out.",
+          "Bend front knee; arms parallel.",
+          "Gaze forward; switch sides."
+        ]
+      },
+      {
+        "id": 14,
+        "name": "Seated Forward Fold",
+        "description": "Hamstring and low-back stretch.",
+        "duration": "6 mins",
+        "image": "https://example.com/images/forward-fold.png",
+        "icon": "🌿",
+        "color": "#8A7FFF",
+        "steps": [
+          "Sit tall, legs long.",
+          "Hinge at hips, reach forward.",
+          "Breathe; avoid rounding."
+        ]
+      },
+      {
+        "id": 15,
+        "name": "Child’s Pose to Cobra",
+        "description": "Spinal mobility; gentle backbend.",
+        "duration": "6 mins",
+        "image": "https://example.com/images/child-cobra.png",
+        "icon": "🌙",
+        "color": "#6F63FF",
+        "steps": [
+          "From child’s pose slide to prone.",
+          "Press gently into cobra.",
+          "Return to child’s pose; repeat."
+        ]
+      }
+    ],
+    "Lower Body Workout": [
+      {
+        "id": 16,
+        "name": "Bodyweight Squats",
+        "description": "Targets quads, glutes, and core.",
+        "duration": "8 mins",
+        "image": "https://example.com/images/squat.png",
+        "icon": "🦵",
+        "color": "#2E8B57",
+        "steps": [
+          "Feet shoulder-width, chest tall.",
+          "Sit hips back and down.",
+          "Drive through heels to stand."
+        ]
+      },
+      {
+        "id": 17,
+        "name": "Forward Lunges",
+        "description": "Single-leg strength and balance.",
+        "duration": "8 mins",
+        "image": "https://example.com/images/lunge.png",
+        "icon": "🚶‍♂️",
+        "color": "#3A9D68",
+        "steps": [
+          "Step forward, lower to 90° knees.",
+          "Front knee tracks over mid-foot.",
+          "Push back to start; alternate."
+        ]
+      },
+      {
+        "id": 18,
+        "name": "Glute Bridges",
+        "description": "Glute and posterior-chain activation.",
+        "duration": "7 mins",
+        "image": "https://example.com/images/glute-bridge.png",
+        "icon": "🍑",
+        "color": "#49B57A",
+        "steps": [
+          "Lie supine, knees bent.",
+          "Drive hips up; squeeze glutes.",
+          "Lower with control."
+        ]
+      },
+      {
+        "id": 19,
+        "name": "Romanian Deadlifts (DB)",
+        "description": "Hamstrings and glutes via hip hinge.",
+        "duration": "8 mins",
+        "image": "https://example.com/images/rdl.png",
+        "icon": "🏋️",
+        "color": "#57C58A",
+        "steps": [
+          "Hold DBs, soft knees, back flat.",
+          "Hinge hips; slide DBs along thighs.",
+          "Stand tall by driving hips forward."
+        ]
+      },
+      {
+        "id": 20,
+        "name": "Calf Raises",
+        "description": "Strengthens calves and ankles.",
+        "duration": "5 mins",
+        "image": "https://example.com/images/calf-raise.png",
+        "icon": "🦶",
+        "color": "#65D6A6",
+        "steps": [
+          "Feet hip-width; hold support if needed.",
+          "Rise onto toes; squeeze calves.",
+          "Lower slowly; repeat."
+        ]
+      }
+    ],
+    "Full Body Workout": [
+      {
+        "id": 21,
+        "name": "Plank to Push-Up",
+        "description": "Core, chest, and shoulder stability.",
+        "duration": "6 mins",
+        "image": "https://example.com/images/plank-to-pushup.png",
+        "icon": "🧱",
+        "color": "#C084FC",
+        "steps": [
+          "Start in forearm plank.",
+          "Press to high plank one arm at a time.",
+          "Lower back to forearms; alternate lead."
+        ]
+      },
+      {
+        "id": 22,
+        "name": "Kettlebell/DB Swings",
+        "description": "Hip power; posterior chain cardio.",
+        "duration": "7 mins",
+        "image": "https://example.com/images/kb-swing.png",
+        "icon": "🏋️‍♀️",
+        "color": "#A855F7",
+        "steps": [
+          "Hinge at hips, neutral spine.",
+          "Drive hips to swing weight to chest.",
+          "Let it fall; repeat with hip snap."
+        ]
+      },
+      {
+        "id": 23,
+        "name": "Thrusters (DB)",
+        "description": "Squat to press—full body strength.",
+        "duration": "8 mins",
+        "image": "https://example.com/images/thruster.png",
+        "icon": "🚀",
+        "color": "#9333EA",
+        "steps": [
+          "DBs at shoulders; squat deep.",
+          "Drive up and press overhead.",
+          "Lower to shoulders; repeat."
+        ]
+      },
+      {
+        "id": 24,
+        "name": "Bear Crawl",
+        "description": "Total-body coordination and core.",
+        "duration": "6 mins",
+        "image": "https://example.com/images/bear-crawl.png",
+        "icon": "🐾",
+        "color": "#7C3AED",
+        "steps": [
+          "Hands under shoulders; knees hover.",
+          "Move opposite hand/foot forward.",
+          "Keep hips low; crawl controlled."
+        ]
+      },
+      {
+        "id": 25,
+        "name": "Jump Rope",
+        "description": "Conditioning and footwork.",
+        "duration": "7 mins",
+        "image": "https://example.com/images/jump-rope.png",
+        "icon": "🪢",
+        "color": "#6D28D9",
+        "steps": [
+          "Hold handles at hips.",
+          "Small jumps on balls of feet.",
+          "Stay relaxed; steady cadence."
+        ]
+      }
+    ]
+  }
+}

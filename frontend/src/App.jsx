@@ -17,27 +17,62 @@ import UserMeals from "./pages/User/UserMeals";
 import UserClasses from "./pages/User/UserClasses";
 import ProfilePage from "./pages/User/userProfile/ProfilePage";
 import MessagePortal from "./components/userComponents/MessagePortal";
+import WorkoutVideo from "./pages/User/userProfile/WorkoutVideo";
+import HelpCenter from "./pages/User/userProfile/HelpCenter";
+import UserPlanCard from "./pages/User/UserPlanCard";
 
+// Trainer
+import TrainerLogin from "./auth/TrainerAuth/trainerLogin";
+import TrainerHome from "./pages/Trainer/TrainerHome";
+// NOTE: ensure this import path is correct in your repo structure
+import TrainerNavbar from "./components/trainerComponents/TrainerNavbar";
+import TrainerClient from "./pages/Trainer/TrainerClient";
+import TrainerSessions from "./pages/Trainer/TrainerSessions";
 
+// Admin
 
 const Layout = ({ children }) => {
   const location = useLocation();
   const { darkMode } = useTheme();
 
-  // Pages where we don't want to show Navbar
-  const noNavbarRoutes = ["/", "/login", "/register", "/userGoal", "/userInfo","/recentActivity","/chat/:trainerName"];
+  const path = location.pathname;
 
-  const showNavbar = !(
-  noNavbarRoutes.includes(location.pathname) || 
-  location.pathname.startsWith("/chat/")
-);
+  const isTrainerRoute = path.startsWith("/trainer");
+
+  const isTrainerLogin = path === "/trainerLogin";
+
+
+  // User pages where Navbar should be hidden
+  const noUserNavbarRoutes = [
+    "/", "/login", "/register", "/userGoal", "/userInfo",
+    "/recentActivity", "/help"
+  ];
+
+  const hideUserNavbar =
+    noUserNavbarRoutes.includes(path) ||
+    path.startsWith("/chat/") ||
+    path.startsWith("/workout/") ||
+    isTrainerRoute;
+
+  // Decide which top navbar to show
+  let TopNav = null;
+  if (isTrainerRoute && !isTrainerLogin) {
+    TopNav = <TrainerNavbar />;
+  
+  } else if (!hideUserNavbar) {
+    TopNav = <Navbar />;
+  }
+
   return (
     <div
-      className={`min-h-screen  text-gray-900 dark:text-gray-100 transition-colors duration-200 ${darkMode ? "bg-gray-900" : "bg-gray-100"
-        }`}
+      className={`min-h-screen text-gray-900 dark:text-gray-100 transition-colors duration-200 ${
+        darkMode ? "bg-gray-900" : "bg-gray-100"
+      }`}
     >
-      {showNavbar && <Navbar />}
-      <div className={showNavbar ? "pt-1" : ""}>{children}</div>
+      {TopNav}
+      <div className={!hideUserNavbar && !isTrainerRoute  ? "pt-1" : ""}>
+        {children}
+      </div>
     </div>
   );
 };
@@ -48,19 +83,20 @@ function App() {
       <Router>
         <Layout>
           <Routes>
+            {/* Public / Auth */}
             <Route path="/" element={<WelcomePage />} />
             <Route path="/login" element={<UserLogin />} />
             <Route path="/register" element={<UserRegister />} />
 
-
-            {/* UserInfo */}
+            {/* User Info */}
             <Route path="/userInfo" element={<UserInfo />} />
             <Route path="/userGoal" element={<UserGoal />} />
 
-            {/* UserDashboard */}
+            {/* User Dashboard */}
             <Route path="/recentActivity" element={<RecentActivity />} />
+            <Route path="/workoutPlan/:category" element={<UserPlanCard />} />
 
-            {/* NavbarRoutes */}
+            {/* User Navbar routes */}
             <Route path="/home" element={<Home />} />
             <Route path="/workouts" element={<Workout />} />
             <Route path="/nutrition" element={<Nutrients />} />
@@ -69,12 +105,22 @@ function App() {
             <Route path="/userMeals" element={<UserMeals />} />
             <Route path="/userClasses" element={<UserClasses />} />
 
-            {/*ProfilesRoute*/}
+            {/* User Profile */}
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/workoutsVideo" element={<WorkoutVideo />} />
+            <Route path="/workoutsVideo/:slug" element={<WorkoutVideo />} />
+            <Route path="/help" element={<HelpCenter />} />
 
-            {/* Message */}
-             <Route path="/chat/:trainerName" element={<MessagePortal />} />
+            {/* Messages */}
+            <Route path="/chat/:trainerName" element={<MessagePortal />} />
 
+            {/* Trainer */}
+            <Route path="/trainerLogin" element={<TrainerLogin />} />
+            <Route path="/trainerHome" element={<TrainerHome />} />
+            <Route path="/trainer/clients" element={<TrainerClient />} />
+            <Route path="/trainer/sessions" element={<TrainerSessions />} />
+
+       
           </Routes>
         </Layout>
       </Router>
@@ -83,17 +129,3 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
-
-
-
-
-
-
-
-
-

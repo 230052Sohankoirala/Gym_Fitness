@@ -145,13 +145,21 @@ const Hero = () => (
             Get Started <ArrowRight size={18} />
           </Link>
           <Link
-            to="/features"
-            className="bg-blue-800 text-white px-8 py-4 rounded-full font-semibold flex items-center justify-center gap-2 hover:bg-blue-900 transition-all duration-300"
+            to="/trainerLogin"
+            className="inline-flex items-center bg-white text-blue-700 px-8 py-4 rounded-full font-semibold text-lg hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl"
           >
-            Learn More
+            TrainerLogin<ArrowRight size={20} className="ml-2" />
           </Link>
+          <Link
+            to="/adminLogin"
+            className="inline-flex items-center bg-white text-blue-700 px-8 py-4 rounded-full font-semibold text-lg hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl"
+          >
+          AdminLogin<ArrowRight size={20} className="ml-2" />
+          </Link>
+        
         </div>
       </ScrollAnimation>
+      
     </div>
   </section>
 );
@@ -230,6 +238,7 @@ const CTA = () => (
           Start Your Journey Today <ArrowRight size={20} className="ml-2" />
         </Link>
       </ScrollAnimation>
+
     </div>
   </section>
 );
