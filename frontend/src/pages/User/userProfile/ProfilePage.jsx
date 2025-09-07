@@ -10,7 +10,7 @@ import {
     Bell,
     Utensils,
     TrendingUp,
-    Ruler,
+
     HelpCircle,
     Settings,
     X,
@@ -25,14 +25,11 @@ import BackWorkout from "../../../video/BackWorkout.mp4";
 
 const ProfilePage = () => {
     const [logoutModal, setLogoutModal] = useState(false);
-    const [unitSettings, setUnitSettings] = useState({
-        weight: "kg",
-        height: "cm",
-    });
+
     const [activeSections, setActiveSections] = useState({
         Account: false,
         Fitness: false,
-        Unit: false,
+
         Help: false,
     });
 
@@ -72,26 +69,7 @@ const ProfilePage = () => {
                 },
             ],
         },
-        {
-            title: "Unit",
-            icon: <Ruler size={18} />,
-            items: [
-                {
-                    name: "Weight",
-                    url: "/unit/weight",
-                    icon: <Ruler size={16} />,
-                    options: ["kg", "pound"],
-                    type: "weight",
-                },
-                {
-                    name: "Height",
-                    url: "/unit/height",
-                    icon: <Ruler size={16} />,
-                    options: ["cm", "ft & in"],
-                    type: "height",
-                },
-            ],
-        },
+
         {
             title: "Help",
             icon: <HelpCircle size={18} />,
@@ -125,9 +103,7 @@ const ProfilePage = () => {
         }));
     };
 
-    const handleToggle = (type, option) => {
-        setUnitSettings((prev) => ({ ...prev, [type]: option }));
-    };
+
 
     const handleLogout = () => {
         setLogoutModal(false);
@@ -368,16 +344,8 @@ const ProfilePage = () => {
                                                                             key={option}
                                                                             whileHover={{ scale: 1.05 }}
                                                                             whileTap={{ scale: 0.95 }}
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleToggle(item.type, option);
-                                                                            }}
-                                                                            className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium transition-colors duration-200 ${unitSettings[item.type] === option
-                                                                                ? "bg-indigo-500 text-white"
-                                                                                : darkMode
-                                                                                    ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                                                                                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                                                                                }`}
+
+                                                                            className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium transition-colors duration-200 `}
                                                                         >
                                                                             {option}
                                                                         </motion.button>

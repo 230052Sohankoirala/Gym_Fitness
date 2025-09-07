@@ -28,6 +28,7 @@ import TrainerHome from "./pages/Trainer/TrainerHome";
 import TrainerNavbar from "./components/trainerComponents/TrainerNavbar";
 import TrainerClient from "./pages/Trainer/TrainerClient";
 import TrainerSessions from "./pages/Trainer/TrainerSessions";
+import EditProfile from "./pages/User/userProfile/EditProfile";
 
 // Admin
 
@@ -45,7 +46,7 @@ const Layout = ({ children }) => {
   // User pages where Navbar should be hidden
   const noUserNavbarRoutes = [
     "/", "/login", "/register", "/userGoal", "/userInfo",
-    "/recentActivity", "/help"
+    "/recentActivity", "/help","/editProfile"
   ];
 
   const hideUserNavbar =
@@ -110,6 +111,7 @@ function App() {
             <Route path="/workoutsVideo" element={<WorkoutVideo />} />
             <Route path="/workoutsVideo/:slug" element={<WorkoutVideo />} />
             <Route path="/help" element={<HelpCenter />} />
+            <Route path="/editProfile" element={<EditProfile />} />
 
             {/* Messages */}
             <Route path="/chat/:trainerName" element={<MessagePortal />} />
