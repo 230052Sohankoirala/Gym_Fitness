@@ -13,6 +13,7 @@ import {
   Receipt,
   CreditCard,
   ChevronRight,
+  View,
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -36,9 +37,7 @@ const AdminHomepage = () => {
   ];
 
   const activity = [
-    { id: "a1", text: "New Trainer joined: Nirmal P.", time: "2m ago" },
-   
-  ];
+    { id: "a1", text: "New Trainer joined: Nirmal P.", time: "2m ago" }, ];
 
   // simple sparkline points (pure SVG)
   const revenuePoints = useMemo(() => {
@@ -85,9 +84,9 @@ const AdminHomepage = () => {
           <div className="ml-auto">
             <button
               onClick={() => navigate("/admin/settings")}
-              className={`px-3 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition-colors duration-200 ${darkMode
-                  ? "bg-gray-800 hover:bg-gray-700 text-white"
-                  : "bg-white hover:bg-gray-50 border border-gray-200"
+              className={`cursor-pointer px-3 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition-colors duration-200 ${darkMode
+                ? "bg-gray-800 hover:bg-gray-700 text-white"
+                : "bg-white text-black hover:bg-gray-50 border border-gray-200"
                 }`}
             >
               <Settings size={16} />
@@ -127,9 +126,9 @@ const AdminHomepage = () => {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2">
               <ActionButton
-                icon={<PlusCircle size={18} />}
-                label="Add Class"
-                onClick={() => navigate("/classes/new")}
+                icon={<View size={18} />}
+                label="ShowClasses"
+                onClick={() => navigate("/admin/classes")}
                 darkMode={darkMode}
               />
               <ActionButton
@@ -138,12 +137,7 @@ const AdminHomepage = () => {
                 onClick={() => navigate("/trainers/new")}
                 darkMode={darkMode}
               />
-              <ActionButton
-                icon={<Receipt size={18} />}
-                label="View Bookings"
-                onClick={() => navigate("/bookings")}
-                darkMode={darkMode}
-              />
+            
               <ActionButton
                 icon={<CreditCard size={18} />}
                 label="Billing"

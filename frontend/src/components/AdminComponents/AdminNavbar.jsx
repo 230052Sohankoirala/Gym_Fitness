@@ -10,7 +10,7 @@ import {
     CreditCard,
     FileText,
     Database,
-    Settings,
+
     Bell,
     Menu,
     X,
@@ -26,7 +26,7 @@ const ADMIN_LINKS = [
     { name: "Payments", to: "/admin/payments", icon: <CreditCard size={18} /> },
     { name: "Reports", to: "/admin/reports", icon: <FileText size={18} /> },
     { name: "System", to: "/admin/system", icon: <Database size={18} /> },
-    { name: "Settings", to: "/admin/settings", icon: <Settings size={18} /> },
+
 ];
 
 /**

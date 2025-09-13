@@ -55,7 +55,7 @@ const AdminLogin = () => {
             setIsSubmitting(false);
 
             // navigate after success
-            navigate("/adminHome");
+            navigate("/admin");
         }, 1500);
     };
 
