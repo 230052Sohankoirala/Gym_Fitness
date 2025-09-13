@@ -24,13 +24,19 @@ import UserPlanCard from "./pages/User/UserPlanCard";
 // Trainer
 import TrainerLogin from "./auth/TrainerAuth/trainerLogin";
 import TrainerHome from "./pages/Trainer/TrainerHome";
-// NOTE: ensure this import path is correct in your repo structure
 import TrainerNavbar from "./components/trainerComponents/TrainerNavbar";
 import TrainerClient from "./pages/Trainer/TrainerClient";
 import TrainerSessions from "./pages/Trainer/TrainerSessions";
-import EditProfile from "./pages/User/userProfile/EditProfile";
 
 // Admin
+import AdminLogin from "./auth/AdminAuth/adminLogin";
+import AdminNavbar from "./components/AdminComponents/AdminNavbar";
+import AdminHomepage from "./pages/Admin/AdminHomepage";
+import AdminSettings from "./pages/Admin/AdminSettings";
+
+// Shared
+import EditProfile from "./pages/User/userProfile/EditProfile";
+import UserNotifications from "./pages/User/userProfile/Notification";
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -39,27 +45,28 @@ const Layout = ({ children }) => {
   const path = location.pathname;
 
   const isTrainerRoute = path.startsWith("/trainer");
-
+  const isAdminRoute = path.startsWith("/admin");
   const isTrainerLogin = path === "/trainerLogin";
-
+  const isAdminLogin = path === "/adminLogin";
 
   // User pages where Navbar should be hidden
   const noUserNavbarRoutes = [
-    "/", "/login", "/register", "/userGoal", "/userInfo",
-    "/recentActivity", "/help","/editProfile"
+    "/", "/memberLogin", "/register", "/userGoal", "/userInfo",
+    "/recentActivity", "/help",
   ];
 
   const hideUserNavbar =
     noUserNavbarRoutes.includes(path) ||
     path.startsWith("/chat/") ||
     path.startsWith("/workout/") ||
-    isTrainerRoute;
+    isTrainerRoute ||
+    isAdminRoute;
 
-  // Decide which top navbar to show
   let TopNav = null;
   if (isTrainerRoute && !isTrainerLogin) {
     TopNav = <TrainerNavbar />;
-  
+  } else if (isAdminRoute && !isAdminLogin) {
+    TopNav = <AdminNavbar />;
   } else if (!hideUserNavbar) {
     TopNav = <Navbar />;
   }
@@ -71,7 +78,7 @@ const Layout = ({ children }) => {
       }`}
     >
       {TopNav}
-      <div className={!hideUserNavbar && !isTrainerRoute  ? "pt-1" : ""}>
+      <div className={!hideUserNavbar && !isTrainerRoute && !isAdminRoute ? "pt-1" : ""}>
         {children}
       </div>
     </div>
@@ -86,18 +93,12 @@ function App() {
           <Routes>
             {/* Public / Auth */}
             <Route path="/" element={<WelcomePage />} />
-            <Route path="/login" element={<UserLogin />} />
+            <Route path="/memberLogin" element={<UserLogin />} />
             <Route path="/register" element={<UserRegister />} />
+            <Route path="/trainerLogin" element={<TrainerLogin />} />
+            <Route path="/adminLogin" element={<AdminLogin />} />
 
-            {/* User Info */}
-            <Route path="/userInfo" element={<UserInfo />} />
-            <Route path="/userGoal" element={<UserGoal />} />
-
-            {/* User Dashboard */}
-            <Route path="/recentActivity" element={<RecentActivity />} />
-            <Route path="/workoutPlan/:category" element={<UserPlanCard />} />
-
-            {/* User Navbar routes */}
+            {/* User */}
             <Route path="/home" element={<Home />} />
             <Route path="/workouts" element={<Workout />} />
             <Route path="/nutrition" element={<Nutrients />} />
@@ -105,24 +106,26 @@ function App() {
             <Route path="/workout/:id" element={<WorkoutDetail />} />
             <Route path="/userMeals" element={<UserMeals />} />
             <Route path="/userClasses" element={<UserClasses />} />
-
-            {/* User Profile */}
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/workoutsVideo" element={<WorkoutVideo />} />
             <Route path="/workoutsVideo/:slug" element={<WorkoutVideo />} />
-            <Route path="/help" element={<HelpCenter />} />
             <Route path="/editProfile" element={<EditProfile />} />
-
-            {/* Messages */}
+            <Route path="/notifications" element={<UserNotifications />} />
             <Route path="/chat/:trainerName" element={<MessagePortal />} />
+            <Route path="/userInfo" element={<UserInfo />} />
+            <Route path="/recentActivity" element={<RecentActivity />} />
+            <Route path="/userGoal" element={<UserGoal />} />
+            <Route path="/help" element={<HelpCenter />} />
+            <Route path="/workoutPlan/:category" element={<UserPlanCard />} />
 
             {/* Trainer */}
-            <Route path="/trainerLogin" element={<TrainerLogin />} />
             <Route path="/trainerHome" element={<TrainerHome />} />
             <Route path="/trainer/clients" element={<TrainerClient />} />
             <Route path="/trainer/sessions" element={<TrainerSessions />} />
 
-       
+            {/* Admin */}
+            <Route path="/admin" element={<AdminHomepage />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
           </Routes>
         </Layout>
       </Router>
