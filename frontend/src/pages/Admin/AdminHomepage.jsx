@@ -134,14 +134,14 @@ const AdminHomepage = () => {
               <ActionButton
                 icon={<UserPlus size={18} />}
                 label="Add Trainer"
-                onClick={() => navigate("/trainers/new")}
+                onClick={() => navigate("/admin/trainers")}
                 darkMode={darkMode}
               />
             
               <ActionButton
                 icon={<CreditCard size={18} />}
                 label="Billing"
-                onClick={() => navigate("/billing")}
+                onClick={() => navigate("/admin/payments")}
                 darkMode={darkMode}
               />
             </div>

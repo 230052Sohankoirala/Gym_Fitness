@@ -37,6 +37,9 @@ import AdminSettings from "./pages/Admin/AdminSettings";
 // Shared
 import EditProfile from "./pages/User/userProfile/EditProfile";
 import UserNotifications from "./pages/User/userProfile/Notification";
+import AdminUserList from "./pages/Admin/AdminUserList";
+import AdminTrainerList from "./pages/Admin/AdminTrainerList";
+import AdminPayments from "./pages/Admin/AdminPayments";
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -73,9 +76,8 @@ const Layout = ({ children }) => {
 
   return (
     <div
-      className={`min-h-screen text-gray-900 dark:text-gray-100 transition-colors duration-200 ${
-        darkMode ? "bg-gray-900" : "bg-gray-100"
-      }`}
+      className={`min-h-screen text-gray-900 dark:text-gray-100 transition-colors duration-200 ${darkMode ? "bg-gray-900" : "bg-gray-100"
+        }`}
     >
       {TopNav}
       <div className={!hideUserNavbar && !isTrainerRoute && !isAdminRoute ? "pt-1" : ""}>
@@ -126,6 +128,9 @@ function App() {
             {/* Admin */}
             <Route path="/admin" element={<AdminHomepage />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/users" element={<AdminUserList />} />
+            <Route path="/admin/trainers" element={<AdminTrainerList />} />
+            <Route path="/admin/payments" element={<AdminPayments />} />
           </Routes>
         </Layout>
       </Router>
