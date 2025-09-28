@@ -40,6 +40,9 @@ import UserNotifications from "./pages/User/userProfile/Notification";
 import AdminUserList from "./pages/Admin/AdminUserList";
 import AdminTrainerList from "./pages/Admin/AdminTrainerList";
 import AdminPayments from "./pages/Admin/AdminPayments";
+import PrivacyPolicy from "../../../Project_learn/frontend/src/pages/WelcomePage/PrivacyPolicy";
+import Terms from "../../../Project_learn/frontend/src/pages/WelcomePage/Terms";
+import Contact from "../../../Project_learn/frontend/src/pages/WelcomePage/Contact";
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -55,7 +58,7 @@ const Layout = ({ children }) => {
   // User pages where Navbar should be hidden
   const noUserNavbarRoutes = [
     "/", "/memberLogin", "/register", "/userGoal", "/userInfo",
-    "/recentActivity", "/help",
+    "/recentActivity", "/help", "/privacy", "/terms", "/contacts"
   ];
 
   const hideUserNavbar =
@@ -99,6 +102,9 @@ function App() {
             <Route path="/register" element={<UserRegister />} />
             <Route path="/trainerLogin" element={<TrainerLogin />} />
             <Route path="/adminLogin" element={<AdminLogin />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/contacts" element={<Contact />} />
 
             {/* User */}
             <Route path="/home" element={<Home />} />
