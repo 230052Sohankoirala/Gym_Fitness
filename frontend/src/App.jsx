@@ -43,6 +43,9 @@ import AdminPayments from "./pages/Admin/AdminPayments";
 import PrivacyPolicy from "../../../Project_learn/frontend/src/pages/WelcomePage/PrivacyPolicy";
 import Terms from "../../../Project_learn/frontend/src/pages/WelcomePage/Terms";
 import Contact from "../../../Project_learn/frontend/src/pages/WelcomePage/Contact";
+import TrainerMessages from "./pages/Trainer/TrainerMessages";
+import TrainerSettings from "./pages/Trainer/TrainerSettings";
+
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -130,6 +133,9 @@ function App() {
             <Route path="/trainerHome" element={<TrainerHome />} />
             <Route path="/trainer/clients" element={<TrainerClient />} />
             <Route path="/trainer/sessions" element={<TrainerSessions />} />
+            <Route path="/trainer/messages" element={<TrainerMessages />} />
+            <Route path="/trainer/settings" element={<TrainerSettings />} />
+
 
             {/* Admin */}
             <Route path="/admin" element={<AdminHomepage />} />

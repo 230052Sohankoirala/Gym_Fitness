@@ -13,7 +13,7 @@ const PrivacyPolicy = () => {
                     className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg"
                     onClick={handleBack}
                 >
-                    <MoveLeft />
+                    <MoveLeft /> <span>Back</span>
                 </button>
             </div>
             <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-8 lg:p-12">
