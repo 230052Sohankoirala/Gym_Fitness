@@ -1,478 +1,457 @@
-import { motion } from 'framer-motion';// eslint-disable-line no-unused-vars
-import { useTheme } from '../../context/ThemeContext';
-import { MessageCircle, Star, Calendar, Clock, Users, MapPin, CreditCard, X } from 'lucide-react';
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+/* eslint-disable no-unused-vars */
+// src/pages/member/UserClasses.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "../../context/ThemeContext";
+import {
+    MessageCircle,
+    Star,
+    Calendar,
+    Clock,
+    Users,
+    Search,
+    Filter,
+    ChevronDown,
+    CheckCircle2,
+    XCircle
+} from "lucide-react";
+
+// ---------------------------
+// Mock Data (UI-only)
+// ---------------------------
+const MOCK_TRAINERS = [
+    {
+        _id: "t1",
+        name: "Adarsh Sapkota",
+        speciality: "Strength & Conditioning",
+        experience: "5 yrs",
+        rating: 4.6,
+        bio: "Focus on compound lifts, proper form, and sustainable habit building.",
+    },
+    {
+        _id: "t2",
+        name: "Suvam Parajuli",
+        speciality: "Yoga & Mobility",
+        experience: "3 yrs",
+        rating: 4.9,
+        bio: "Breath-led mobility sequences that enhance flexibility and calm.",
+    },
+    {
+        _id: "t3",
+        name: "Shrabhya Paudel",
+        speciality: "HIIT & Fat Loss",
+        experience: "4 yrs",
+        rating: 4.4,
+        bio: "Time-efficient intervals that keep intensity high and results higher.",
+    },
+];
+
+const MOCK_SESSIONS = [
+    {
+        _id: "s1",
+        trainer: "t1",
+        date: "2025-11-10",
+        time: "07:00–08:00",
+        maxClients: 6,
+        clientsEnrolled: [],
+        status: "Pending",
+        title: "Barbell Foundations",
+    },
+    {
+        _id: "s2",
+        trainer: "t1",
+        date: "2025-11-12",
+        time: "18:00–19:00",
+        maxClients: 8,
+        clientsEnrolled: ["me"],
+        status: "Confirmed",
+        title: "Upper Body Strength",
+    },
+    {
+        _id: "s3",
+        trainer: "t2",
+        date: "2025-11-11",
+        time: "06:30–07:15",
+        maxClients: 12,
+        clientsEnrolled: [],
+        status: "Pending",
+        title: "Morning Vinyasa Flow",
+    },
+    {
+        _id: "s4",
+        trainer: "t3",
+        date: "2025-11-13",
+        time: "17:30–18:10",
+        maxClients: 10,
+        clientsEnrolled: ["me", "u2", "u3", "u4", "u5"],
+        status: "Confirmed",
+        title: "After-Work HIIT",
+    },
+];
+
+// Utility: star array
+const StarRow = ({ value = 0 }) => {
+    const full = Math.floor(value);
+    return (
+        <div className="flex items-center">
+            {[...Array(5)].map((_, i) => (
+                <Star
+                    key={i}
+                    size={16}
+                    className={i < full ? "text-yellow-400" : "text-gray-300 dark:text-gray-500"}
+                />
+            ))}
+            <span className="ml-2 text-sm font-medium">{typeof value === "number" ? value.toFixed(1) : "N/A"}</span>
+        </div>
+    );
+};
+
+// Tag
+const Tag = ({ children }) => (
+    <span className="inline-block px-2 py-0.5 text-[11px] rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200">
+        {children}
+    </span>
+);
+
+// Skeleton Card
+const TrainerCardSkeleton = ({ darkMode }) => (
+    <div className={`rounded-xl overflow-hidden shadow-lg ${darkMode ? "bg-gray-800" : "bg-white"} p-5`}>
+        <div className="animate-pulse space-y-3">
+            <div className="h-5 w-2/3 bg-gray-200 dark:bg-gray-700 rounded" />
+            <div className="h-3 w-1/2 bg-gray-200 dark:bg-gray-700 rounded" />
+            <div className="h-3 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+            <div className="h-16 w-full bg-gray-200 dark:bg-gray-700 rounded" />
+            <div className="h-24 w-full bg-gray-200 dark:bg-gray-700 rounded" />
+        </div>
+    </div>
+);
+
+// Variants
+const cardVariants = {
+    initial: { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.25 } },
+    hover: { y: -5, transition: { duration: 0.2 } },
+};
 
 const UserClasses = () => {
     const { darkMode } = useTheme();
+    const [loading, setLoading] = useState(true);
 
-    const trainers = [
-        {
-            id: 1,
-            name: "Sohan Koirala",
-            img: "/trainer1.jpg",
-            speciality: "Yoga",
-            rating: 4.5,
-            bio: "Certified yoga instructor with 8 years of experience specializing in Hatha and Vinyasa flow.",
-            experience: "8 years",
-            availableSlots: [
-                { date: "2023-06-15", times: ["09:00", "11:00", "15:00"] },
-                { date: "2023-06-16", times: ["10:00", "14:00", "16:00"] }
-            ]
-        },
-        {
-            id: 2,
-            name: "Anita Sharma",
-            img: "/trainer2.jpg",
-            speciality: "Pilates",
-            rating: 4.7,
-            bio: "Pilates expert focused on core strength and rehabilitation with a holistic approach to fitness.",
-            experience: "6 years",
-            availableSlots: [
-                { date: "2023-06-15", times: ["08:00", "12:00", "17:00"] },
-                { date: "2023-06-16", times: ["09:00", "13:00", "18:00"] }
-            ]
-        },
-        {
-            id: 3,
-            name: "Rajesh Thapa",
-            img: "/trainer3.jpg",
-            speciality: "Strength Training",
-            rating: 4.8,
-            bio: "Strength and conditioning coach helping clients build muscle and improve athletic performance.",
-            experience: "10 years",
-            availableSlots: [
-                { date: "2023-06-15", times: ["07:00", "12:00", "19:00"] },
-                { date: "2023-06-16", times: ["08:00", "13:00", "18:00"] }
-            ]
-        },
-        {
-            id: 4,
-            name: "Priya Khatri",
-            img: "/trainer4.jpg",
-            speciality: "Cardio",
-            rating: 4.6,
-            bio: "Cardio specialist creating high-energy workouts that maximize calorie burn and endurance.",
-            experience: "5 years",
-            availableSlots: [
-                { date: "2023-06-15", times: ["06:00", "10:00", "16:00"] },
-                { date: "2023-06-16", times: ["07:00", "11:00", "17:00"] }
-            ]
-        },
-        {
-            id: 5,
-            name: "Suman Gurung",
-            img: "/trainer5.jpg",
-            speciality: "Crossfit",
-            rating: 4.9,
-            bio: "CrossFit Level 2 trainer with competition experience focused on functional movement at high intensity.",
-            experience: "7 years",
-            availableSlots: [
-                { date: "2023-06-15", times: ["05:00", "09:00", "17:00"] },
-                { date: "2023-06-16", times: ["06:00", "10:00", "16:00"] }
-            ]
-        }
-    ];
+    // Local UI state (no backend)
+    const [trainers, setTrainers] = useState([]);
+    const [sessions, setSessions] = useState([]);
+    const [me] = useState("me"); // fake logged-in user id
+    const [search, setSearch] = useState("");
+    const [speciality, setSpeciality] = useState("All");
+    const [onlyEnrolled, setOnlyEnrolled] = useState(false);
+    const [joinMessage, setJoinMessage] = useState("");
 
-    const classes = [
-        {
-            id: 1,
-            name: "Morning Yoga",
-            trainer: "Sohan Koirala",
-            trainerId: 1,
-            duration: "60 mins",
-            price: "Membership",
-            description: "Start your day with a peaceful yoga session that focuses on breathing, flexibility, and mindfulness.",
-            intensity: "Moderate",
-            capacity: 15,
-            location: "Studio A"
-        },
-        {
-            id: 2,
-            name: "Evening Yoga",
-            trainer: "Sohan Koirala",
-            trainerId: 1,
-            duration: "45 mins",
-            price: "Membership",
-            description: "Wind down your day with a relaxing yoga flow that releases tension and prepares you for restful sleep.",
-            intensity: "Light",
-            capacity: 12,
-            location: "Studio A"
-        },
-        {
-            id: 3,
-            name: "Pilates Basics",
-            trainer: "Anita Sharma",
-            trainerId: 2,
-            duration: "50 mins",
-            price: "Membership",
-            description: "Learn the fundamentals of Pilates with a focus on core strength, posture, and controlled movements.",
-            intensity: "Moderate",
-            capacity: 10,
-            location: "Studio B"
-        },
-        {
-            id: 4,
-            name: "Strength Training 101",
-            trainer: "Rajesh Thapa",
-            trainerId: 3,
-            duration: "55 mins",
-            price: "Membership",
-            description: "Build functional strength using free weights and resistance training with proper form guidance.",
-            intensity: "High",
-            capacity: 8,
-            location: "Weight Room"
-        },
-        {
-            id: 5,
-            name: "Cardio Blast",
-            trainer: "Priya Khatri",
-            trainerId: 4,
-            duration: "40 mins",
-            price: "Membership",
-            description: "High-intensity cardio workout that combines intervals, circuits, and endurance training.",
-            intensity: "High",
-            capacity: 20,
-            location: "Studio C"
-        },
-        {
-            id: 6,
-            name: "Crossfit Challenge",
-            trainer: "Suman Gurung",
-            trainerId: 5,
-            duration: "55 mins",
-            price: "Membership",
-            description: "Functional movements performed at high intensity in a group setting with constant variation.",
-            intensity: "Very High",
-            capacity: 12,
-            location: "Crossfit Area"
-        }
-    ];
+    // Simulate initial load
+    useEffect(() => {
+        const t = setTimeout(() => {
+            setTrainers(MOCK_TRAINERS);
+            setSessions(MOCK_SESSIONS);
+            setLoading(false);
+        }, 600);
+        return () => clearTimeout(t);
+    }, []);
 
-    // State management
-    const [membershipStatus, setMembershipStatus] = useState(Array(classes.length).fill(false));
-    const [selectedTrainer, setSelectedTrainer] = useState(null);
-    const [selectedClass, setSelectedClass] = useState(null);
-    const [bookingStep, setBookingStep] = useState(0); // 0: not booking, 1: select time, 2: confirm
-    const [selectedDate, setSelectedDate] = useState("");
-    const [selectedTime, setSelectedTime] = useState("");
-    const [enrollmentStep, setEnrollmentStep] = useState(0); // 0: not enrolling, 1: confirm enrollment
+    // Helpers
+    const isEnrolled = (session) => (session?.clientsEnrolled || []).includes(me);
+    const trainerIdOf = (s) => (typeof s?.trainer === "string" ? s.trainer : s?.trainer?._id || s?.trainer?.id);
 
-    // Handle booking a trainer
-    const handleBookTrainer = (trainer) => {
-        setSelectedTrainer(trainer);
-        setBookingStep(1);
-        setSelectedDate(trainer.availableSlots[0].date);
-    };
+    // Filters
+    const specialities = useMemo(() => ["All", ...Array.from(new Set(MOCK_TRAINERS.map((t) => t.speciality)))], []);
 
-    // Handle enrolling in a class
-    const handleEnrollClass = (cls) => {
-        setSelectedClass(cls);
-        setEnrollmentStep(1);
-    };
-
-    // Complete booking process
-    const completeBooking = () => {
-        // In a real app, you would save this booking to a database
-        alert(`Booking confirmed with ${selectedTrainer.name} on ${selectedDate} at ${selectedTime}`);
-        setBookingStep(0);
-        setSelectedTrainer(null);
-    };
-
-    // Complete enrollment process
-    const completeEnrollment = () => {
-        // In a real app, you would save this enrollment to a database
-
-        // Update membership status for this class
-        const classIndex = classes.findIndex(c => c.id === selectedClass.id);
-        setMembershipStatus(prev => {
-            const newStatus = [...prev];
-            newStatus[classIndex] = true;
-            return newStatus;
+    const visibleTrainers = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return trainers.filter((t) => {
+            const matchesText =
+                !q ||
+                t.name.toLowerCase().includes(q) ||
+                t.bio.toLowerCase().includes(q) ||
+                (t.speciality || "").toLowerCase().includes(q);
+            const matchesSpec = speciality === "All" || t.speciality === speciality;
+            return matchesText && matchesSpec;
         });
-        setEnrollmentStep(0);
-        setSelectedClass(null);
-    };
+    }, [trainers, search, speciality]);
 
-    // Handle buying membership
-    const handleBuyMembership = (index) => {
-        setMembershipStatus(prevStatus => {
-            return prevStatus.map((status, i) => {
-                if (i === index) {
-                    return !status;
-                } else {
-                    return status;
-                }
+    const sessionsByTrainer = useMemo(() => {
+        const map = new Map();
+        sessions.forEach((s) => {
+            if (onlyEnrolled && !isEnrolled(s)) return;
+            const tid = trainerIdOf(s);
+            if (!map.has(tid)) map.set(tid, []);
+            map.get(tid).push(s);
+        });
+        return map;
+    }, [sessions, onlyEnrolled]);
+
+    // UI Actions
+    const handleBook = (sessionId) => {
+        setSessions((prev) =>
+            prev.map((s) => {
+                if (s._id !== sessionId) return s;
+                // capacity check
+                const full = (s.clientsEnrolled?.length || 0) >= (s.maxClients || 0);
+                if (full || isEnrolled(s)) return s;
+                const firstEnrollment = (s.clientsEnrolled?.length ?? 0) === 0;
+                return {
+                    ...s,
+                    clientsEnrolled: [...(s.clientsEnrolled || []), me],
+                    status: s.status === "Pending" && firstEnrollment ? "Confirmed" : s.status,
+                };
             })
-        });
+        );
+        setJoinMessage("Joined!");
+        setTimeout(() => setJoinMessage(""), 1500);
+    };
+
+    const handleChat = (trainerId) => {
+        setJoinMessage("Opening chat…");
+        setTimeout(() => setJoinMessage(""), 1200);
+        // In real app: navigate(`/chat/${trainerId}`)
+    };
+
+    // UI Formatting helpers
+    const prettyDate = (iso) => {
+        try {
+            const d = new Date(iso + "T00:00:00");
+            return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+        } catch {
+            return iso;
+        }
+    };
+
+    const StatusBadge = ({ status }) => {
+        const ok = status === "Confirmed";
+        return (
+            <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-full ${ok
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-200"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200"
+                    }`}
+            >
+                {ok ? <CheckCircle2 size={12} /> : <XCircle size={12} className="opacity-70" />}
+                {status}
+            </span>
+        );
     };
 
     return (
-        <>
-            {/* Booking Modal */}
-            {bookingStep > 0 && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className={`rounded-xl p-6 max-w-md w-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
-                    >
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold">Book {selectedTrainer.name}</h3>
-                            <button onClick={() => setBookingStep(0)} className="p-1">
-                                <X size={24} />
-                            </button>
-                        </div>
+        <div className={`p-6 min-h-screen ${darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"}`}>
+            {/* Header */}
+            <div className="max-w-7xl mx-auto">
+                <h1 className={`${darkMode ? "text-white" : "text-gray-800"} text-3xl font-bold text-center mt-2 mb-6`}>
+                    Trainers & Classes
+                </h1>
 
-                        {bookingStep === 1 && (
-                            <>
-                                <div className="mb-4">
-                                    <label className="block mb-2 font-medium">Select Date</label>
-                                    <select
-                                        value={selectedDate}
-                                        onChange={(e) => setSelectedDate(e.target.value)}
-                                        className={`w-full p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-900'}`}
-                                    >
-                                        {selectedTrainer.availableSlots.map(slot => (
-                                            <option key={slot.date} value={slot.date}>
-                                                {new Date(slot.date).toLocaleDateString()}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="mb-4">
-                                    <label className="block mb-2 font-medium">Available Times</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {selectedTrainer.availableSlots
-                                            .find(slot => slot.date === selectedDate)?.times
-                                            .map(time => (
-                                                <button
-                                                    key={time}
-                                                    onClick={() => setSelectedTime(time)}
-                                                    className={`p-2 rounded-lg text-center ${selectedTime === time
-                                                        ? 'bg-blue-500 text-white'
-                                                        : darkMode ? 'bg-gray-700' : 'bg-gray-100'
-                                                        }`}
-                                                >
-                                                    {time}
-                                                </button>
-                                            ))}
-                                    </div>
-                                </div>
-
-                                <button
-                                    onClick={() => setBookingStep(2)}
-                                    disabled={!selectedTime}
-                                    className={`w-full py-3 rounded-lg font-medium ${!selectedTime
-                                        ? 'bg-gray-400 cursor-not-allowed'
-                                        : 'bg-blue-500 hover:bg-blue-600'
-                                        } text-white`}
-                                >
-                                    Continue to Confirm
-                                </button>
-                            </>
-                        )}
-
-                        {bookingStep === 2 && (
-                            <>
-                                <div className={`p-4 rounded-lg mb-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                                    <h4 className="font-bold mb-2">Booking Summary</h4>
-                                    <p>Trainer: {selectedTrainer.name}</p>
-                                    <p>Date: {new Date(selectedDate).toLocaleDateString()}</p>
-                                    <p>Time: {selectedTime}</p>
-                                    <p className="mt-2 font-medium">Duration: 60 minutes</p>
-                                    <p className="font-medium">Price: $50</p>
-                                </div>
-
-                                <div className="mb-4">
-                                    <label className="block mb-2 font-medium">Payment Method</label>
-                                    <div className={`p-3 rounded-lg flex items-center ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                                        <CreditCard size={20} className="mr-2" />
-                                        <span>Credit Card ending in 4567</span>
-                                    </div>
-                                </div>
-
-                                <button
-                                    onClick={completeBooking}
-                                    className="w-full py-3 bg-green-500 hover:bg-green-600 rounded-lg font-medium text-white"
-                                >
-                                    Confirm Booking
-                                </button>
-                            </>
-                        )}
-                    </motion.div>
-                </div>
-            )}
-
-            {/* Enrollment Modal */}
-            {enrollmentStep > 0 && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className={`rounded-xl p-6 max-w-md w-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
-                    >
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className={`${darkMode ? 'text-white' : 'text-gray-800'} text-xl font-bold`}>Enroll in {selectedClass.name}</h3>
-                            <button onClick={() => setEnrollmentStep(0)} className="p-1">
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        <div className={`p-4 rounded-lg mb-4 ${darkMode ? 'bg-gray-700 ' : 'bg-gray-100 text-black'}`}>
-                            <h4 className="font-bold mb-2">Class Details</h4>
-                            <p>Trainer: {selectedClass.trainer}</p>
-                            <p>Duration: {selectedClass.duration}</p>
-                            <p>Intensity: {selectedClass.intensity}</p>
-                            <p>Location: {selectedClass.location}</p>
-                            <p className="mt-2">{selectedClass.description}</p>
-                        </div>
-                        <Link to={`class/${selectedClass.id}`}>
-                            <button
-                                onClick={completeEnrollment}
-                                className="w-full py-3 bg-green-500 hover:bg-green-600 rounded-lg font-medium text-white"
-                            >
-                                Enroll
-                            </button>
-                        </Link>
-                    </motion.div>
-                </div>
-            )}
-
-            <h1 className={`${darkMode ? 'text-white' : 'text-gray-800'} text-3xl font-bold text-center mt-12 mb-12`}>
-                Available Trainers
-            </h1>
-
-            <motion.section
-                className={`p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-8 transition-colors duration-200 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}
-            >
-                {trainers.map((trainer, index) => (
-                    <motion.div
-                        key={index}
-                        whileHover={{ y: -5 }}
-                        className={`rounded-xl overflow-hidden flex flex-col transition-colors duration-200 shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
-                    >
-                        <img
-                            src={trainer.img}
-                            alt={trainer.name}
-                            className="w-full h-48 object-cover rounded-t-xl"
+                {/* Controls */}
+                <div
+                    className={`grid grid-cols-1 md:grid-cols-3 gap-3 mb-8 ${darkMode ? "text-white" : "text-gray-900"
+                        }`}
+                >
+                    <div className={`flex items-center gap-2 rounded-xl px-3 py-2 ${darkMode ? "bg-gray-800" : "bg-white"} shadow`}>
+                        <Search size={18} className="opacity-70" />
+                        <input
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Search trainers, specialties, bios…"
+                            className={`w-full bg-transparent outline-none text-sm ${darkMode ? "placeholder-gray-400" : "placeholder-gray-500"}`}
                         />
-                        <div className="p-5 flex-1 flex flex-col justify-between">
-                            <div>
-                                <h3 className="text-xl font-semibold mb-1">{trainer.name}</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-300 mb-2">
-                                    {trainer.speciality} • {trainer.experience} experience
-                                </p>
-                                <div className="flex items-center mb-2">
-                                    {[...Array(5)].map((_, i) => (
-                                        <Star
-                                            key={i}
-                                            size={16}
-                                            className={
-                                                i < Math.floor(trainer.rating)
-                                                    ? 'text-yellow-400'
-                                                    : 'text-gray-300'
-                                            }
-                                        />
-                                    ))}
-                                    <span className="ml-2 text-sm font-medium">
-                                        {trainer.rating.toFixed(1)}
-                                    </span>
-                                </div>
-                                <p className="text-sm mt-2 line-clamp-3">{trainer.bio}</p>
-                            </div>
-                            <div className="mt-4 flex gap-3">
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleBookTrainer(trainer)}
-                                    className="flex-1 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-medium shadow-md hover:from-blue-600 hover:to-blue-700 transition flex items-center justify-center gap-2"
-                                >
-                                    <Calendar size={16} /> Book
-                                </motion.button>
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    className="flex-1 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-medium shadow-md hover:from-green-600 hover:to-green-700 transition flex items-center justify-center gap-2"
-                                >
-                                    <MessageCircle size={16} />
-                                    <Link to={`/chat/${trainer.id}`} state={{
-                                        trainer
-                                    }}>Chat</Link>
-                                </motion.button>
+                    </div>
 
-                            </div>
+                    <div className={`flex items-center justify-between rounded-xl px-3 py-2 ${darkMode ? "bg-gray-800" : "bg-white"} shadow`}>
+                        <div className="flex items-center gap-2">
+                            <Filter size={18} className="opacity-70" />
+                            <span className="text-sm font-medium">Speciality</span>
                         </div>
-                    </motion.div>
-                ))}
-            </motion.section>
+                        <div className="relative">
+                            <select
+                                className={`appearance-none bg-transparent pr-6 text-sm outline-none cursor-pointer ${darkMode ? "text-white" : "text-gray-800"}`}
+                                value={speciality}
+                                onChange={(e) => setSpeciality(e.target.value)}
+                            >
+                                {specialities.map((s) => (
+                                    <option key={s} value={s}>
+                                        {s}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown size={16} className="absolute right-0 top-1/2 -translate-y-1/2 opacity-70" />
+                        </div>
+                    </div>
 
-            <h1 className={`${darkMode ? 'text-white' : 'text-gray-800'} text-3xl font-bold text-center mt-16 mb-12`}>
-                Classes
-            </h1>
-
-            <motion.section
-                className={`p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 transition-colors duration-200 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}
-            >
-                {classes.map((cls, index) => (
-                    <motion.div
-                        key={index}
-                        whileHover={{ y: -5 }}
-                        className={`rounded-xl overflow-hidden p-5 flex flex-col justify-between transition-colors duration-200 shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
+                    <label
+                        className={`flex items-center justify-between rounded-xl px-3 py-2 cursor-pointer select-none ${darkMode ? "bg-gray-800" : "bg-white"} shadow`}
                     >
-                        <div>
-                            <h3 className="text-xl font-semibold mb-1">{cls.name}</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-300 mb-2">
-                                Trainer: {cls.trainer}
-                            </p>
-                            <div className="flex items-center gap-4 text-sm my-3">
-                                <span className="flex items-center gap-1">
-                                    <Clock size={16} /> {cls.duration}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                    <Users size={16} /> {cls.capacity} spots
-                                </span>
-                                <span className="flex items-center gap-1">
-                                    <MapPin size={16} /> {cls.location}
-                                </span>
-                            </div>
-                            <p className="text-sm my-3">{cls.description}</p>
-                            <div className="my-3">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${cls.intensity === "Light" ? "bg-green-100 text-green-800" :
-                                    cls.intensity === "Moderate" ? "bg-yellow-100 text-yellow-800" :
-                                        cls.intensity === "High" ? "bg-orange-100 text-orange-800" :
-                                            "bg-red-100 text-red-800"
-                                    }`}>
-                                    Intensity: {cls.intensity}
-                                </span>
-                            </div>
-                        </div>
+                        <span className="text-sm font-medium">Show my enrollments only</span>
+                        <input
+                            type="checkbox"
+                            checked={onlyEnrolled}
+                            onChange={(e) => setOnlyEnrolled(e.target.checked)}
+                            className="h-4 w-4 accent-blue-600"
+                        />
+                    </label>
+                </div>
 
-                        {membershipStatus[index] ? (
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => handleEnrollClass(cls)}
-                                className="mt-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-medium shadow-md hover:from-blue-600 hover:to-blue-700 transition"
-                            >
-                                Enroll Now
-                            </motion.button>
-                        ) : (
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => handleBuyMembership(index)}
-                                className="mt-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-medium shadow-md hover:from-green-600 hover:to-green-700 transition"
-                            >
-                                Buy Membership
-                            </motion.button>
-                        )}
-                    </motion.div>
-                ))}
-            </motion.section>
-        </>
+                {/* Grid */}
+                <motion.section
+                    layout
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                    {loading ? (
+                        <>
+                            <TrainerCardSkeleton darkMode={darkMode} />
+                            <TrainerCardSkeleton darkMode={darkMode} />
+                            <TrainerCardSkeleton darkMode={darkMode} />
+                        </>
+                    ) : (
+                        <AnimatePresence initial={false}>
+                            {visibleTrainers.length === 0 ? (
+                                <div
+                                    className={`col-span-full rounded-xl p-8 text-center ${darkMode ? "bg-gray-800" : "bg-white"} shadow`}
+                                >
+                                    <p className="text-sm opacity-80">No trainers match your filters.</p>
+                                </div>
+                            ) : (
+                                visibleTrainers.map((trainer) => {
+                                    const tSessions = (sessionsByTrainer.get(trainer._id) || []).sort(
+                                        (a, b) => new Date(a.date) - new Date(b.date)
+                                    );
+
+                                    return (
+                                        <motion.div
+                                            key={trainer._id}
+                                            variants={cardVariants}
+                                            initial="initial"
+                                            animate="animate"
+                                            whileHover="hover"
+                                            exit={{ opacity: 0, y: 8, transition: { duration: 0.2 } }}
+                                            className={`rounded-xl overflow-hidden flex flex-col shadow-lg transition-colors ${darkMode ? "bg-gray-800" : "bg-white"
+                                                }`}
+                                        >
+                                            <div className="p-5 flex-1 flex flex-col">
+                                                {/* Trainer header */}
+                                                <div className="flex items-start gap-3">
+                                                    <div
+                                                        className={`h-12 w-12 rounded-full flex items-center justify-center text-sm font-semibold ${darkMode ? "bg-gray-700" : "bg-gray-100"
+                                                            }`}
+                                                        title={trainer.name}
+                                                    >
+                                                        {trainer.name
+                                                            .split(" ")
+                                                            .map((n) => n[0])
+                                                            .join("")
+                                                            .slice(0, 2)
+                                                            .toUpperCase()}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h3 className="text-lg font-semibold leading-tight">{trainer.name}</h3>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <Tag>{trainer.speciality || "Fitness"}</Tag>
+                                                            <Tag>{trainer.experience || "N/A"} exp</Tag>
+                                                        </div>
+                                                        <div className="mt-2">
+                                                            <StarRow value={trainer.rating} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Bio */}
+                                                <p className="text-sm mt-3 line-clamp-3 opacity-90">{trainer.bio}</p>
+
+                                                {/* Sessions */}
+                                                <div className="mt-5 space-y-3">
+                                                    {tSessions.length === 0 ? (
+                                                        <p className="text-sm text-gray-400 dark:text-gray-500">No sessions available</p>
+                                                    ) : (
+                                                        tSessions.map((session) => {
+                                                            const enrolled = isEnrolled(session);
+                                                            const current = session.clientsEnrolled?.length || 0;
+                                                            const cap = session.maxClients || 0;
+                                                            const full = cap > 0 && current >= cap;
+
+                                                            return (
+                                                                <div
+                                                                    key={session._id}
+                                                                    className={`p-3 rounded-lg border ${darkMode ? "border-gray-700" : "border-gray-200"
+                                                                        }`}
+                                                                >
+                                                                    <div className="flex items-center justify-between mb-2">
+                                                                        <span className="text-sm font-medium">{session.title || "Class"}</span>
+                                                                        <StatusBadge status={session.status} />
+                                                                    </div>
+
+                                                                    <div className="flex justify-between items-center mb-2 text-sm">
+                                                                        <span className="flex items-center gap-1">
+                                                                            <Calendar size={14} /> {prettyDate(session.date)}
+                                                                        </span>
+                                                                        <span className="flex items-center gap-1">
+                                                                            <Clock size={14} /> {session.time}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    <div className="flex justify-between items-center text-sm">
+                                                                        <span className="flex items-center gap-1">
+                                                                            <Users size={14} /> {current}/{cap || "∞"}
+                                                                        </span>
+
+                                                                        {enrolled ? (
+                                                                            <motion.button
+                                                                                whileHover={{ scale: 1.05 }}
+                                                                                whileTap={{ scale: 0.95 }}
+                                                                                onClick={() => handleChat(trainer._id)}
+                                                                                className="flex items-center gap-2 px-3 py-1 rounded-lg bg-green-500 hover:bg-green-600 text-white text-xs font-medium"
+                                                                            >
+                                                                                <MessageCircle size={14} /> Chat Now
+                                                                            </motion.button>
+                                                                        ) : (
+                                                                            <motion.button
+                                                                                whileHover={{ scale: 1.05 }}
+                                                                                whileTap={{ scale: 0.95 }}
+                                                                                disabled={full}
+                                                                                onClick={() => handleBook(session._id)}
+                                                                                className={`px-3 py-1 rounded-lg text-xs font-medium ${full
+                                                                                        ? "bg-gray-500 cursor-not-allowed text-white"
+                                                                                        : "bg-blue-500 hover:bg-blue-600 text-white"
+                                                                                    }`}
+                                                                            >
+                                                                                {full ? "Full" : "Book"}
+                                                                            </motion.button>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })
+                            )}
+                        </AnimatePresence>
+                    )}
+                </motion.section>
+
+                {/* Booking status feedback */}
+                <AnimatePresence>
+                    {joinMessage && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="mt-6 text-center"
+                        >
+                            <p className="inline-block px-3 py-2 rounded-md text-sm font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200">
+                                {joinMessage}
+                            </p>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        </div>
     );
 };
 

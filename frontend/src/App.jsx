@@ -45,6 +45,7 @@ import Terms from "../../../Project_learn/frontend/src/pages/WelcomePage/Terms";
 import Contact from "../../../Project_learn/frontend/src/pages/WelcomePage/Contact";
 import TrainerMessages from "./pages/Trainer/TrainerMessages";
 import TrainerSettings from "./pages/Trainer/TrainerSettings";
+import TrainerAnalytics from "./pages/Trainer/TrainerAnalytics";
 
 
 const Layout = ({ children }) => {
@@ -135,6 +136,8 @@ function App() {
             <Route path="/trainer/sessions" element={<TrainerSessions />} />
             <Route path="/trainer/messages" element={<TrainerMessages />} />
             <Route path="/trainer/settings" element={<TrainerSettings />} />
+            <Route path="/trainer/analytics" element={<TrainerAnalytics />} />
+
 
 
             {/* Admin */}

@@ -10,7 +10,7 @@ const TRAINER_LINKS = [
   { name: "Dashboard", to: "/trainerHome", icon: <LayoutGrid size={18} /> },
   { name: "Clients", to: "/trainer/clients", icon: <Users size={18} /> },
   { name: "Sessions", to: "/trainer/sessions", icon: <CalendarDays size={18} /> },
-  
+  {name: "Reports", to: "/trainer/analytics", icon: <BarChart3 size={18} />},
   { name: "Messages", to: "/trainer/messages", icon: <MessageSquare size={18} /> },
 
   { name: "Settings", to: "/trainer/settings", icon: <Settings size={18} /> },

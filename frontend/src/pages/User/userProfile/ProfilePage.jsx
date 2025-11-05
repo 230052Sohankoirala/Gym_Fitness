@@ -108,7 +108,7 @@ const ProfilePage = () => {
     const handleLogout = () => {
         setLogoutModal(false);
         // Perform logout logic here
-        navigate("/login");
+        navigate("/memberLogin");
     };
 
     const handleItemClick = (sectionTitle, item) => {

@@ -323,7 +323,7 @@ const UserRegister = () => {
                     <motion.div variants={itemVariants} className="mt-6 text-center">
                         <p className="text-gray-600">
                             Already have an account?{" "}
-                            <Link to="/login" className="font-semibold text-indigo-600 hover:text-indigo-500">
+                            <Link to="/memberLogin" className="font-semibold text-indigo-600 hover:text-indigo-500">
                                 Login
                             </Link>
                         </p>
