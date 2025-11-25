@@ -46,6 +46,7 @@ import Contact from "../../../Project_learn/frontend/src/pages/WelcomePage/Conta
 import TrainerMessages from "./pages/Trainer/TrainerMessages";
 import TrainerSettings from "./pages/Trainer/TrainerSettings";
 import TrainerAnalytics from "./pages/Trainer/TrainerAnalytics";
+import TrainerNotification from "./pages/Trainer/TrainerNotification";
 
 
 const Layout = ({ children }) => {
@@ -137,6 +138,7 @@ function App() {
             <Route path="/trainer/messages" element={<TrainerMessages />} />
             <Route path="/trainer/settings" element={<TrainerSettings />} />
             <Route path="/trainer/analytics" element={<TrainerAnalytics />} />
+            <Route path="/trainer/notifications" element={<TrainerNotification />} />
 
 
 
