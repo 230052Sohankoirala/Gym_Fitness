@@ -47,6 +47,8 @@ import TrainerMessages from "./pages/Trainer/TrainerMessages";
 import TrainerSettings from "./pages/Trainer/TrainerSettings";
 import TrainerAnalytics from "./pages/Trainer/TrainerAnalytics";
 import TrainerNotification from "./pages/Trainer/TrainerNotification";
+import AdminReport from "./pages/Admin/AdminReport";
+import AdminSystem from "./pages/Admin/AdminSystem";
 
 
 const Layout = ({ children }) => {
@@ -145,6 +147,8 @@ function App() {
             {/* Admin */}
             <Route path="/admin" element={<AdminHomepage />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/report" element={<AdminReport />} />
+            <Route path="/admin/system" element={<AdminSystem />} />
             <Route path="/admin/users" element={<AdminUserList />} />
             <Route path="/admin/trainers" element={<AdminTrainerList />} />
             <Route path="/admin/payments" element={<AdminPayments />} />

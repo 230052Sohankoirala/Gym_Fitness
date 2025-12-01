@@ -24,7 +24,7 @@ const ADMIN_LINKS = [
     { name: "Users", to: "/admin/users", icon: <Users size={18} /> },
     { name: "Trainers", to: "/admin/trainers", icon: <ClipboardList size={18} /> },
     { name: "Payments", to: "/admin/payments", icon: <CreditCard size={18} /> },
-    { name: "Reports", to: "/admin/reports", icon: <FileText size={18} /> },
+    { name: "Reports", to: "/admin/report", icon: <FileText size={18} /> },
     { name: "System", to: "/admin/system", icon: <Database size={18} /> },
 
 ];
