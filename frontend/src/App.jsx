@@ -49,6 +49,7 @@ import TrainerAnalytics from "./pages/Trainer/TrainerAnalytics";
 import TrainerNotification from "./pages/Trainer/TrainerNotification";
 import AdminReport from "./pages/Admin/AdminReport";
 import AdminSystem from "./pages/Admin/AdminSystem";
+import AdminNotificationsPage from "./pages/Admin/AdminNotificationsPage";
 
 
 const Layout = ({ children }) => {
@@ -152,6 +153,8 @@ function App() {
             <Route path="/admin/users" element={<AdminUserList />} />
             <Route path="/admin/trainers" element={<AdminTrainerList />} />
             <Route path="/admin/payments" element={<AdminPayments />} />
+            <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
+
           </Routes>
         </Layout>
       </Router>
