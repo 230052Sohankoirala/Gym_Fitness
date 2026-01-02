@@ -13,6 +13,7 @@ import userRoutes from "./routes/userRoutes.js";
 import trainerRoutes from "./routes/trainerRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import sessionRoutes from "./routes/sessionRoutes.js";
+import taskRoutes from "./routes/taskRoutes.js";
 
 dotenv.config();
 
@@ -59,7 +60,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/sessions", sessionRoutes);
 // ================= Health =================
 app.get("/", (_req, res) => res.send("🚀 API is running..."));
-
+app.use("/api/tasks", taskRoutes);
 // ================= Error Middleware =================
 app.use((err, _req, res, _next) => {
   console.error("Error:", err.stack || err);

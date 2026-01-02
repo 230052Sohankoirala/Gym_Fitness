@@ -2,6 +2,7 @@
 
 import Notification from "../models/Notification.js";
 
+
 /**
  * sendNotification({
  *   user: ObjectId,
