@@ -14,6 +14,7 @@ import trainerRoutes from "./routes/trainerRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import sessionRoutes from "./routes/sessionRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
+import nutritionRoutes from "./routes/nutritionRoutes.js";
 
 dotenv.config();
 
@@ -58,6 +59,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/trainers", trainerRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/sessions", sessionRoutes);
+app.use("/api/nutrition", nutritionRoutes);
+
 // ================= Health =================
 app.get("/", (_req, res) => res.send("🚀 API is running..."));
 app.use("/api/tasks", taskRoutes);
