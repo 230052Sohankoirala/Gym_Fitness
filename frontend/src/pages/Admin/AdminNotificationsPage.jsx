@@ -1,7 +1,6 @@
-// src/pages/admin/AdminNotificationsPage.jsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
+import { motion } from "framer-motion";// eslint-disable-line no-unused-vars
 import {
   ArrowLeft,
   Bell,
@@ -11,119 +10,68 @@ import {
   Info,
   Trash2,
   Clock,
+  Check,
+  X,
+  RefreshCcw,
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import { apiFetch } from "../../utils/api";
 
 const AdminNotificationsPage = () => {
   const navigate = useNavigate();
   const { darkMode } = useTheme?.() ?? { darkMode: false };
 
-
-  const notifications = [
-    {
-      id: "n1",
-      title: "New member sign-up",
-      message: "Ritwiz Acharya just joined the gym on a 12-month plan.",
-      type: "info",
-      category: "members",
-      time: "2 min ago",
-      unread: true,
-    },
-    {
-      id: "n2",
-      title: "Payment succeeded",
-      message: "Monthly billing for Suvam Parajuli processed successfully.",
-      type: "success",
-      category: "billing",
-      time: "15 min ago",
-      unread: true,
-    },
-    {
-      id: "n3",
-      title: "Payment failed",
-      message:
-        "Auto-renew for membership ID #1024 failed. Card declined, needs follow-up.",
-      type: "warning",
-      category: "billing",
-      time: "43 min ago",
-      unread: false,
-    },
-    {
-      id: "n4",
-      title: "Class almost full",
-      message:
-        "Evening HIIT with Sohan Koirala is 90% booked. Consider opening another slot.",
-      type: "info",
-      category: "classes",
-      time: "Today, 4:02 PM",
-      unread: false,
-    },
-    {
-      id: "n5",
-      title: "System maintenance",
-      message:
-        "Dashboard analytics will be recalculated at midnight. No downtime expected.",
-      type: "system",
-      category: "system",
-      time: "Today, 10:15 AM",
-      unread: false,
-    },
-    {
-      id: "n6",
-      title: "Trainer onboarding completed",
-      message: "New trainer 'Anjal Sapkota' profile is now live.",
-      type: "success",
-      category: "trainers",
-      time: "Yesterday",
-      unread: false,
-    },
-  ];
-
-  // --- filter state ---
+  const [notifications, setNotifications] = useState([]);
   const [activeFilter, setActiveFilter] = useState("all");
 
-  const filteredNotifications = useMemo(() => {
-    if (activeFilter === "all") return notifications;
-    if (activeFilter === "unread")
-      return notifications.filter((n) => n.unread);
-    return notifications.filter((n) => n.category === activeFilter);
-  }, [activeFilter, notifications]);
+  const [loading, setLoading] = useState(true);
+  const [errMsg, setErrMsg] = useState("");
+
+  const [toast, setToast] = useState({ show: false, ok: true, text: "" });
+
+  const showToast = (ok, text) => {
+    setToast({ show: true, ok, text });
+    setTimeout(() => setToast({ show: false, ok: true, text: "" }), 1700);
+  };
+
+  const loadNotifications = async () => {
+    setLoading(true);
+    setErrMsg("");
+    try {
+      const data = await apiFetch("/api/notifications?role=admin");
+      setNotifications(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setErrMsg(e?.message || "Failed to load notifications");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadNotifications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const unreadCount = useMemo(
-    () => notifications.filter((n) => n.unread).length,
+    () => notifications.filter((n) => !n.isRead).length,
     [notifications]
   );
 
-  // --- shared styles like AdminHomepage ---
-  const cardBase =
-    "rounded-2xl p-4 sm:p-5 shadow-sm transition-colors duration-200";
+  const filteredNotifications = useMemo(() => {
+    if (activeFilter === "all") return notifications;
+    if (activeFilter === "unread") return notifications.filter((n) => !n.isRead);
+    return notifications.filter((n) => n.type === activeFilter);
+  }, [activeFilter, notifications]);
+
+  const cardBase = "rounded-2xl p-4 sm:p-5 shadow-sm transition-colors duration-200";
   const cardTheme = darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900";
   const subText = darkMode ? "text-gray-300" : "text-gray-600";
   const borderSoft = darkMode ? "border-gray-700" : "border-gray-200";
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { delayChildren: 0.1, staggerChildren: 0.05 },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { y: 12, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { type: "spring", stiffness: 160, damping: 16 },
-    },
-  };
-
   const filterPillClasses = (active) =>
-    `px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium inline-flex items-center gap-2 border ${borderSoft} transition-colors duration-200 ${
+    `px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium border ${borderSoft} transition-colors duration-200 ${
       active
-        ? darkMode
-          ? "bg-indigo-600 text-white border-indigo-500"
-          : "bg-indigo-600 text-white border-indigo-600"
+        ? "bg-indigo-600 text-white border-indigo-600"
         : darkMode
         ? "bg-gray-900 text-gray-200 hover:bg-gray-800"
         : "bg-white text-gray-700 hover:bg-gray-100"
@@ -132,11 +80,11 @@ const AdminNotificationsPage = () => {
   const typeBadgeClasses = (type) => {
     const base =
       "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium";
-    if (type === "success")
+    if (type === "payment")
       return `${base} ${
         darkMode ? "bg-emerald-900 text-emerald-200" : "bg-emerald-50 text-emerald-700"
       }`;
-    if (type === "warning")
+    if (type === "booking")
       return `${base} ${
         darkMode ? "bg-amber-900 text-amber-200" : "bg-amber-50 text-amber-700"
       }`;
@@ -150,186 +98,209 @@ const AdminNotificationsPage = () => {
   };
 
   const typeIcon = (type) => {
-    if (type === "success") return <CheckCircle2 size={14} />;
-    if (type === "warning") return <AlertTriangle size={14} />;
+    if (type === "payment") return <CheckCircle2 size={14} />;
+    if (type === "booking") return <AlertTriangle size={14} />;
     if (type === "system") return <Info size={14} />;
     return <Bell size={14} />;
   };
 
+  const timeLabel = (iso) => {
+    try {
+      return new Date(iso).toLocaleString();
+    } catch {
+      return String(iso || "");
+    }
+  };
+
+  // ✅ actions
+  const markRead = async (id) => {
+    try {
+      await apiFetch(`/api/notifications/${id}/read`, { method: "PATCH" });
+      setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, isRead: true } : n)));
+      showToast(true, "Marked as read");
+    } catch (e) {
+      showToast(false, e?.message || "Failed");
+    }
+  };
+
+  const markAllRead = async () => {
+    try {
+      await apiFetch(`/api/notifications/read-all`, { method: "PATCH" });
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      showToast(true, "All marked read");
+    } catch (e) {
+      showToast(false, e?.message || "Failed");
+    }
+  };
+
+  const deleteOne = async (id) => {
+    try {
+      await apiFetch(`/api/notifications/${id}`, { method: "DELETE" });
+      setNotifications((prev) => prev.filter((n) => n._id !== id));
+      showToast(true, "Deleted");
+    } catch (e) {
+      showToast(false, e?.message || "Failed");
+    }
+  };
+
+  const clearAll = async () => {
+    try {
+      await apiFetch(`/api/notifications`, { method: "DELETE" });
+      setNotifications([]);
+      showToast(true, "Cleared all");
+    } catch (e) {
+      showToast(false, e?.message || "Failed");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className={`min-h-screen p-6 ${darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"}`}>
+        Loading notifications...
+      </div>
+    );
+  }
+
+  if (errMsg) {
+    return (
+      <div className={`min-h-screen p-6 ${darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"}`}>
+        <div className={`rounded-xl p-4 ${darkMode ? "bg-red-900/40 text-red-200" : "bg-red-50 text-red-700"}`}>
+          {errMsg}
+        </div>
+        <button
+          onClick={loadNotifications}
+          className="mt-4 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={`min-h-screen transition-colors duration-200 ${
-        darkMode ? "bg-gray-900" : "bg-gray-100"
-      }`}
-    >
+    <div className={`min-h-screen transition-colors duration-200 ${darkMode ? "bg-gray-900" : "bg-gray-100"}`}>
       {/* Header */}
-      <div
-        className={`w-full transition-colors duration-200 ${
-          darkMode ? "bg-gray-900" : "bg-gray-100"
-        }`}
-      >
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-5 flex items-center gap-3">
+      <div className="w-full">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <button
             onClick={() => navigate("/admin")}
-            className={`p-2 rounded-full transition-colors duration-200 ${
-              darkMode ? "hover:bg-gray-800" : "hover:bg-gray-200"
-            }`}
+            className={`p-2 rounded-full ${darkMode ? "hover:bg-gray-800" : "hover:bg-gray-200"}`}
             aria-label="Back"
           >
             <ArrowLeft size={20} />
           </button>
-          <h1
-            className={`text-xl sm:text-2xl font-semibold transition-colors duration-200 ${
-              darkMode ? "text-white" : "text-gray-800"
-            }`}
-          >
+
+          <h1 className={`text-xl sm:text-2xl font-semibold ${darkMode ? "text-white" : "text-gray-800"}`}>
             Admin Notifications
           </h1>
+
           <div className="ml-auto flex items-center gap-2">
-            <span className={`hidden sm:inline text-xs ${subText}`}>
-              {unreadCount} unread
-            </span>
+            <span className={`hidden sm:inline text-xs ${subText}`}>{unreadCount} unread</span>
+
+            <button
+              onClick={loadNotifications}
+              className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium inline-flex items-center gap-2 ${
+                darkMode ? "bg-gray-800 hover:bg-gray-700 text-white" : "bg-white border border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              <RefreshCcw size={16} />
+              Refresh
+            </button>
+
+            <button
+              onClick={markAllRead}
+              className="px-3 py-2 rounded-lg text-xs sm:text-sm font-medium inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              <Check size={16} />
+              Mark all read
+            </button>
+
             <button
               onClick={() => navigate("/admin/settings")}
-              className={`cursor-pointer px-3 py-2 rounded-lg text-xs sm:text-sm font-medium inline-flex items-center gap-2 transition-colors duration-200 ${
-                darkMode
-                  ? "bg-gray-800 hover:bg-gray-700 text-white"
-                  : "bg-white text-black hover:bg-gray-50 border border-gray-200"
+              className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium inline-flex items-center gap-2 ${
+                darkMode ? "bg-gray-800 hover:bg-gray-700 text-white" : "bg-white border border-gray-200 hover:bg-gray-50"
               }`}
             >
               <Filter size={16} />
-              Notification Settings
+              Settings
             </button>
           </div>
         </div>
       </div>
 
+      {/* Toast */}
+      {toast.show && (
+        <div className="fixed top-4 right-4 z-50">
+          <div
+            className={`rounded-xl px-4 py-3 shadow-lg flex items-center gap-2 ${
+              toast.ok
+                ? darkMode
+                  ? "bg-emerald-900 text-emerald-100"
+                  : "bg-emerald-50 text-emerald-700"
+                : darkMode
+                ? "bg-red-900 text-red-100"
+                : "bg-red-50 text-red-700"
+            }`}
+          >
+            {toast.ok ? <Check size={16} /> : <X size={16} />}
+            <span className="text-sm font-medium">{toast.text}</span>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         className="max-w-6xl mx-auto px-4 sm:px-6 pb-10 space-y-6"
       >
-        {/* Top row: overview + filters */}
-        <div className="grid lg:grid-cols-3 gap-4">
-          {/* Overview */}
-          <motion.div variants={itemVariants} className={`${cardBase} ${cardTheme}`}>
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Bell size={18} />
-                  Notification Overview
-                </h3>
-                <p className={`text-xs mt-1 ${subText}`}>
-                  Track unread alerts, billing issues and member activity.
-                </p>
-              </div>
-            </div>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-xs sm:text-sm">
-              <OverviewStat
-                label="Total"
-                value={notifications.length}
-                subtitle="All notifications"
-                darkMode={darkMode}
-              />
-              <OverviewStat
-                label="Unread"
-                value={unreadCount}
-                subtitle="Needs review"
-                highlight
-                darkMode={darkMode}
-              />
-              <OverviewStat
-                label="Billing"
-                value={notifications.filter((n) => n.category === "billing").length}
-                subtitle="Payment related"
-                darkMode={darkMode}
-              />
-            </div>
-          </motion.div>
+        {/* Filters */}
+        <div className={`${cardBase} ${cardTheme}`}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-sm sm:text-base">Filters</h3>
+            <button
+              onClick={() => setActiveFilter("all")}
+              className={`text-xs underline ${darkMode ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}
+            >
+              Reset
+            </button>
+          </div>
 
-          {/* Filters */}
-          <motion.div
-            variants={itemVariants}
-            className={`${cardBase} ${cardTheme} lg:col-span-2`}
-          >
-            <div className="flex items-center justify-between mb-3 gap-2">
-              <h3 className="font-semibold text-sm sm:text-base">Filters</h3>
-              <button
-                onClick={() => setActiveFilter("all")}
-                className={`text-xs sm:text-sm underline-offset-2 ${
-                  darkMode
-                    ? "text-gray-300 hover:text-white"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Reset
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveFilter("all")}
-                className={filterPillClasses(activeFilter === "all")}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter("unread")}
-                className={filterPillClasses(activeFilter === "unread")}
-              >
-                Unread
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter("members")}
-                className={filterPillClasses(activeFilter === "members")}
-              >
-                Members
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter("billing")}
-                className={filterPillClasses(activeFilter === "billing")}
-              >
-                Billing
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter("classes")}
-                className={filterPillClasses(activeFilter === "classes")}
-              >
-                Classes
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter("system")}
-                className={filterPillClasses(activeFilter === "system")}
-              >
-                System
-              </button>
-            </div>
-          </motion.div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => setActiveFilter("all")} className={filterPillClasses(activeFilter === "all")}>
+              All
+            </button>
+            <button onClick={() => setActiveFilter("unread")} className={filterPillClasses(activeFilter === "unread")}>
+              Unread
+            </button>
+            <button onClick={() => setActiveFilter("payment")} className={filterPillClasses(activeFilter === "payment")}>
+              Payments
+            </button>
+            <button onClick={() => setActiveFilter("booking")} className={filterPillClasses(activeFilter === "booking")}>
+              Bookings
+            </button>
+            <button onClick={() => setActiveFilter("system")} className={filterPillClasses(activeFilter === "system")}>
+              System
+            </button>
+          </div>
         </div>
 
         {/* Notifications list */}
-        <motion.div variants={itemVariants} className={`${cardBase} ${cardTheme}`}>
+        <div className={`${cardBase} ${cardTheme}`}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm sm:text-base">
               {activeFilter === "all"
                 ? "All Notifications"
                 : activeFilter === "unread"
                 ? "Unread Notifications"
-                : `${activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)} Notifications`}
+                : `${activeFilter.toUpperCase()} Notifications`}
             </h3>
+
             <button
               type="button"
-              className={`text-xs sm:text-sm inline-flex items-center gap-1 transition-colors duration-200 ${
-                darkMode
-                  ? "text-red-300 hover:text-red-200"
-                  : "text-red-600 hover:text-red-700"
+              onClick={clearAll}
+              className={`text-xs sm:text-sm inline-flex items-center gap-1 ${
+                darkMode ? "text-red-300 hover:text-red-200" : "text-red-600 hover:text-red-700"
               }`}
             >
               <Trash2 size={14} />
@@ -338,7 +309,7 @@ const AdminNotificationsPage = () => {
           </div>
 
           <div
-            className={`rounded-2xl border ${borderSoft} max-h-[480px] overflow-y-auto transition-colors duration-200 ${
+            className={`rounded-2xl border ${borderSoft} max-h-[520px] overflow-y-auto ${
               darkMode ? "bg-gray-900/40" : "bg-gray-50"
             }`}
           >
@@ -346,33 +317,28 @@ const AdminNotificationsPage = () => {
               <div className="flex flex-col items-center justify-center py-10 text-center px-4">
                 <Bell size={28} className={darkMode ? "text-gray-500" : "text-gray-400"} />
                 <p className="mt-3 text-sm font-medium">No notifications to show</p>
-                <p className={`mt-1 text-xs ${subText}`}>
-                  Try changing filters or check back after some new activity.
-                </p>
+                <p className={`mt-1 text-xs ${subText}`}>Try another filter.</p>
               </div>
             ) : (
               <ul className="divide-y divide-gray-200/40 dark:divide-gray-800/60">
                 {filteredNotifications.map((n) => (
                   <li
-                    key={n.id}
-                    className={`px-4 sm:px-5 py-3 sm:py-4 flex gap-3 sm:gap-4 items-start transition-colors duration-150 ${
+                    key={n._id}
+                    className={`px-4 sm:px-5 py-3 sm:py-4 flex gap-3 sm:gap-4 items-start ${
                       darkMode
-                        ? n.unread
+                        ? !n.isRead
                           ? "bg-gray-900/70 hover:bg-gray-800"
                           : "hover:bg-gray-900"
-                        : n.unread
+                        : !n.isRead
                         ? "bg-white hover:bg-gray-50"
                         : "bg-gray-50 hover:bg-gray-100"
                     }`}
                   >
-                    {/* left indicator */}
                     <div className="pt-1">
                       <span
                         className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
-                          n.unread
-                            ? darkMode
-                              ? "bg-indigo-600/70 text-white"
-                              : "bg-indigo-600 text-white"
+                          !n.isRead
+                            ? "bg-indigo-600 text-white"
                             : darkMode
                             ? "bg-gray-800 text-gray-200"
                             : "bg-white text-gray-700"
@@ -382,40 +348,49 @@ const AdminNotificationsPage = () => {
                       </span>
                     </div>
 
-                    {/* main content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-semibold truncate">{n.title}</p>
-                        <span className={typeBadgeClasses(n.type)}>
-                          {typeIcon(n.type)}
-                          {n.type === "success"
-                            ? "Success"
-                            : n.type === "warning"
-                            ? "Attention"
-                            : n.type === "system"
-                            ? "System"
-                            : "Info"}
-                        </span>
-                        {n.unread && (
-                          <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                              darkMode
-                                ? "bg-indigo-900 text-indigo-200"
-                                : "bg-indigo-50 text-indigo-700"
-                            }`}
-                          >
+                        <span className={typeBadgeClasses(n.type)}>{typeIcon(n.type)} {n.type}</span>
+
+                        {!n.isRead && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                            darkMode ? "bg-indigo-900 text-indigo-200" : "bg-indigo-50 text-indigo-700"
+                          }`}>
                             NEW
                           </span>
                         )}
                       </div>
-                      <p className={`mt-1 text-xs sm:text-sm leading-snug ${subText}`}>
-                        {n.message}
-                      </p>
-                      <div className="mt-1 flex items-center gap-3 text-[11px] sm:text-xs">
+
+                      <p className={`mt-1 text-xs sm:text-sm leading-snug ${subText}`}>{n.message}</p>
+
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] sm:text-xs">
                         <span className={`inline-flex items-center gap-1 ${subText}`}>
                           <Clock size={12} />
-                          {n.time}
+                          {timeLabel(n.createdAt)}
                         </span>
+
+                        {!n.isRead && (
+                          <button
+                            onClick={() => markRead(n._id)}
+                            className={`inline-flex items-center gap-1 text-xs font-medium ${
+                              darkMode ? "text-indigo-300 hover:text-indigo-200" : "text-indigo-600 hover:text-indigo-700"
+                            }`}
+                          >
+                            <Check size={14} />
+                            Mark read
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => deleteOne(n._id)}
+                          className={`inline-flex items-center gap-1 text-xs font-medium ${
+                            darkMode ? "text-red-300 hover:text-red-200" : "text-red-600 hover:text-red-700"
+                          }`}
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
                       </div>
                     </div>
                   </li>
@@ -423,30 +398,8 @@ const AdminNotificationsPage = () => {
               </ul>
             )}
           </div>
-        </motion.div>
+        </div>
       </motion.div>
-    </div>
-  );
-};
-
-/* ---------- small building blocks ---------- */
-
-const OverviewStat = ({ label, value, subtitle, highlight, darkMode }) => {
-  const accent = highlight
-    ? darkMode
-      ? "text-indigo-300"
-      : "text-indigo-600"
-    : darkMode
-    ? "text-white"
-    : "text-gray-900";
-
-  const sub = darkMode ? "text-gray-300" : "text-gray-600";
-
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className={`text-[11px] uppercase tracking-wide ${sub}`}>{label}</span>
-      <span className={`text-lg font-semibold ${accent}`}>{value}</span>
-      <span className={`text-[11px] ${sub}`}>{subtitle}</span>
     </div>
   );
 };

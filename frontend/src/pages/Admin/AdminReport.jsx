@@ -1,363 +1,624 @@
-// src/pages/admin/AdminReport.jsx
-
-import React from "react";
-import { motion } from "framer-motion";// eslint-disable-line no-unused-vars
+import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import {
+    Download,
+    RefreshCw,
+    AlertCircle,
+    FileText,
+    Users,
+    Activity,
+    DollarSign,
+    Shield,
+    UserCircle,
+    BadgeCheck,
+    BadgeX,
+} from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
-const statCards = [
-  {
-    label: "Total Users",
-    value: "1,248",
-    change: "+12.4%",
-    trend: "up",
-  },
-  {
-    label: "Active Subscriptions",
-    value: "326",
-    change: "+4.2%",
-    trend: "up",
-  },
-  {
-    label: "New Reports (7 days)",
-    value: "19",
-    change: "-8.1%",
-    trend: "down",
-  },
-  {
-    label: "Open Issues",
-    value: "7",
-    change: "—",
-    trend: "neutral",
-  },
-];
+const BASE_URL = "http://localhost:4000";
 
-const recentReports = [
-  {
-    id: "#RPT-1024",
-    title: "Monthly usage summary",
-    type: "Analytics",
-    createdAt: "24 Nov 2025",
-    status: "Generated",
-  },
-  {
-    id: "#RPT-1023",
-    title: "Payment reconciliation",
-    type: "Finance",
-    createdAt: "23 Nov 2025",
-    status: "In review",
-  },
-  {
-    id: "#RPT-1022",
-    title: "User feedback & complaints",
-    type: "Support",
-    createdAt: "22 Nov 2025",
-    status: "Generated",
-  },
-  {
-    id: "#RPT-1021",
-    title: "System health overview",
-    type: "System",
-    createdAt: "20 Nov 2025",
-    status: "Generated",
-  },
-];
+function getToken() {
+    return localStorage.getItem("token");
+}
 
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i = 1) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: 0.05 * i, duration: 0.35, ease: "easeOut" },
-  }),
-};
+/** ---------- Helpers: CSV + downloads ---------- */
+function safe(v) {
+    if (v === null || v === undefined) return "";
+    return String(v).replace(/\s+/g, " ").trim();
+}
 
-const AdminReport = () => {
-  const { darkMode } = useTheme?.() ?? { darkMode: false };
+function toCSV(rows, headers) {
+    // headers: [{ key:"email", label:"Email" }, ...]
+    const headerLine = headers.map((h) => `"${safe(h.label).replaceAll('"', '""')}"`).join(",");
+    const lines = rows.map((r) =>
+        headers
+            .map((h) => `"${safe(r?.[h.key]).replaceAll('"', '""')}"`)
+            .join(",")
+    );
+    return [headerLine, ...lines].join("\n");
+}
 
-  const pageBg = darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900";
-  const cardBase = "rounded-2xl p-4 sm:p-5 shadow-sm transition-colors duration-200";
-  const cardTheme = darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900";
-  const subText = darkMode ? "text-gray-300" : "text-gray-600";
-  const borderSoft = darkMode ? "border-gray-700" : "border-gray-200";
-  const softBg = darkMode ? "bg-gray-800" : "bg-gray-100";
+function downloadBlob(filename, content, type) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
 
-  return (
-    <div className={`min-h-screen w-full p-6 transition-colors duration-200 ${pageBg}`}>
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
-        className="mx-auto flex max-w-6xl flex-col gap-6"
-      >
-        {/* Header */}
-        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-              <span className="bg-gradient-to-r from-sky-400 to-emerald-400 bg-clip-text text-transparent">
-                Admin Reports
-              </span>
-            </h1>
-            <p className={`mt-1 text-sm ${subText}`}>
-              Overview of platform activity, key metrics, and generated reports at a glance.
-            </p>
-          </div>
+function formatMoney(n, currency = "AUD") {
+    const val = Number(n || 0);
+    try {
+        return new Intl.NumberFormat("en-AU", { style: "currency", currency }).format(val);
+    } catch {
+        return `${currency} ${val.toFixed(2)}`;
+    }
+}
 
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            <select
-              className={`rounded-xl border px-3 py-2 text-xs shadow-sm outline-none transition ${borderSoft} ${
-                darkMode ? "bg-gray-900 text-white hover:border-gray-500" : "bg-white text-gray-800 hover:border-gray-400"
-              } focus:border-sky-400 focus:ring-2 focus:ring-sky-300`}
-            >
-              <option>Last 7 days</option>
-              <option>Last 30 days</option>
-              <option>Last 90 days</option>
-              <option>Custom range</option>
-            </select>
+function formatDateTime(d) {
+    if (!d) return "";
+    const dt = new Date(d);
+    if (Number.isNaN(dt.getTime())) return safe(d);
+    return dt.toLocaleString();
+}
 
-            <button
-              className={`rounded-xl border px-4 py-2 text-xs font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-sky-300 ${borderSoft} ${
-                darkMode
-                  ? "bg-gray-900 text-gray-100 hover:border-sky-500 hover:text-sky-400"
-                  : "bg-white text-gray-800 hover:border-sky-400 hover:text-sky-500"
-              }`}
-            >
-              Export summary
-            </button>
-          </div>
-        </div>
+const AdminReports = () => {
+    const { darkMode } = useTheme?.() ?? { darkMode: false };
 
-        {/* Stat cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {statCards.map((card, index) => (
-            <motion.div
-              key={card.label}
-              custom={index}
-              initial="hidden"
-              animate="visible"
-              variants={fadeInUp}
-              className={`${cardBase} ${cardTheme} border ${borderSoft} hover:shadow-md hover:-translate-y-1`}
-            >
-              <p className={`text-xs font-medium uppercase tracking-wide ${subText}`}>
-                {card.label}
-              </p>
-              <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-2xl font-semibold tracking-tight">{card.value}</span>
-                <span
-                  className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
-                    card.trend === "up"
-                      ? "bg-emerald-500/10 text-emerald-400"
-                      : card.trend === "down"
-                      ? "bg-rose-500/10 text-rose-400"
-                      : "bg-gray-500/10 text-gray-400"
-                  }`}
-                >
-                  {card.change}
-                </span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
-        <div className="grid gap-6 lg:grid-cols-[2fr,1.3fr]">
-          {/* Activity chart */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            custom={1}
-            className={`${cardBase} ${cardTheme} border ${borderSoft}`}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-semibold tracking-tight">Activity overview</h2>
-                <p className={`text-xs ${subText}`}>
-                  Daily generated reports and admin actions (dummy data).
-                </p>
-              </div>
-              <span className="rounded-full bg-sky-500/10 px-3 py-1 text-[10px] font-medium text-sky-400">
-                Live
-              </span>
+    // report data
+    const [stats, setStats] = useState({ members: 0, trainers: 0, sessions: 0 });
+    const [revenue, setRevenue] = useState({
+        totalRevenue: 0,
+        adminRevenue: 0,
+        trainerRevenue: 0,
+        transactions: 0,
+    });
+    const [activity, setActivity] = useState([]);
+    const [trainers, setTrainers] = useState([]);
+    const [users, setUsers] = useState([]);
+
+    // filters
+    const [timeRange, setTimeRange] = useState("all"); // UI only for now (since your API doesn’t accept range)
+    const [roleFilter, setRoleFilter] = useState("all"); // for users list
+    const [statusFilter, setStatusFilter] = useState("all"); // active/inactive
+
+    const token = useMemo(() => getToken(), []);
+
+    const pageBg = darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900";
+    const cardBg = darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200";
+    const muted = darkMode ? "text-gray-300" : "text-gray-600";
+    const subtle = darkMode ? "bg-gray-800" : "bg-white";
+    const inputBg = darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-300";
+
+    const api = useMemo(() => {
+        return axios.create({
+            baseURL: BASE_URL,
+            headers: { Authorization: `Bearer ${token}` },
+        });
+    }, [token]);
+
+    const fetchAll = async () => {
+        try {
+            setLoading(true);
+            setError("");
+
+            if (!token) {
+                setError("Admin token not found. Please login again.");
+                return;
+            }
+
+            // NOTE: these endpoints must exist
+            const [statsRes, revRes, actRes, trainersRes, usersRes] = await Promise.all([
+                api.get("/api/admin/stats"),
+                api.get("/api/admin/revenue"),
+                api.get("/api/admin/activity"),
+                api.get("/api/admin/trainers"),
+                api.get("/api/admin/users"), // you added this route
+            ]);
+
+            setStats(statsRes.data || { members: 0, trainers: 0, sessions: 0 });
+            setRevenue(
+                revRes.data || { totalRevenue: 0, adminRevenue: 0, trainerRevenue: 0, transactions: 0 }
+            );
+            setActivity(Array.isArray(actRes.data) ? actRes.data : []);
+            setTrainers(Array.isArray(trainersRes.data) ? trainersRes.data : []);
+            setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
+        } catch (e) {
+            setError(e?.response?.data?.message || "Failed to load admin reports.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAll();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    /** ---------- Derived filtered users ---------- */
+    const filteredUsers = useMemo(() => {
+        return users.filter((u) => {
+            const role = String(u.role || "member").toLowerCase();
+            const isActive = u.isActive !== undefined ? Boolean(u.isActive) : true;
+
+            const roleOk = roleFilter === "all" || role === roleFilter;
+            const statusOk =
+                statusFilter === "all" ||
+                (statusFilter === "active" && isActive) ||
+                (statusFilter === "inactive" && !isActive);
+
+            return roleOk && statusOk;
+        });
+    }, [users, roleFilter, statusFilter]);
+
+    /** ---------- Downloads: CSV ---------- */
+    const downloadUsersCSV = () => {
+        const rows = filteredUsers.map((u) => ({
+            name: u.fullName || u.fullname || u.name || "Unnamed",
+            email: u.email || "",
+            role: u.role || "member",
+            isActive: u.isActive !== undefined ? String(Boolean(u.isActive)) : "true",
+            createdAt: formatDateTime(u.createdAt),
+        }));
+
+        const csv = toCSV(rows, [
+            { key: "name", label: "Name" },
+            { key: "email", label: "Email" },
+            { key: "role", label: "Role" },
+            { key: "isActive", label: "Active" },
+            { key: "createdAt", label: "Created At" },
+        ]);
+
+        downloadBlob("admin_users_report.csv", csv, "text/csv;charset=utf-8");
+    };
+
+    const downloadTrainersCSV = () => {
+        const rows = trainers.map((t) => ({
+            name: t.name || "",
+            email: t.email || "",
+            speciality: t.speciality || "",
+            experience: t.experience || "",
+            rating: t.rating ?? "",
+            createdAt: formatDateTime(t.createdAt),
+        }));
+
+        const csv = toCSV(rows, [
+            { key: "name", label: "Trainer Name" },
+            { key: "email", label: "Email" },
+            { key: "speciality", label: "Speciality" },
+            { key: "experience", label: "Experience" },
+            { key: "rating", label: "Rating" },
+            { key: "createdAt", label: "Created At" },
+        ]);
+
+        downloadBlob("admin_trainers_report.csv", csv, "text/csv;charset=utf-8");
+    };
+
+    const downloadActivityCSV = () => {
+        const rows = activity.map((a) => ({
+            type: a.type || "",
+            message: a.message || "",
+            time: formatDateTime(a.time),
+        }));
+
+        const csv = toCSV(rows, [
+            { key: "type", label: "Type" },
+            { key: "message", label: "Message" },
+            { key: "time", label: "Time" },
+        ]);
+
+        downloadBlob("admin_activity_report.csv", csv, "text/csv;charset=utf-8");
+    };
+
+    /** ---------- Downloads: PDF (Full report) ---------- */
+    const downloadFullPDF = () => {
+        const doc = new jsPDF("p", "mm", "a4");
+
+        // Title
+        doc.setFontSize(16);
+        doc.text("Admin Report", 14, 18);
+
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 24);
+        doc.text(`Time Range: ${timeRange}`, 14, 29);
+
+        // Summary cards
+        autoTable(doc, {
+            startY: 35,
+            head: [["Metric", "Value"]],
+            body: [
+                ["Members", String(stats.members ?? 0)],
+                ["Trainers", String(stats.trainers ?? 0)],
+                ["Sessions", String(stats.sessions ?? 0)],
+                ["Total Revenue", formatMoney(revenue.totalRevenue)],
+                ["Admin Revenue", formatMoney(revenue.adminRevenue)],
+                ["Trainer Revenue", formatMoney(revenue.trainerRevenue)],
+                ["Transactions", String(revenue.transactions ?? 0)],
+            ],
+            styles: { fontSize: 10 },
+            headStyles: { fillColor: [33, 33, 33] },
+        });
+
+        // Users table (first 25 rows to keep PDF light)
+        const usersRows = filteredUsers.slice(0, 25).map((u) => [
+            u.fullName || u.fullname || u.name || "Unnamed",
+            u.email || "",
+            u.role || "member",
+            u.isActive !== undefined ? (u.isActive ? "Active" : "Inactive") : "Active",
+        ]);
+
+        autoTable(doc, {
+            startY: doc.lastAutoTable.finalY + 8,
+            head: [["Users (Top 25)", "Email", "Role", "Status"]],
+            body: usersRows.length ? usersRows : [["No users", "", "", ""]],
+            styles: { fontSize: 9 },
+            headStyles: { fillColor: [33, 33, 33] },
+        });
+
+        // Trainers table (first 15)
+        const trainersRows = trainers.slice(0, 15).map((t) => [
+            t.name || "",
+            t.email || "",
+            t.speciality || "",
+            String(t.rating ?? ""),
+        ]);
+
+        autoTable(doc, {
+            startY: doc.lastAutoTable.finalY + 8,
+            head: [["Trainers (Top 15)", "Email", "Speciality", "Rating"]],
+            body: trainersRows.length ? trainersRows : [["No trainers", "", "", ""]],
+            styles: { fontSize: 9 },
+            headStyles: { fillColor: [33, 33, 33] },
+        });
+
+        // Activity table (top 10)
+        const actRows = activity.slice(0, 10).map((a) => [
+            a.type || "",
+            a.message || "",
+            formatDateTime(a.time),
+        ]);
+
+        autoTable(doc, {
+            startY: doc.lastAutoTable.finalY + 8,
+            head: [["Recent Activity (Top 10)", "Message", "Time"]],
+            body: actRows.length ? actRows : [["No activity", "", ""]],
+            styles: { fontSize: 9 },
+            headStyles: { fillColor: [33, 33, 33] },
+        });
+
+        doc.save("admin_full_report.pdf");
+    };
+
+    /** ---------- UI components ---------- */
+    const StatCard = ({ icon, title, value, note }) => (
+        <div className={`rounded-2xl border p-4 ${cardBg}`}>
+            <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>{icon}</div>
+                <div className="min-w-0">
+                    <p className={`text-sm ${muted}`}>{title}</p>
+                    <p className="text-2xl font-bold">{value}</p>
+                    {note ? <p className={`text-xs mt-1 ${muted}`}>{note}</p> : null}
+                </div>
             </div>
-
-            <div
-              className={`mt-2 h-48 w-full rounded-xl p-4 ${
-                darkMode
-                  ? "bg-gradient-to-br from-gray-900 via-black to-gray-900"
-                  : "bg-gradient-to-br from-gray-900 via-gray-950 to-black"
-              }`}
-            >
-              {/* Simple bar chart using divs */}
-              <div className="flex h-full items-end justify-between gap-2">
-                {[
-                  { label: "Mon", value: 40 },
-                  { label: "Tue", value: 60 },
-                  { label: "Wed", value: 75 },
-                  { label: "Thu", value: 55 },
-                  { label: "Fri", value: 90 },
-                  { label: "Sat", value: 35 },
-                  { label: "Sun", value: 50 },
-                ].map((day) => (
-                  <div
-                    key={day.label}
-                    className="flex h-full flex-1 flex-col items-center justify-end gap-1"
-                  >
-                    <div className="relative flex h-full w-full items-end justify-center">
-                      <div className="w-3 rounded-full bg-gray-700/70">
-                        <div
-                          className="w-3 rounded-full bg-sky-400"
-                          style={{ height: `${day.value}%` }}
-                        />
-                      </div>
-                    </div>
-                    <span className="text-[10px] text-gray-400">{day.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Summary / notes */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            custom={2}
-            className={`${cardBase} ${cardTheme} border ${borderSoft} flex flex-col gap-3`}
-          >
-            <h2 className="text-sm font-semibold tracking-tight">Summary insights</h2>
-            <p className={`text-xs leading-relaxed ${subText}`}>
-              Quick written snapshot of the current state of the platform. Use this when
-              you just need the narrative instead of raw numbers. You can later bind
-              this to real analytics coming from your backend.
-            </p>
-
-            <ul className={`mt-1 space-y-1 text-xs ${subText}`}>
-              <li>• User growth is stable with a slight upward trend.</li>
-              <li>• Most reports are generated between Thursday and Friday.</li>
-              <li>• Open issues remain low and manageable for the team.</li>
-              <li>• Financial and system reports are generated regularly.</li>
-            </ul>
-
-            <textarea
-              rows={4}
-              placeholder="Admin notes for this period (e.g. anomalies, follow-ups, tasks for dev team)…"
-              className={`mt-2 w-full rounded-xl border px-3 py-2 text-xs outline-none transition ${borderSoft} ${
-                darkMode
-                  ? "bg-gray-900 text-gray-100 focus:border-sky-400 focus:ring-2 focus:ring-sky-500"
-                  : "bg-gray-50 text-gray-800 focus:border-sky-400 focus:ring-2 focus:ring-sky-300"
-              }`}
-            />
-            <div className="flex justify-end">
-              <button className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-300">
-                Save note
-              </button>
-            </div>
-          </motion.div>
         </div>
+    );
 
-        {/* Recent reports table */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          custom={3}
-          className={`overflow-hidden rounded-2xl border ${borderSoft} ${cardTheme} shadow-sm`}
-        >
-          <div
-            className={`flex items-center justify-between px-4 py-3 text-sm font-semibold border-b ${borderSoft}`}
-          >
-            <span>Recent report runs</span>
-            <button
-              className={`rounded-full border px-3 py-1 text-[11px] font-medium transition ${borderSoft} ${
-                darkMode
-                  ? "text-gray-300 hover:border-sky-500 hover:text-sky-400"
-                  : "text-gray-600 hover:border-sky-400 hover:text-sky-500"
-              }`}
-            >
-              View all
-            </button>
-          </div>
+    const SectionHeader = ({ title, right }) => (
+        <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+            <div>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <FileText size={18} className="text-indigo-500" />
+                    {title}
+                </h2>
+            </div>
+            {right ? <div className="flex items-center gap-2">{right}</div> : null}
+        </div>
+    );
 
-          <div className="w-full overflow-x-auto">
-            <table className="min-w-full text-left text-xs">
-              <thead className={`${softBg} ${subText}`}>
-                <tr>
-                  <Th>ID</Th>
-                  <Th>Title</Th>
-                  <Th>Type</Th>
-                  <Th>Created</Th>
-                  <Th>Status</Th>
-                  <Th align="right">Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentReports.map((report, idx) => (
-                  <tr
-                    key={report.id}
-                    className={`border-t ${borderSoft} ${
-                      idx % 2 === 0
-                        ? darkMode
-                          ? "bg-gray-900/40"
-                          : "bg-white"
-                        : darkMode
-                        ? "bg-gray-900/10"
-                        : "bg-gray-50"
-                    } ${darkMode ? "hover:bg-gray-800" : "hover:bg-gray-100"} transition-colors`}
-                  >
-                    <Td mono>{report.id}</Td>
-                    <Td>{report.title}</Td>
-                    <Td>{report.type}</Td>
-                    <Td>{report.createdAt}</Td>
-                    <Td>
-                      <span
-                        className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
-                          report.status === "Generated"
-                            ? "bg-emerald-500/10 text-emerald-400"
-                            : report.status === "In review"
-                            ? "bg-amber-500/10 text-amber-400"
-                            : "bg-gray-500/10 text-gray-400"
+    const RoleIcon = ({ role }) => {
+        const r = String(role || "").toLowerCase();
+        if (r === "admin") return <Shield size={16} className="text-indigo-500" />;
+        if (r === "trainer") return <UserCircle size={16} className="text-emerald-500" />;
+        return <Users size={16} className="text-blue-500" />;
+    };
+
+    if (loading) {
+        return (
+            <div className={`min-h-screen p-6 ${pageBg}`}>
+                <div className={`rounded-2xl border p-6 ${subtle} ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+                    <p className={muted}>Loading admin reports...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className={`min-h-screen p-6 ${pageBg}`}>
+                <div
+                    className={`p-6 flex items-center gap-2 rounded-xl border ${darkMode ? "bg-red-900/40 border-red-800 text-red-200" : "bg-red-50 border-red-200 text-red-700"
                         }`}
-                      >
-                        {report.status}
-                      </span>
-                    </Td>
-                    <Td align="right">
-                      <button className="rounded-full px-3 py-1 text-[11px] font-medium text-sky-400 hover:bg-sky-500/10">
-                        Download
-                      </button>
-                      <button className="ml-1 rounded-full px-3 py-1 text-[11px] font-medium text-gray-400 hover:bg-gray-500/10">
-                        Details
-                      </button>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
-      </motion.div>
-    </div>
-  );
+                >
+                    <AlertCircle size={18} />
+                    <div className="flex-1">{error}</div>
+                    <button
+                        onClick={fetchAll}
+                        className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${darkMode ? "bg-gray-800 hover:bg-gray-700" : "bg-white hover:bg-gray-100"
+                            }`}
+                    >
+                        <RefreshCw size={16} />
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className={`min-h-screen p-6 transition-colors duration-200 ${pageBg}`}>
+            {/* Page Header */}
+            <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold">Admin Reports</h1>
+                    <p className={muted}>Generate downloadable reports for users, trainers, revenue, and activity.</p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <select
+                        value={timeRange}
+                        onChange={(e) => setTimeRange(e.target.value)}
+                        className={`px-3 py-2 rounded-xl border outline-none transition ${inputBg}`}
+                        title="Time range (UI only)"
+                    >
+                        <option value="all">All Time</option>
+                        <option value="30days">Last 30 Days (UI)</option>
+                        <option value="7days">Last 7 Days (UI)</option>
+                    </select>
+
+                    <button
+                        onClick={fetchAll}
+                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${darkMode ? "border-gray-700 bg-gray-800 hover:bg-gray-700" : "border-gray-200 bg-white hover:bg-gray-100"
+                            }`}
+                    >
+                        <RefreshCw size={16} />
+                        Refresh
+                    </button>
+
+                    <button
+                        onClick={downloadFullPDF}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+                    >
+                        <Download size={16} />
+                        Download Full PDF
+                    </button>
+                </div>
+            </div>
+
+            {/* Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <StatCard icon={<Users size={18} className="text-blue-500" />} title="Members" value={stats.members ?? 0} />
+                <StatCard icon={<UserCircle size={18} className="text-emerald-500" />} title="Trainers" value={stats.trainers ?? 0} />
+                <StatCard icon={<Activity size={18} className="text-purple-500" />} title="Sessions" value={stats.sessions ?? 0} />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <StatCard
+                    icon={<DollarSign size={18} className="text-green-500" />}
+                    title="Total Revenue"
+                    value={formatMoney(revenue.totalRevenue)}
+                    note={`${revenue.transactions ?? 0} transactions`}
+                />
+                <StatCard icon={<DollarSign size={18} className="text-indigo-500" />} title="Admin Revenue" value={formatMoney(revenue.adminRevenue)} />
+                <StatCard icon={<DollarSign size={18} className="text-orange-500" />} title="Trainer Revenue" value={formatMoney(revenue.trainerRevenue)} />
+                <StatCard icon={<FileText size={18} className="text-gray-500" />} title="Generated" value={new Date().toLocaleDateString()} />
+            </div>
+
+            {/* Users Section */}
+            <div className={`rounded-2xl border p-5 mb-6 ${cardBg}`}>
+                <SectionHeader
+                    title="Users Report"
+                    right={
+                        <>
+                            <select
+                                value={roleFilter}
+                                onChange={(e) => setRoleFilter(e.target.value)}
+                                className={`px-3 py-2 rounded-xl border outline-none transition ${inputBg}`}
+                            >
+                                <option value="all">All Roles</option>
+                                <option value="member">Members</option>
+                                <option value="trainer">Trainers</option>
+                                <option value="admin">Admins</option>
+                            </select>
+
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className={`px-3 py-2 rounded-xl border outline-none transition ${inputBg}`}
+                            >
+                                <option value="all">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+
+                            <button
+                                onClick={downloadUsersCSV}
+                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${darkMode ? "border-gray-700 bg-gray-800 hover:bg-gray-700" : "border-gray-200 bg-white hover:bg-gray-100"
+                                    }`}
+                            >
+                                <Download size={16} />
+                                CSV
+                            </button>
+                        </>
+                    }
+                />
+
+                <p className={`text-sm ${muted} mb-3`}>
+                    Showing <span className="font-semibold">{filteredUsers.length}</span> of{" "}
+                    <span className="font-semibold">{users.length}</span> users
+                </p>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className={muted}>
+                                <th className="text-left py-2">Name</th>
+                                <th className="text-left py-2">Email</th>
+                                <th className="text-left py-2">Role</th>
+                                <th className="text-left py-2">Status</th>
+                                <th className="text-left py-2">Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredUsers.slice(0, 20).map((u) => {
+                                const name = u.fullName || u.fullname || u.name || "Unnamed";
+                                const isActive = u.isActive !== undefined ? Boolean(u.isActive) : true;
+
+                                return (
+                                    <tr key={u._id} className={`border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+                                        <td className="py-2">{name}</td>
+                                        <td className="py-2">{u.email || ""}</td>
+                                        <td className="py-2 inline-flex items-center gap-2">
+                                            <RoleIcon role={u.role} />
+                                            <span className="capitalize">{u.role || "member"}</span>
+                                        </td>
+                                        <td className="py-2">
+                                            <span
+                                                className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg ${isActive
+                                                        ? darkMode
+                                                            ? "bg-emerald-900/40 text-emerald-200"
+                                                            : "bg-emerald-50 text-emerald-700"
+                                                        : darkMode
+                                                            ? "bg-red-900/40 text-red-200"
+                                                            : "bg-red-50 text-red-700"
+                                                    }`}
+                                            >
+                                                {isActive ? <BadgeCheck size={14} /> : <BadgeX size={14} />}
+                                                {isActive ? "Active" : "Inactive"}
+                                            </span>
+                                        </td>
+                                        <td className="py-2">{formatDateTime(u.createdAt)}</td>
+                                    </tr>
+                                );
+                            })}
+
+                            {filteredUsers.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className={`py-4 ${muted}`}>
+                                        No users match your filters.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {filteredUsers.length > 20 && (
+                    <p className={`text-xs mt-3 ${muted}`}>
+                        Showing first 20 users on screen. Download CSV/PDF for full report.
+                    </p>
+                )}
+            </div>
+
+            {/* Trainers Section */}
+            <div className={`rounded-2xl border p-5 mb-6 ${cardBg}`}>
+                <SectionHeader
+                    title="Trainers Report"
+                    right={
+                        <button
+                            onClick={downloadTrainersCSV}
+                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${darkMode ? "border-gray-700 bg-gray-800 hover:bg-gray-700" : "border-gray-200 bg-white hover:bg-gray-100"
+                                }`}
+                        >
+                            <Download size={16} />
+                            CSV
+                        </button>
+                    }
+                />
+
+                <p className={`text-sm ${muted} mb-3`}>Total trainers: {trainers.length}</p>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className={muted}>
+                                <th className="text-left py-2">Name</th>
+                                <th className="text-left py-2">Email</th>
+                                <th className="text-left py-2">Speciality</th>
+                                <th className="text-left py-2">Rating</th>
+                                <th className="text-left py-2">Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {trainers.slice(0, 15).map((t) => (
+                                <tr key={t._id} className={`border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+                                    <td className="py-2">{t.name || ""}</td>
+                                    <td className="py-2">{t.email || ""}</td>
+                                    <td className="py-2">{t.speciality || ""}</td>
+                                    <td className="py-2">{String(t.rating ?? "")}</td>
+                                    <td className="py-2">{formatDateTime(t.createdAt)}</td>
+                                </tr>
+                            ))}
+
+                            {trainers.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className={`py-4 ${muted}`}>
+                                        No trainers found.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {trainers.length > 15 && (
+                    <p className={`text-xs mt-3 ${muted}`}>Showing first 15 trainers on screen. Download CSV/PDF for full report.</p>
+                )}
+            </div>
+
+            {/* Activity Section */}
+            <div className={`rounded-2xl border p-5 mb-6 ${cardBg}`}>
+                <SectionHeader
+                    title="Recent Activity Report"
+                    right={
+                        <button
+                            onClick={downloadActivityCSV}
+                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${darkMode ? "border-gray-700 bg-gray-800 hover:bg-gray-700" : "border-gray-200 bg-white hover:bg-gray-100"
+                                }`}
+                        >
+                            <Download size={16} />
+                            CSV
+                        </button>
+                    }
+                />
+
+                <p className={`text-sm ${muted} mb-3`}>Showing latest activities (top 10 on screen)</p>
+
+                <div className="space-y-3">
+                    {activity.slice(0, 10).map((a, idx) => (
+                        <div
+                            key={`${a.type}-${idx}`}
+                            className={`rounded-xl p-3 border transition-colors ${darkMode ? "border-gray-700 bg-gray-900/30" : "border-gray-200 bg-gray-50"
+                                }`}
+                        >
+                            <p className="font-medium">{a.message}</p>
+                            <p className={`text-xs mt-1 ${muted}`}>
+                                Type: <span className="capitalize">{a.type}</span> • {formatDateTime(a.time)}
+                            </p>
+                        </div>
+                    ))}
+
+                    {activity.length === 0 && <p className={muted}>No recent activity found.</p>}
+                </div>
+            </div>
+        </div>
+    );
 };
 
-/* ---------- small table helpers (same pattern as AdminPayments) ---------- */
-const Th = ({ children, align = "left" }) => (
-  <th
-    className={`px-4 py-2 text-[11px] font-medium transition-colors duration-200 text-${align}`}
-  >
-    {children}
-  </th>
-);
-
-const Td = ({ children, mono = false, align = "left" }) => (
-  <td
-    className={`px-4 py-2 whitespace-nowrap text-[11px] transition-colors duration-200 text-${align} ${
-      mono ? "font-mono" : ""
-    }`}
-  >
-    {children}
-  </td>
-);
-
-export default AdminReport;
+export default AdminReports;
