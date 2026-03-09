@@ -15,7 +15,10 @@ import {
   createTrainerTask,
   updateTrainerTask,
   deleteTrainerTask,
+  getMyClientsWithSessions
 } from "../controllers/trainerController.js";
+
+
 import { protect } from "../middleware/auth.js";
 import { authorizeRoles } from "../middleware/role.js";
 
@@ -42,6 +45,8 @@ router.post("/:id/avatar", protect, authorizeRoles("admin", "trainer"), upload.s
 
 /* tasks */
 router.get("/tasks/my", protect, authorizeRoles("trainer"), getTrainerTasks);
+router.get("/sessions/my/clients", protect, getMyClientsWithSessions);
+
 // alias so your frontend /api/trainers/tasks also works
 router.get("/tasks", protect, authorizeRoles("trainer"), getTrainerTasks);
 router.post("/tasks", protect, authorizeRoles("trainer"), createTrainerTask);

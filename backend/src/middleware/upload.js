@@ -3,25 +3,24 @@ import path from "path";
 import fs from "fs";
 
 // Configure storage
+
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const dir = path.join(process.cwd(), "uploads/avatars");
+  destination: (req, file, cb) => {
+    const dir = path.join(process.cwd(), "upload/chat");
+
+    // ✅ Create folder if missing
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true }); // auto-create folder
+      fs.mkdirSync(dir, { recursive: true });
     }
+
     cb(null, dir);
   },
-  filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname);
-    const safeName = file.originalname.replace(/\s+/g, "-");
-    const filename = `${Date.now()}-${safeName}`;
-    cb(null, filename);
-
-    // Save filename for controller use
-    req.savedFilename = filename;
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname || "");
+    const base = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    cb(null, `${base}${ext}`);
   },
 });
-
 // File filter: only images
 const fileFilter = (req, file, cb) => {
   const allowed = /jpeg|jpg|png|gif/;

@@ -369,6 +369,58 @@ export const getTrainerDashboard = async (req, res) => {
 /* =================================================================== */
 /*                          AVATAR / MEDIA                              */
 /* =================================================================== */
+/* =================================================================== */
+/*                    TRAINER: MY CLIENTS + SESSIONS                    */
+/* =================================================================== */
+
+export const getMyClientsWithSessions = async (req, res) => {
+  try {
+    // 1) Get all sessions owned by this trainer
+    const sessions = await Session.find({ trainer: req.user._id })
+      .select("_id title name date time startTime endTime price amount status clientsEnrolled")
+      .populate("clientsEnrolled", "fullname name email membership MemberShip age goals profile metrics weight height")
+      .sort({ date: 1, time: 1 })
+      .lean();
+
+    // 2) Build map: clientId -> { user, sessions: [] }
+    const map = new Map();
+
+    for (const s of sessions) {
+      const enrolled = Array.isArray(s.clientsEnrolled) ? s.clientsEnrolled : [];
+
+      for (const u of enrolled) {
+        const uid = (u?._id || u?.id)?.toString?.();
+        if (!uid) continue;
+
+        if (!map.has(uid)) {
+          map.set(uid, {
+            user: u,
+            sessions: [],
+          });
+        }
+
+        // push the session summary
+        map.get(uid).sessions.push({
+          _id: s._id,
+          title: s.title || s.name || "Session",
+          date: s.date,
+          time: s.time,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          price: s.price ?? s.amount,
+          status: s.status || "Pending",
+        });
+      }
+    }
+
+    // 3) Convert map to array
+    const result = Array.from(map.values());
+
+    return res.json(result);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
 
 export const uploadAvatar = async (req, res) => {
   try {

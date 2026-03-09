@@ -1,4 +1,3 @@
-// routes/sessionRoutes.js
 import express from "express";
 import { protect } from "../middleware/auth.js";
 import { authorizeRoles } from "../middleware/role.js";
@@ -14,6 +13,7 @@ import {
   completeSession,
   cancelSession,
   getTrainerClients,
+  getTrainerClientsWithSessions
 } from "../controllers/sessionController.js";
 
 const router = express.Router();
@@ -42,5 +42,7 @@ router.post("/:id/join", protect, authorizeRoles("member"), joinSession);
 router.post("/:id/start", protect, authorizeRoles("trainer", "admin"), startSession);
 router.post("/:id/complete", protect, authorizeRoles("trainer", "admin"), completeSession);
 router.post("/:id/cancel", protect, authorizeRoles("trainer", "admin"), cancelSession);
+router.get("/my/clients-with-sessions", protect, authorizeRoles("trainer"), getTrainerClientsWithSessions);
+
 
 export default router;

@@ -160,22 +160,39 @@ export const verifyEmail = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password, rememberMe } = req.body;
-    const user = await User.findOne({ email }).select("+password");
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required." });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select("+password");
 
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
-    if (!user.isVerified)
-      return res
-        .status(400)
-        .json({ message: "Please verify your email before logging in." });
+    if (!user.isVerified) {
+      return res.status(400).json({ message: "Please verify your email before logging in." });
+    }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
-      return res.status(400).json({ message: "Invalid credentials" });
+    // ✅ If it’s a Google account without password, stop here
+    if (user.googleId && !user.password) {
+      return res.status(400).json({
+        message: "This account was created with Google. Please login using Google Sign-In.",
+      });
+    }
+
+    // ✅ Guard against missing password in DB
+    if (!user.password) {
+      return res.status(500).json({
+        message: "Password missing for this user in database. Please reset password or recreate user.",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(String(password), String(user.password));
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
     const token = generateToken(user._id, user.role, rememberMe);
 
-    res.json({
+    return res.json({
       message: "Login successful",
       token,
       user: {
@@ -188,7 +205,7 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Login error:", error);
-    res.status(500).json({ message: "Server error during login" });
+    return res.status(500).json({ message: "Server error during login" });
   }
 };
 

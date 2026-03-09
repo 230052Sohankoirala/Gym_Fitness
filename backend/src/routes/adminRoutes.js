@@ -11,6 +11,9 @@ import {
   createTrainerAdmin,
   updateTrainerAdmin,
   deleteTrainerAdmin,
+  getAllUsersAdmin,
+  updateUserStatusAdmin,
+  deleteUserAdmin
 } from "../controllers/adminController.js";
 import { protect } from "../middleware/auth.js";
 import { authorizeRoles } from "../middleware/role.js";
@@ -37,5 +40,9 @@ router.get("/trainers/:id", protect, authorizeRoles("admin"), getTrainerByIdAdmi
 router.post("/trainers", protect, authorizeRoles("admin"), createTrainerAdmin);
 router.put("/trainers/:id", protect, authorizeRoles("admin"), updateTrainerAdmin);
 router.delete("/trainers/:id", protect, authorizeRoles("admin"), deleteTrainerAdmin);
+// 👥 Admin User Management (Members)
+router.get("/users", protect, authorizeRoles("admin"), getAllUsersAdmin);
+router.patch("/users/:id/status", protect, authorizeRoles("admin"), updateUserStatusAdmin);
+router.delete("/users/:id", protect, authorizeRoles("admin"), deleteUserAdmin);
 
 export default router;

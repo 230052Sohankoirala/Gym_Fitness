@@ -315,6 +315,71 @@ export const deleteTrainerAdmin = async (req, res) => {
     return res.status(500).json({ message: "Failed to delete trainer" });
   }
 };
+/* ---------------- Admin: Get all members/users ---------------- */
+export const getAllUsersAdmin = async (req, res) => {
+  try {
+    // Your members are stored in User model
+    const users = await User.find()
+      .select("fullname fullName name email role isActive createdAt")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json(users);
+  } catch (err) {
+    console.error("Get users error:", err);
+    return res.status(500).json({ message: "Failed to fetch users" });
+  }
+};
+
+/* ---------------- Admin: Update user status (activate/deactivate) ---------------- */
+export const updateUserStatusAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    const updated = await User.findByIdAndUpdate(
+      id,
+      { isActive: Boolean(isActive) },
+      { new: true }
+    ).select("fullname fullName name email role isActive createdAt");
+
+    if (!updated) return res.status(404).json({ message: "User not found" });
+
+    return res.json({
+      message: "User status updated",
+      user: updated,
+    });
+  } catch (err) {
+    console.error("Update user status error:", err);
+    return res.status(500).json({ message: "Failed to update user status" });
+  }
+};
+
+/* ---------------- Admin: Delete user ---------------- */
+export const deleteUserAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Safety: prevent deleting admins (optional)
+    const user = await User.findById(id).select("role");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.role === "admin") {
+      return res.status(400).json({ message: "Cannot delete admin user" });
+    }
+
+    // (Optional safety) prevent deleting users with enrollments/payments etc.
+    // If you have Payment linked to memberId etc, you can check here.
+
+    await User.deleteOne({ _id: id });
+
+    return res.json({ message: "User deleted successfully" });
+  } catch (err) {
+    console.error("Delete user error:", err);
+    return res.status(500).json({ message: "Failed to delete user" });
+  }
+};
+
 
 export default {
   getAdminStats,
@@ -327,4 +392,7 @@ export default {
   createTrainerAdmin,
   updateTrainerAdmin,
   deleteTrainerAdmin,
+  getAllUsersAdmin,
+  updateUserStatusAdmin,
+  deleteUserAdmin
 };

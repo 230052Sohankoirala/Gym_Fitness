@@ -71,26 +71,34 @@ async function verifyChatAccess(trainerId, memberId) {
  */
 export const getTrainerThreads = async (req, res) => {
   try {
-    if ((req.role || req.user?.role) !== "trainer") {
+    const role = req.role || req.user?.role;
+
+    if (role !== "trainer") {
       return res.status(403).json({ message: "Trainer only" });
     }
 
-    const trainerId = req.user._id;
+    const trainerId = req.user?._id;
+    if (!trainerId) {
+      return res.status(401).json({ message: "Unauthorized: trainer not found" });
+    }
 
-    // active chat access list
     const activeAccess = await ChatAccess.find({
       trainer: trainerId,
       expiresAt: { $gt: new Date() },
     })
-      // ✅ include avatar fields + updatedAt (cache-busting)
       .populate("member", "fullname username name email avatar avatarUrl profileImage photoUrl image updatedAt")
       .lean();
 
+    // ✅ FILTER OUT BROKEN / NULL MEMBERS (prevents _id crash)
+    const safeAccess = (activeAccess || []).filter((a) => a?.member && a?.member?._id);
+
     const threads = await Promise.all(
-      activeAccess.map(async (a) => {
+      safeAccess.map(async (a) => {
+        const memberId = a.member._id;
+
         const last = await Message.findOne({
           trainer: trainerId,
-          member: a.member._id,
+          member: memberId,
         })
           .sort({ createdAt: -1 })
           .select("text createdAt")
@@ -100,11 +108,11 @@ export const getTrainerThreads = async (req, res) => {
         const avatarUrl = buildPublicUrl(req, rawAvatar);
 
         return {
-          memberId: a.member._id,
+          memberId,
           name: a.member.fullname || a.member.name || a.member.username || "Member",
           email: a.member.email || "",
-          avatarUrl, // ✅ used by frontend
-          avatarUpdatedAt: a.member.updatedAt || null, // ✅ used to bust cache
+          avatarUrl,
+          avatarUpdatedAt: a.member.updatedAt || null,
           lastText: last?.text || "",
           lastAt: last?.createdAt || null,
           chatExpiresAt: a.expiresAt,
@@ -112,7 +120,6 @@ export const getTrainerThreads = async (req, res) => {
       })
     );
 
-    // newest active threads first
     threads.sort((a, b) => {
       const ta = a.lastAt ? new Date(a.lastAt).getTime() : 0;
       const tb = b.lastAt ? new Date(b.lastAt).getTime() : 0;
@@ -121,9 +128,11 @@ export const getTrainerThreads = async (req, res) => {
 
     return res.json(threads);
   } catch (err) {
+    console.error("getTrainerThreads error:", err);
     return res.status(400).json({ message: err.message || "Failed to load threads" });
   }
 };
+
 
 /**
  * ✅ Send message (BOTH)
@@ -285,9 +294,84 @@ export const getMessages = async (req, res) => {
     return res.status(500).json({ message: "Failed to load messages" });
   }
 };
+// ✅ POST /api/messages/:trainerId/media
+// - member: body { text optional } + files[]
+// - trainer: body { text optional, memberId } + files[]
+export const sendMediaMessage = async (req, res) => {
+  try {
+    const { trainerId } = req.params;
+    const user = req.user;
 
+    const role = req.role || user?.role;
+    const { memberId } = req.body;
+
+    // ✅ files from multer
+    const files = req.files || [];
+    if (!files.length) {
+      return res.status(400).json({ message: "No files uploaded" });
+    }
+
+    // ✅ decide member + senderModel exactly like sendMessage()
+    let memberFinal = null;
+    let senderModel = null;
+
+    if (role === "member") {
+      memberFinal = user._id;
+      senderModel = "User";
+      await verifyChatAccess(trainerId, memberFinal);
+    } else if (role === "trainer") {
+      if (String(user._id) !== String(trainerId)) {
+        return res.status(403).json({ message: "TrainerId mismatch" });
+      }
+      if (!memberId) return res.status(400).json({ message: "memberId is required" });
+      memberFinal = memberId;
+      senderModel = "Trainer";
+      await verifyChatAccess(trainerId, memberFinal);
+    } else {
+      return res.status(403).json({ message: "Only member/trainer can upload" });
+    }
+
+    const attachments = files.map((f) => {
+      const url = `${req.protocol}://${req.get("host")}/uploads/chat/${f.filename}`;
+      const mime = f.mimetype || "";
+      const type = mime.startsWith("image/")
+        ? "image"
+        : mime.startsWith("video/")
+        ? "video"
+        : "file";
+
+      return {
+        type,
+        url,
+        filename: f.originalname,
+        mime,
+        size: f.size,
+      };
+    });
+
+    // ✅ save as a Message row (text optional)
+    const msg = await Message.create({
+      trainer: trainerId,
+      member: memberFinal,
+      senderModel,
+      sender: user._id,
+      text: req.body.text ? String(req.body.text).trim() : "",
+      attachments, // ✅ new field (see schema update below)
+    });
+
+    const populated = await Message.findById(msg._id)
+      .populate("sender", "fullname username name role avatar avatarUrl profileImage photoUrl image updatedAt")
+      .lean();
+
+    return res.status(201).json(populated);
+  } catch (err) {
+    console.error("sendMediaMessage error:", err);
+    return res.status(500).json({ message: err.message || "Upload failed" });
+  }
+};
 export default {
   getTrainerThreads,
   sendMessage,
   getMessages,
+  sendMediaMessage,
 };
