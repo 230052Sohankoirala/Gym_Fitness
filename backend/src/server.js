@@ -13,6 +13,9 @@ import jwt from "jsonwebtoken";
 
 import connectDB from "./config/db.js";
 
+// ✅ Stripe webhook controller
+import { handleStripeWebhook } from "./controllers/paymentController.js";
+
 // Routes
 import notificationPreferencesRoutes from "./routes/notificationPreferences.js";
 import paymentsRouter from "./routes/payments.js";
@@ -36,7 +39,7 @@ import trainerAdminChatRoutes from "./routes/trainerAdminChatRoutes.js";
 // Models
 import User from "./models/User.js";
 import Trainer from "./models/Trainer.js";
-import Admin from "./models/Admin.js"; // ✅ ADD (must exist)
+import Admin from "./models/Admin.js";
 import Message from "./models/Message.js";
 import ChatAccess from "./models/ChatAccess.js";
 
@@ -72,12 +75,25 @@ app.use(
 app.use(
   helmet({
     crossOriginOpenerPolicy: isDev ? false : { policy: "same-origin" },
-    crossOriginResourcePolicy: isDev ? false : { policy: "same-origin" }, // ✅ add this
+    crossOriginResourcePolicy: isDev ? false : { policy: "same-origin" },
   })
 );
 
 app.use(morgan("dev"));
 app.use(cookieParser());
+
+/**
+ * ✅ IMPORTANT:
+ * Stripe webhook must use RAW body and must be mounted
+ * BEFORE express.json()
+ */
+app.post(
+  "/api/payments/webhook",
+  express.raw({ type: "application/json" }),
+  handleStripeWebhook
+);
+
+// ✅ Normal JSON parsers for all other routes
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -106,7 +122,7 @@ app.use("/api/payments", paymentsRouter);
 app.use("/api/admin-messages", adminMessageRoutes);
 app.use("/api/trainer", trainerAdminChatRoutes);
 
-// Static uploads
+// ================= STATIC FILES =================
 app.use(
   "/uploads/avatars",
   express.static(path.join(__dirname, "../uploads/avatars"), {
@@ -116,7 +132,7 @@ app.use(
     },
   })
 );
-// ✅ Static chat uploads (images/videos in messages)
+
 app.use(
   "/uploads/chat",
   express.static(path.join(__dirname, "../uploads/chat"), {
@@ -126,6 +142,7 @@ app.use(
     },
   })
 );
+
 app.get("/", (_req, res) => res.send("🚀 API is running..."));
 
 // ================= SOCKET.IO =================
@@ -160,12 +177,15 @@ async function verifyChatAccess30Days(trainerId, memberId) {
     expiresAt: { $gt: new Date() },
   }).lean();
 
-  if (!access) throw new Error("Chat locked. Book again to unlock chat for 30 days.");
+  if (!access) {
+    throw new Error("Chat locked. Book again to unlock chat for 30 days.");
+  }
+
   return true;
 }
 
 /**
- * ✅ SOCKET AUTH (support: member / trainer / admin)
+ * ✅ SOCKET AUTH (member / trainer / admin)
  */
 io.use(async (socket, next) => {
   try {
@@ -182,6 +202,7 @@ io.use(async (socket, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     if (!decoded?.id) {
       console.log("❌ SOCKET AUTH: Invalid decoded token");
       return next(new Error("Invalid token"));
@@ -190,16 +211,23 @@ io.use(async (socket, next) => {
     let account = null;
 
     if (decoded.role === "trainer") {
-      account = await Trainer.findById(decoded.id).select("_id role name fullName fullname email");
+      account = await Trainer.findById(decoded.id).select(
+        "_id role name fullName fullname email"
+      );
     } else if (decoded.role === "admin") {
-      account = await Admin.findById(decoded.id).select("_id role name fullName fullname email");
+      account = await Admin.findById(decoded.id).select(
+        "_id role name fullName fullname email"
+      );
+
       if (!account) {
-        // fallback if your admin accounts live in User collection
-        account = await User.findById(decoded.id).select("_id role name fullName fullname email");
+        account = await User.findById(decoded.id).select(
+          "_id role name fullName fullname email"
+        );
       }
     } else {
-      // member/user
-      account = await User.findById(decoded.id).select("_id role fullname name fullName email");
+      account = await User.findById(decoded.id).select(
+        "_id role fullname name fullName email"
+      );
     }
 
     if (!account) {
@@ -242,7 +270,10 @@ io.on("connection", (socket) => {
       }
 
       if (me.role === "trainer") {
-        if (String(me.id) !== String(trainerId)) throw new Error("TrainerId mismatch");
+        if (String(me.id) !== String(trainerId)) {
+          throw new Error("TrainerId mismatch");
+        }
+
         if (!memberId) throw new Error("memberId required");
 
         await verifyChatAccess30Days(trainerId, memberId);
@@ -262,6 +293,7 @@ io.on("connection", (socket) => {
     try {
       const me = socket.user;
       const clean = String(text || "").trim();
+
       if (!clean) throw new Error("Message cannot be empty");
       if (!trainerId) throw new Error("trainerId required");
 
@@ -273,7 +305,10 @@ io.on("connection", (socket) => {
         senderModel = "User";
         await verifyChatAccess30Days(trainerId, memberFinal);
       } else if (me.role === "trainer") {
-        if (String(me.id) !== String(trainerId)) throw new Error("TrainerId mismatch");
+        if (String(me.id) !== String(trainerId)) {
+          throw new Error("TrainerId mismatch");
+        }
+
         if (!memberId) throw new Error("memberId required");
 
         memberFinal = memberId;
@@ -314,14 +349,16 @@ io.on("connection", (socket) => {
   socket.on("adminTrainer:join", async ({ chatId }) => {
     try {
       const me = socket.user;
+
       if (!chatId) throw new Error("chatId required");
 
       const chat = await AdminTrainerChat.findById(chatId).lean();
       if (!chat) throw new Error("Chat not found");
 
-      // only admin or that trainer can join
-      const isAdmin = me.role === "admin" && String(chat.adminId) === String(me.id);
-      const isTrainer = me.role === "trainer" && String(chat.trainerId) === String(me.id);
+      const isAdmin =
+        me.role === "admin" && String(chat.adminId) === String(me.id);
+      const isTrainer =
+        me.role === "trainer" && String(chat.trainerId) === String(me.id);
 
       if (!isAdmin && !isTrainer) throw new Error("Forbidden");
 
@@ -333,52 +370,51 @@ io.on("connection", (socket) => {
     }
   });
 
-socket.on("adminTrainer:send", async ({ chatId, text }) => {
-  try {
-    const me = socket.user;
-    const clean = String(text || "").trim();
+  socket.on("adminTrainer:send", async ({ chatId, text }) => {
+    try {
+      const me = socket.user;
+      const clean = String(text || "").trim();
 
-    if (!chatId) throw new Error("chatId required");
-    if (!clean) throw new Error("Message cannot be empty");
+      if (!chatId) throw new Error("chatId required");
+      if (!clean) throw new Error("Message cannot be empty");
 
-    const chat = await AdminTrainerChat.findById(chatId).lean();
-    if (!chat) throw new Error("Chat not found");
+      const chat = await AdminTrainerChat.findById(chatId).lean();
+      if (!chat) throw new Error("Chat not found");
 
-    const isAdmin = me.role === "admin" && String(chat.adminId) === String(me.id);
-    const isTrainer = me.role === "trainer" && String(chat.trainerId) === String(me.id);
+      const isAdmin =
+        me.role === "admin" && String(chat.adminId) === String(me.id);
+      const isTrainer =
+        me.role === "trainer" && String(chat.trainerId) === String(me.id);
 
-    if (!isAdmin && !isTrainer) throw new Error("Forbidden");
+      if (!isAdmin && !isTrainer) throw new Error("Forbidden");
 
-    const senderRole = isAdmin ? "admin" : "trainer";
+      const senderRole = isAdmin ? "admin" : "trainer";
 
-    // ✅ IMPORTANT: your schema requires senderId
-    const saved = await AdminTrainerMessage.create({
-      chatId,
-      adminId: chat.adminId,
-      trainerId: chat.trainerId,
+      const saved = await AdminTrainerMessage.create({
+        chatId,
+        adminId: chat.adminId,
+        trainerId: chat.trainerId,
+        senderRole,
+        senderId: me.id,
+        text: clean,
+      });
 
-      senderRole,
-      senderId: me.id,         // ✅ FIX
-      text: clean,
-    });
+      const payload = {
+        _id: String(saved._id),
+        chatId: String(chatId),
+        adminId: String(chat.adminId),
+        trainerId: String(chat.trainerId),
+        senderRole,
+        senderId: String(me.id),
+        text: clean,
+        createdAt: saved.createdAt,
+      };
 
-    const payload = {
-      _id: String(saved._id),
-      chatId: String(chatId),
-      adminId: String(chat.adminId),
-      trainerId: String(chat.trainerId),
-      senderRole,
-      senderId: String(me.id), // ✅ include in payload
-      text: clean,
-      createdAt: saved.createdAt,
-    };
-
-    io.to(`adminTrainer:${chatId}`).emit("adminTrainer:new", payload);
-  } catch (e) {
-    socket.emit("adminTrainer:error", { message: e.message || "Send failed" });
-  }
-});
-
+      io.to(`adminTrainer:${chatId}`).emit("adminTrainer:new", payload);
+    } catch (e) {
+      socket.emit("adminTrainer:error", { message: e.message || "Send failed" });
+    }
+  });
 
   socket.on("disconnect", (reason) => {
     console.log("🔴 SOCKET disconnected:", socket.id, reason);

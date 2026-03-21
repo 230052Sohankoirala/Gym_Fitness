@@ -1,23 +1,15 @@
-// backend/routes/subscriptions.js
 import express from "express";
-import Subscription from "../models/Subscription.js";
-import   { protect } from "../middleware/auth.js";
-
+import { protect } from "../middleware/auth.js";
+import {
+    getMyActiveSubscription,
+    getMySubscriptionHistory,
+    cancelMySubscription,
+} from "../controllers/subscriptionController.js";
 
 const router = express.Router();
 
-router.get("/active",protect , async (req, res) => {
-    try {
-        const sub = await Subscription.findOne({
-            member: req.user._id,
-            active: true,
-        }).sort({ createdAt: -1 });
-
-        return res.json(sub || null);
-    } catch (err) {
-        console.error(err);
-        return res.status(500).json({ message: "Cannot fetch subscription" });
-    }
-});
+router.get("/active", protect, getMyActiveSubscription);
+router.get("/history", protect, getMySubscriptionHistory);
+router.post("/:id/cancel", protect, cancelMySubscription);
 
 export default router;
