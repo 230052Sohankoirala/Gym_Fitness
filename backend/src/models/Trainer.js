@@ -25,17 +25,15 @@ const trainerSchema = new mongoose.Schema(
 
     avatar: { type: String, default: "" },
 
-    // Stripe Connect (payouts)
+    // Stripe Connect
     stripeAccountId: { type: String, default: null },
     stripeOnboarded: { type: Boolean, default: false },
 
-    // Optional dashboard metric
     totalEarnings: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
-// Hash password before save
 trainerSchema.pre("save", async function (next) {
   try {
     if (!this.isModified("password")) return next();
@@ -46,7 +44,6 @@ trainerSchema.pre("save", async function (next) {
   }
 });
 
-// Compare password
 trainerSchema.methods.matchPassword = async function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
 };

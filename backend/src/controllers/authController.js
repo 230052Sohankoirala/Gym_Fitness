@@ -210,43 +210,85 @@ export const login = async (req, res) => {
 };
 
 /* ---------------- Google OAuth ---------------- */
+/* ---------------- Google OAuth ---------------- */
 export const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
-    if (!token)
-      return res.status(400).json({ message: "Google token required" });
+
+    if (!token) {
+      return res.status(400).json({
+        message: "Google token required",
+      });
+    }
 
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
+
     const payload = ticket.getPayload();
 
-    const { sub: googleId, email, name } = payload;
+    if (!payload) {
+      return res.status(400).json({
+        message: "Invalid Google token payload",
+      });
+    }
+
+    const {
+      sub: googleId,
+      email,
+      name,
+      email_verified,
+    } = payload;
+
+    if (!email) {
+      return res.status(400).json({
+        message: "Google account email not found",
+      });
+    }
 
     let user = await User.findOne({ email });
     let isNewUser = false;
 
-    // Case 1️⃣: User already exists but not verified → resend code
+    /* -------------------------------------------------
+       CASE 1: User exists but email not verified
+       ------------------------------------------------- */
     if (user && !user.isVerified) {
       const code = crypto.randomInt(100000, 999999).toString();
+
+      user.googleId = user.googleId || googleId;
       user.verificationCode = code;
       user.verificationCodeExpires = Date.now() + 15 * 60 * 1000;
+
       await user.save();
 
-      await sendVerificationEmail(email, code, user.fullname);
+      await sendVerificationEmail(user.email, code, user.fullname);
 
-      return res.json({
+      return res.status(200).json({
+        success: true,
         message: "Verification code sent to your email. Please verify to continue.",
         requiresVerification: true,
+        isNewUser: false,
+        email: user.email,
+        user: {
+          id: user._id,
+          fullname: user.fullname,
+          email: user.email,
+          username: user.username,
+          role: user.role,
+          isVerified: user.isVerified,
+        },
       });
     }
 
-    // Case 2️⃣: New Google user → create unverified account and send email
+    /* -------------------------------------------------
+       CASE 2: New Google user
+       ------------------------------------------------- */
     if (!user) {
       const code = crypto.randomInt(100000, 999999).toString();
+
       user = await User.create({
-        fullname: name,
+        fullname: name || "Google User",
         username: email.split("@")[0],
         email,
         googleId,
@@ -254,41 +296,67 @@ export const googleLogin = async (req, res) => {
         verificationCode: code,
         verificationCodeExpires: Date.now() + 15 * 60 * 1000,
       });
+
       isNewUser = true;
 
-      await sendVerificationEmail(email, code, name);
+      await sendVerificationEmail(user.email, code, user.fullname);
 
-      return res.json({
+      return res.status(201).json({
+        success: true,
         message: "New Google user. Verification email sent.",
-        isNewUser,
         requiresVerification: true,
+        isNewUser: true,
+        email: user.email,
+        user: {
+          id: user._id,
+          fullname: user.fullname,
+          email: user.email,
+          username: user.username,
+          role: user.role,
+          isVerified: user.isVerified,
+        },
       });
     }
 
-    // Case 3️⃣: Existing verified user → normal login
+    /* -------------------------------------------------
+       CASE 3: Existing verified user
+       ------------------------------------------------- */
     if (!user.isVerified) {
-      return res
-        .status(400)
-        .json({ message: "Please verify your email before login." });
+      return res.status(400).json({
+        message: "Please verify your email before login.",
+      });
+    }
+
+    if (!user.googleId) {
+      user.googleId = googleId;
+      await user.save();
     }
 
     const jwtToken = generateToken(user._id, user.role);
 
-    res.json({
+    return res.status(200).json({
+      success: true,
       message: "Google login successful",
       token: jwtToken,
+      isNewUser,
+      email: user.email,
       user: {
         id: user._id,
         fullname: user.fullname,
         email: user.email,
         username: user.username,
         role: user.role,
+        isVerified: user.isVerified,
       },
-      isNewUser,
+      google: {
+        email_verified: !!email_verified,
+      },
     });
   } catch (error) {
     console.error("❌ Google login error:", error);
-    res.status(500).json({ message: "Server error during Google login" });
+    return res.status(500).json({
+      message: "Server error during Google login",
+    });
   }
 };
 /* ---------------- Logout ---------------- */
