@@ -73,6 +73,18 @@ const userSchema = new mongoose.Schema(
     verificationCodeExpires: {
       type: Date,
     },
+    resetCode: {
+      type: String,
+      default: null,
+    },
+    resetCodeExpires: {
+      type: Date,
+      default: null,
+    },
+    resetCodeVerified: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

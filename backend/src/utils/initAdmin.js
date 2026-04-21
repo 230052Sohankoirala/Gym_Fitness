@@ -1,13 +1,22 @@
+import mongoose from "mongoose";
+import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 import Admin from "../models/Admin.js";
 
+dotenv.config();
+
 export const initAdmin = async () => {
     try {
+        console.log("🚀 Starting admin initialization...");
+
+        await mongoose.connect(process.env.MONGO_URI);
+        console.log("✅ MongoDB connected");
+
         const existingAdmin = await Admin.findOne({ email: "admin@fittrack.com" });
 
         if (existingAdmin) {
             console.log("✅ Admin already exists");
-            return;
+            process.exit(0);
         }
 
         const hashedPw = await bcrypt.hash("Admin@fittrack01", 10);
@@ -18,8 +27,16 @@ export const initAdmin = async () => {
             role: "admin",
         });
 
-        console.log("✅ Default Admin created (admin@fittrack.com / Admin@fittrack01)");
+        console.log("✅ Default Admin created");
+        console.log("📧 Email: admin@fittrack.com");
+        console.log("🔑 Password: Admin@fittrack01");
+
+        process.exit(0);
     } catch (error) {
         console.error("❌ Error creating admin:", error.message);
+        process.exit(1);
     }
 };
+
+// 🔥 THIS WAS MISSING
+initAdmin();

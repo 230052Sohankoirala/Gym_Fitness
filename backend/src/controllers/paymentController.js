@@ -95,7 +95,6 @@ const finalizePaidSession = async ({
         }
     }
 
-    // create or refresh chat access for 30 days
     await ChatAccess.findOneAndUpdate(
         { trainer: trainerId, member: userId },
         { expiresAt: expires },
@@ -199,7 +198,7 @@ export const createCheckoutSession = async (req, res) => {
 
         const gymSession = await Session.findById(sessionId).populate({
             path: "trainer",
-            select: "name email stripeAccountId stripeOnboarded",
+            select: "name email stripeAccountId stripeOnboarded stripeCountry",
         });
 
         if (!gymSession) {
@@ -242,6 +241,7 @@ export const createCheckoutSession = async (req, res) => {
             adminShare: String(adminShare),
             trainerShare: String(trainerShare),
             payoutMode: "split_80_20",
+            stripeConnectedAccountId: String(trainer.stripeAccountId),
         };
 
         const checkout = await stripe.checkout.sessions.create({
@@ -270,13 +270,16 @@ export const createCheckoutSession = async (req, res) => {
                 transfer_data: {
                     destination: trainer.stripeAccountId,
                 },
+                on_behalf_of: trainer.stripeAccountId,
             },
         });
 
         return res.json({ url: checkout.url });
     } catch (err) {
         console.error("createCheckoutSession error:", err);
-        return res.status(500).json({ message: "Stripe checkout error" });
+        return res.status(500).json({
+            message: err?.message || "Stripe checkout error",
+        });
     }
 };
 
@@ -299,7 +302,7 @@ export const createPaymentIntent = async (req, res) => {
 
         const gymSession = await Session.findById(sessionId).populate(
             "trainer",
-            "name email stripeAccountId stripeOnboarded"
+            "name email stripeAccountId stripeOnboarded stripeCountry"
         );
 
         if (!gymSession) {
@@ -338,6 +341,7 @@ export const createPaymentIntent = async (req, res) => {
             transfer_data: {
                 destination: gymSession.trainer.stripeAccountId,
             },
+            on_behalf_of: gymSession.trainer.stripeAccountId,
             metadata: {
                 userId: String(req.user._id),
                 trainerId: String(gymSession.trainer?._id || ""),
@@ -346,13 +350,19 @@ export const createPaymentIntent = async (req, res) => {
                 adminShare: String(adminShare),
                 trainerShare: String(trainerShare),
                 payoutMode: "split_80_20",
+                stripeConnectedAccountId: String(gymSession.trainer.stripeAccountId),
             },
         });
 
-        return res.json({ clientSecret: intent.client_secret });
+        return res.json({
+            clientSecret: intent.client_secret,
+            onBehalfOf: gymSession.trainer.stripeAccountId,
+        });
     } catch (err) {
         console.error("createPaymentIntent error:", err);
-        return res.status(500).json({ message: "Stripe payment intent error" });
+        return res.status(500).json({
+            message: err?.message || "Stripe payment intent error",
+        });
     }
 };
 
@@ -381,10 +391,6 @@ export const handleStripeWebhook = async (req, res) => {
     }
 
     try {
-        /**
-         * FLOW 1:
-         * Stripe Checkout success
-         */
         if (event.type === "checkout.session.completed") {
             const data = event.data.object;
             const meta = data?.metadata || {};
@@ -411,10 +417,6 @@ export const handleStripeWebhook = async (req, res) => {
             console.log("✅ Checkout session processed successfully:", data.id);
         }
 
-        /**
-         * FLOW 2:
-         * PaymentIntent success (PaymentElement / create-intent)
-         */
         if (event.type === "payment_intent.succeeded") {
             const data = event.data.object;
             const meta = data?.metadata || {};
@@ -447,6 +449,7 @@ export const handleStripeWebhook = async (req, res) => {
         return res.json({ received: true });
     }
 };
+
 export const confirmPaymentIntentAndFinalize = async (req, res) => {
     try {
         const { paymentIntentId } = req.body;

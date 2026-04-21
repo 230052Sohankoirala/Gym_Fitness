@@ -14,18 +14,23 @@ const generateToken = (id, role, rememberMe = false) => {
   });
 };
 
-/* ---------------- Email Helper ---------------- */
+/* ---------------- Mail Transport Helper ---------------- */
+const createMailTransporter = () => {
+  return nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+};
+
+/* ---------------- Email Helper: Verification ---------------- */
 const sendVerificationEmail = async (email, code, fullname) => {
   try {
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS, // Gmail App Password only!
-      },
-    });
+    const transporter = createMailTransporter();
 
     const info = await transporter.sendMail({
       from: `"FitTrack Team" <${process.env.EMAIL_USER}>`,
@@ -56,12 +61,53 @@ const sendVerificationEmail = async (email, code, fullname) => {
   }
 };
 
+/* ---------------- Email Helper: Reset Password ---------------- */
+const sendResetPasswordEmail = async (email, code, fullname) => {
+  try {
+    const transporter = createMailTransporter();
+
+    const info = await transporter.sendMail({
+      from: `"FitTrack Support" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "🔐 Reset Your FitTrack Password",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding:20px; border:1px solid #eee; border-radius:10px; max-width:600px;">
+          <h2 style="color:#4f46e5;">Hello ${fullname || "User"},</h2>
+          <p>We received a request to reset your <b>FitTrack</b> password.</p>
+          <p>Use the following code to continue:</p>
+          <div style="text-align:center; margin:20px 0;">
+            <span style="display:inline-block; font-size:22px; font-weight:bold; background:#4f46e5; color:white; padding:10px 20px; border-radius:6px; letter-spacing:3px;">
+              ${code}
+            </span>
+          </div>
+          <p>This code will expire in <b>10 minutes</b>.</p>
+          <p>If you did not request this password reset, you can safely ignore this email.</p>
+          <hr style="margin:25px 0;">
+          <p>FitTrack Support Team</p>
+        </div>
+      `,
+    });
+
+    console.log(`✅ Reset password email sent to ${email}: ${info.messageId}`);
+  } catch (error) {
+    console.error("❌ Reset password email failed:", error.message);
+    throw new Error("Failed to send reset password email. Try again later.");
+  }
+};
+
 /* ---------------- Register User ---------------- */
 export const register = async (req, res) => {
   try {
     const { fullname, username, email, password } = req.body;
 
-    const existing = await User.findOne({ email });
+    if (!fullname || !username || !email || !password) {
+      return res.status(400).json({
+        message: "Full name, username, email, and password are required.",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const existing = await User.findOne({ email: normalizedEmail });
 
     // Case 1: User exists but not verified → resend code
     if (existing && !existing.isVerified) {
@@ -70,7 +116,7 @@ export const register = async (req, res) => {
       existing.verificationCodeExpires = Date.now() + 15 * 60 * 1000;
       await existing.save();
 
-      await sendVerificationEmail(email, code, existing.fullname);
+      await sendVerificationEmail(existing.email, code, existing.fullname);
 
       return res.status(200).json({
         message: "Verification code resent. Please verify your email.",
@@ -85,26 +131,30 @@ export const register = async (req, res) => {
 
     // Case 3: Create new user
     const code = crypto.randomInt(100000, 999999).toString();
+
     const user = await User.create({
       fullname,
       username,
-      email,
+      email: normalizedEmail,
       password,
       isVerified: false,
       verificationCode: code,
       verificationCodeExpires: Date.now() + 15 * 60 * 1000,
+      resetCode: null,
+      resetCodeExpires: null,
+      resetCodeVerified: false,
     });
 
-    await sendVerificationEmail(email, code, fullname);
+    await sendVerificationEmail(user.email, code, fullname);
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "User registered successfully. Please verify your email.",
       isNewUser: true,
       requiresVerification: true,
     });
   } catch (error) {
     console.error("❌ Register error:", error);
-    res.status(500).json({ message: "Server error during registration" });
+    return res.status(500).json({ message: "Server error during registration" });
   }
 };
 
@@ -113,33 +163,39 @@ export const verifyEmail = async (req, res) => {
   try {
     const { email, code } = req.body;
 
-    const user = await User.findOne({ email });
+    if (!email || !code) {
+      return res.status(400).json({ message: "Email and code are required." });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
+
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (user.isVerified)
+    if (user.isVerified) {
       return res.json({ message: "Email already verified" });
+    }
 
     if (
       user.verificationCode !== code ||
+      !user.verificationCodeExpires ||
       user.verificationCodeExpires < Date.now()
     ) {
       return res.status(400).json({ message: "Invalid or expired code" });
     }
 
-    // ✅ Mark as verified
     user.isVerified = true;
     user.verificationCode = undefined;
     user.verificationCodeExpires = undefined;
     await user.save();
 
-    // ✅ Generate token so frontend can navigate without being logged out
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    res.json({
+    return res.json({
       message: "Email verified successfully",
       verified: true,
       token,
@@ -153,34 +209,174 @@ export const verifyEmail = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Verify email error:", error);
-    res.status(500).json({ message: "Server error during verification" });
+    return res.status(500).json({ message: "Server error during verification" });
   }
 };
+
+/* ---------------- Forgot Password: Send Code ---------------- */
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required." });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found with this email." });
+    }
+
+    const resetCode = crypto.randomInt(100000, 999999).toString();
+
+    user.resetCode = resetCode;
+    user.resetCodeExpires = Date.now() + 10 * 60 * 1000;
+    user.resetCodeVerified = false;
+
+    await user.save();
+
+    await sendResetPasswordEmail(user.email, resetCode, user.fullname);
+
+    return res.status(200).json({
+      message: "Password reset code sent to your email.",
+    });
+  } catch (error) {
+    console.error("❌ Forgot password error:", error);
+    return res.status(500).json({ message: "Server error while sending reset code." });
+  }
+};
+
+/* ---------------- Forgot Password: Verify Code ---------------- */
+export const verifyResetCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ message: "Email and code are required." });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    if (!user.resetCode || !user.resetCodeExpires) {
+      return res.status(400).json({
+        message: "No reset code found. Please request a new one.",
+      });
+    }
+
+    if (user.resetCode !== code) {
+      return res.status(400).json({ message: "Invalid verification code." });
+    }
+
+    if (user.resetCodeExpires < Date.now()) {
+      return res.status(400).json({ message: "Verification code has expired." });
+    }
+
+    user.resetCodeVerified = true;
+    await user.save();
+
+    return res.status(200).json({
+      message: "Reset code verified successfully.",
+    });
+  } catch (error) {
+    console.error("❌ Verify reset code error:", error);
+    return res.status(500).json({ message: "Server error while verifying reset code." });
+  }
+};
+
+/* ---------------- Forgot Password: Reset Password ---------------- */
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({
+        message: "Email, code, and new password are required.",
+      });
+    }
+
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({
+        message: "New password must be at least 6 characters long.",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail }).select("+password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    if (!user.resetCode || !user.resetCodeExpires) {
+      return res.status(400).json({ message: "No password reset request found." });
+    }
+
+    if (user.resetCode !== code) {
+      return res.status(400).json({ message: "Invalid reset code." });
+    }
+
+    if (user.resetCodeExpires < Date.now()) {
+      return res.status(400).json({ message: "Reset code has expired." });
+    }
+
+    if (!user.resetCodeVerified) {
+      return res.status(400).json({ message: "Please verify the reset code first." });
+    }
+
+    user.password = newPassword;
+    user.resetCode = null;
+    user.resetCodeExpires = null;
+    user.resetCodeVerified = false;
+
+    await user.save();
+
+    return res.status(200).json({
+      message: "Password reset successful. You can now log in with your new password.",
+    });
+  } catch (error) {
+    console.error("❌ Reset password error:", error);
+    return res.status(500).json({ message: "Server error while resetting password." });
+  }
+};
+
 /* ---------------- Login ---------------- */
 export const login = async (req, res) => {
   try {
     const { email, password, rememberMe } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required." });
+      return res.status(400).json({
+        message: "Email and password are required.",
+      });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() }).select("+password");
+    const normalizedEmail = email.toLowerCase().trim();
 
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    const user = await User.findOne({ email: normalizedEmail }).select("+password");
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     if (!user.isVerified) {
-      return res.status(400).json({ message: "Please verify your email before logging in." });
+      return res.status(400).json({
+        message: "Please verify your email before logging in.",
+      });
     }
 
-    // ✅ If it’s a Google account without password, stop here
     if (user.googleId && !user.password) {
       return res.status(400).json({
         message: "This account was created with Google. Please login using Google Sign-In.",
       });
     }
 
-    // ✅ Guard against missing password in DB
     if (!user.password) {
       return res.status(500).json({
         message: "Password missing for this user in database. Please reset password or recreate user.",
@@ -188,7 +384,10 @@ export const login = async (req, res) => {
     }
 
     const isMatch = await bcrypt.compare(String(password), String(user.password));
-    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     const token = generateToken(user._id, user.role, rememberMe);
 
@@ -209,7 +408,6 @@ export const login = async (req, res) => {
   }
 };
 
-/* ---------------- Google OAuth ---------------- */
 /* ---------------- Google OAuth ---------------- */
 export const googleLogin = async (req, res) => {
   try {
@@ -247,12 +445,12 @@ export const googleLogin = async (req, res) => {
       });
     }
 
-    let user = await User.findOne({ email });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    let user = await User.findOne({ email: normalizedEmail });
     let isNewUser = false;
 
-    /* -------------------------------------------------
-       CASE 1: User exists but email not verified
-       ------------------------------------------------- */
+    /* CASE 1: User exists but email not verified */
     if (user && !user.isVerified) {
       const code = crypto.randomInt(100000, 999999).toString();
 
@@ -281,20 +479,21 @@ export const googleLogin = async (req, res) => {
       });
     }
 
-    /* -------------------------------------------------
-       CASE 2: New Google user
-       ------------------------------------------------- */
+    /* CASE 2: New Google user */
     if (!user) {
       const code = crypto.randomInt(100000, 999999).toString();
 
       user = await User.create({
         fullname: name || "Google User",
-        username: email.split("@")[0],
-        email,
+        username: normalizedEmail.split("@")[0],
+        email: normalizedEmail,
         googleId,
         isVerified: false,
         verificationCode: code,
         verificationCodeExpires: Date.now() + 15 * 60 * 1000,
+        resetCode: null,
+        resetCodeExpires: null,
+        resetCodeVerified: false,
       });
 
       isNewUser = true;
@@ -318,9 +517,7 @@ export const googleLogin = async (req, res) => {
       });
     }
 
-    /* -------------------------------------------------
-       CASE 3: Existing verified user
-       ------------------------------------------------- */
+    /* CASE 3: Existing verified user */
     if (!user.isVerified) {
       return res.status(400).json({
         message: "Please verify your email before login.",
@@ -359,7 +556,8 @@ export const googleLogin = async (req, res) => {
     });
   }
 };
+
 /* ---------------- Logout ---------------- */
 export const logout = (req, res) => {
-  res.json({ message: "Logout successful" });
+  return res.json({ message: "Logout successful" });
 };

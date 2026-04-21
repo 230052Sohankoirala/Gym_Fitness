@@ -2,35 +2,36 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// Configure storage
+const avatarsDir = path.join(process.cwd(), "uploads", "avatars");
+
+if (!fs.existsSync(avatarsDir)) {
+  fs.mkdirSync(avatarsDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(process.cwd(), "upload/chat");
-
-    // ✅ Create folder if missing
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    cb(null, dir);
+  destination: (_req, _file, cb) => {
+    cb(null, avatarsDir);
   },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || "");
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || "").toLowerCase();
     const base = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     cb(null, `${base}${ext}`);
   },
 });
-// File filter: only images
-const fileFilter = (req, file, cb) => {
-  const allowed = /jpeg|jpg|png|gif/;
-  const ext = path.extname(file.originalname).toLowerCase();
-  if (allowed.test(ext)) {
+
+const fileFilter = (_req, file, cb) => {
+  const allowed = [".jpeg", ".jpg", ".png", ".gif", ".webp"];
+  const ext = path.extname(file.originalname || "").toLowerCase();
+
+  if (allowed.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error("Only images are allowed"));
+    cb(new Error("Only JPG, JPEG, PNG, GIF, and WEBP images are allowed"));
   }
 };
 
-// Export middleware
-export const uploadAvatar = multer({ storage, fileFilter });
+export const uploadAvatar = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 },
+});

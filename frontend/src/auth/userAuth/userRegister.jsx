@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
-import { Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, AlertCircle, ArrowLeft } from "lucide-react";
 import registerImg from "../../assets/Images/Signup.jpg";
 import { Link, useNavigate } from "react-router-dom";
 import { Typewriter } from "react-simple-typewriter";
@@ -10,6 +10,7 @@ import axios from "axios";
 const UserRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [formData, setFormData] = useState({
     fullname: "",
     username: "",
@@ -17,53 +18,92 @@ const UserRegister = () => {
     password: "",
     confirmPassword: "",
   });
+
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
 
   const navigate = useNavigate();
 
-  // Handle input
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    if (errors[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: "",
+      }));
+    }
   };
 
-  // Validate input
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.fullname) newErrors.fullname = "Full name is required";
-    if (!formData.username) newErrors.username = "Username is required";
-    if (!formData.email) newErrors.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(formData.email))
+
+    if (!formData.fullname.trim()) {
+      newErrors.fullname = "Full name is required";
+    }
+
+    if (!formData.username.trim()) {
+      newErrors.username = "Username is required";
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Invalid email format";
-    if (!formData.password) newErrors.password = "Password is required";
-    else if (formData.password.length < 6)
+    }
+
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+    } else if (formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
-    if (!formData.confirmPassword)
+    }
+
+    if (!formData.confirmPassword) {
       newErrors.confirmPassword = "Confirm password required";
-    else if (formData.confirmPassword !== formData.password)
+    } else if (formData.confirmPassword !== formData.password) {
       newErrors.confirmPassword = "Passwords do not match";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Register user
+  const cachePendingEmail = (email) => {
+    const safeEmail = (email || "").trim();
+    if (!safeEmail) return;
+
+    sessionStorage.setItem("registerEmail", safeEmail);
+    localStorage.setItem("pendingEmail", safeEmail);
+  };
+
+  const clearPendingEmail = () => {
+    sessionStorage.removeItem("registerEmail");
+    localStorage.removeItem("pendingEmail");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!validateForm()) return;
+
     setIsSubmitting(true);
     setServerError("");
 
     try {
+      const safeEmail = formData.email.trim();
+
       const { data } = await axios.post(
         "http://localhost:4000/api/auth/register",
         {
-          fullname: formData.fullname,
-          username: formData.username,
-          email: formData.email,
+          fullname: formData.fullname.trim(),
+          username: formData.username.trim(),
+          email: safeEmail,
           password: formData.password,
         }
       );
@@ -71,24 +111,30 @@ const UserRegister = () => {
       const requiresVerification =
         data?.requiresVerification === true ||
         data?.isNewUser === true ||
-        (typeof data?.message === "string" &&
-          /verify/i.test(data.message));
+        data?.needsVerification === true ||
+        (typeof data?.message === "string" && /verify/i.test(data.message));
 
       if (requiresVerification) {
-        navigate("/verify-email", { state: { email: formData.email } });
+        cachePendingEmail(safeEmail);
+
+        navigate("/verify-email", {
+          state: { email: safeEmail },
+        });
         return;
       }
 
       if (data?.token && data?.user) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
+        clearPendingEmail();
         navigate("/home");
         return;
       }
 
       navigate("/memberLogin");
     } catch (err) {
-      const msg = err.response?.data?.message;
+      const msg = err?.response?.data?.message;
+
       if (msg === "User already exists") {
         setServerError("This email is already registered. Please log in instead.");
       } else {
@@ -99,39 +145,57 @@ const UserRegister = () => {
     }
   };
 
-  // Handle Google login/signup
-  const handleGoogleSuccess = async (credentialResponse) => {
-    try {
-      const { data } = await axios.post("http://localhost:4000/api/auth/google", {
-        token: credentialResponse.credential,
-      });
+const handleGoogleSuccess = async (credentialResponse) => {
+  try {
+    const { data } = await axios.post("http://localhost:4000/api/auth/google", {
+      token: credentialResponse.credential,
+    });
 
-      // If verification required → go to verify page
-      if (data?.requiresVerification) {
-        const email =
-          data?.user?.email || data?.email || "";
-        navigate("/verify-email", { state: { email } });
-        return;
-      }
+    console.log("Google response:", data);
 
-      // Otherwise, store and go home
-      if (data?.token && data?.user) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        navigate("/home");
-      } else {
-        navigate("/memberLogin");
-      }
-    } catch (err) {
-      console.error("Google signup error:", err);
-      const msg = err.response?.data?.message;
-      setServerError(msg || "Google signup failed. Try again.");
+    const safeEmail = (
+      data?.user?.email ||
+      data?.email ||
+      ""
+    ).trim();
+
+    if (safeEmail) {
+      sessionStorage.setItem("registerEmail", safeEmail);
+      localStorage.setItem("pendingEmail", safeEmail);
     }
-  };
+
+    if (data?.requiresVerification) {
+      navigate("/verify-email", {
+        state: { email: safeEmail },
+      });
+      return;
+    }
+
+    if (data?.token && data?.user) {
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      sessionStorage.removeItem("registerEmail");
+      localStorage.removeItem("pendingEmail");
+      navigate("/home");
+      return;
+    }
+
+    navigate("/memberLogin");
+  } catch (err) {
+    console.error("Google signup error:", err);
+    const msg = err?.response?.data?.message;
+    setServerError(msg || "Google signup failed. Try again.");
+  }
+};
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-gradient-to-br from-indigo-50 to-purple-50 p-4">
-      {/* Left side image */}
+      <div className="absolute top-6 left-6 z-10">
+        <Link to="/" className="text-gray-600 hover:text-gray-800">
+          <ArrowLeft className="w-6 h-6" />
+        </Link>
+      </div>
+
       <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12">
         <motion.img
           src={registerImg}
@@ -143,7 +207,6 @@ const UserRegister = () => {
         />
       </div>
 
-      {/* Right form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -181,9 +244,7 @@ const UserRegister = () => {
             </motion.div>
           )}
 
-          {/* Register form */}
           <form className="space-y-4" onSubmit={handleSubmit}>
-            {/* Full Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Full Name
@@ -202,7 +263,6 @@ const UserRegister = () => {
               )}
             </div>
 
-            {/* Username */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Username
@@ -221,7 +281,6 @@ const UserRegister = () => {
               )}
             </div>
 
-            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Email
@@ -243,7 +302,6 @@ const UserRegister = () => {
               )}
             </div>
 
-            {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Password
@@ -276,7 +334,6 @@ const UserRegister = () => {
               )}
             </div>
 
-            {/* Confirm Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Confirm Password
@@ -309,7 +366,6 @@ const UserRegister = () => {
               )}
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={isSubmitting}
@@ -319,14 +375,12 @@ const UserRegister = () => {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="flex items-center my-6">
             <div className="flex-grow border-t border-gray-300"></div>
             <span className="mx-4 text-gray-500">or</span>
             <div className="flex-grow border-t border-gray-300"></div>
           </div>
 
-          {/* Google Signup */}
           <div className="mt-4 flex justify-center">
             <GoogleLogin
               theme="filled_blue"

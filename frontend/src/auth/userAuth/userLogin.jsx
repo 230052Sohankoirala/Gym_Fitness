@@ -94,6 +94,11 @@ const UserLogin = () => {
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-indigo-50 to-purple-50 p-4">
+       <div className="absolute top-6 left-6 z-10">
+        <Link to="/" className="text-gray-600 hover:text-gray-800">
+          <ArrowLeft className="w-6 h-6" />
+        </Link>
+      </div>
       {/* Back Button for Mobile */}
       <motion.button
         initial={{ opacity: 0 }}

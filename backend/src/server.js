@@ -1,4 +1,3 @@
-// src/server.js
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -6,21 +5,20 @@ import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import http from "http";
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 
 import connectDB from "./config/db.js";
-
-// ✅ Stripe webhook controller
 import { handleStripeWebhook } from "./controllers/paymentController.js";
 
-// Routes
 import notificationPreferencesRoutes from "./routes/notificationPreferences.js";
 import paymentsRouter from "./routes/payments.js";
 import taskRoutes from "./routes/taskRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
+import adminPaymentRoutes from "./routes/adminPaymentRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import nutritionRoutes from "./routes/nutritionRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -29,21 +27,21 @@ import adminRoutes from "./routes/adminRoutes.js";
 import trainerRoutes from "./routes/trainerRoutes.js";
 import sessionRoutes from "./routes/sessionRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import adminRevenueRoutes from "./routes/adminRevenueRoutes.js";
 import subscriptionRoutes from "./routes/subscriptions.js";
 import notificationsRouter from "./routes/notifications.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
+import workoutPlanRoutes from "./routes/workoutPlanRoutes.js";
 import trainerStripeRoutes from "./routes/trainerStripeRoutes.js";
 import adminMessageRoutes from "./routes/adminMessageRoutes.js";
 import trainerAdminChatRoutes from "./routes/trainerAdminChatRoutes.js";
+import trainerApplicationRoutes from "./routes/trainerApplicationRoutes.js";
 
-// Models
 import User from "./models/User.js";
 import Trainer from "./models/Trainer.js";
 import Admin from "./models/Admin.js";
 import Message from "./models/Message.js";
 import ChatAccess from "./models/ChatAccess.js";
-
-// Admin↔Trainer chat models
 import AdminTrainerChat from "./models/AdminTrainerChat.js";
 import AdminTrainerMessage from "./models/AdminTrainerMessage.js";
 
@@ -54,6 +52,20 @@ const isDev = process.env.NODE_ENV !== "production";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/* absolute upload folders */
+const uploadsRoot = path.join(process.cwd(), "uploads");
+const avatarsDir = path.join(uploadsRoot, "avatars");
+const trainerAvatarsDir = path.join(uploadsRoot, "trainer-avatars");
+const chatDir = path.join(uploadsRoot, "chat");
+const trainerCertificatesDir = path.join(uploadsRoot, "trainer-certificates");
+
+/* ensure folders exist */
+fs.mkdirSync(uploadsRoot, { recursive: true });
+fs.mkdirSync(avatarsDir, { recursive: true });
+fs.mkdirSync(trainerAvatarsDir, { recursive: true });
+fs.mkdirSync(chatDir, { recursive: true });
+fs.mkdirSync(trainerCertificatesDir, { recursive: true });
 
 // ================= CORS =================
 const allowedOrigins = ["http://localhost:3000", "http://localhost:5173"];
@@ -82,18 +94,12 @@ app.use(
 app.use(morgan("dev"));
 app.use(cookieParser());
 
-/**
- * ✅ IMPORTANT:
- * Stripe webhook must use RAW body and must be mounted
- * BEFORE express.json()
- */
 app.post(
   "/api/payments/webhook",
   express.raw({ type: "application/json" }),
   handleStripeWebhook
 );
 
-// ✅ Normal JSON parsers for all other routes
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -106,42 +112,38 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/nutrition", nutritionRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/admin", adminRoutes);
+
+app.use("/api/workout-plans", workoutPlanRoutes);
+app.use("/api/admin", adminPaymentRoutes);
 app.use("/api/trainers", trainerRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/notification-preferences", notificationPreferencesRoutes);
-
+app.use("/api/admin", adminRevenueRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/trainers/stripe", trainerStripeRoutes);
 app.use("/api/payments", paymentsRouter);
-
-// ✅ Admin ↔ Trainer messaging routes
+app.use("/api/trainer-applications", trainerApplicationRoutes);
 app.use("/api/admin-messages", adminMessageRoutes);
 app.use("/api/trainer", trainerAdminChatRoutes);
 
 // ================= STATIC FILES =================
-app.use(
-  "/uploads/avatars",
-  express.static(path.join(__dirname, "../uploads/avatars"), {
-    setHeaders: (res) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    },
-  })
-);
+const staticHeaders = (res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+};
 
+app.use("/uploads", express.static(uploadsRoot, { setHeaders: staticHeaders }));
+app.use("/uploads/avatars", express.static(avatarsDir, { setHeaders: staticHeaders }));
+app.use("/uploads/chat", express.static(chatDir, { setHeaders: staticHeaders }));
 app.use(
-  "/uploads/chat",
-  express.static(path.join(__dirname, "../uploads/chat"), {
-    setHeaders: (res) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    },
-  })
+  "/uploads/trainer-certificates",
+  express.static(trainerCertificatesDir, { setHeaders: staticHeaders })
 );
+app.use("/trainer-avatars", express.static(trainerAvatarsDir, { setHeaders: staticHeaders }));
 
 app.get("/", (_req, res) => res.send("🚀 API is running..."));
 
@@ -167,9 +169,6 @@ io.engine.on("connection_error", (err) => {
   });
 });
 
-/**
- * ✅ 30-day rule check (member ↔ trainer)
- */
 async function verifyChatAccess30Days(trainerId, memberId) {
   const access = await ChatAccess.findOne({
     trainer: trainerId,
@@ -184,9 +183,6 @@ async function verifyChatAccess30Days(trainerId, memberId) {
   return true;
 }
 
-/**
- * ✅ SOCKET AUTH (member / trainer / admin)
- */
 io.use(async (socket, next) => {
   try {
     const rawAuthHeader = socket.handshake.headers?.authorization || "";
@@ -196,44 +192,26 @@ io.use(async (socket, next) => {
 
     const token = socket.handshake.auth?.token || headerToken;
 
-    if (!token) {
-      console.log("❌ SOCKET AUTH: No token");
-      return next(new Error("No token"));
-    }
+    if (!token) return next(new Error("No token"));
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    if (!decoded?.id) {
-      console.log("❌ SOCKET AUTH: Invalid decoded token");
-      return next(new Error("Invalid token"));
-    }
+    if (!decoded?.id) return next(new Error("Invalid token"));
 
     let account = null;
 
     if (decoded.role === "trainer") {
-      account = await Trainer.findById(decoded.id).select(
-        "_id role name fullName fullname email"
-      );
+      account = await Trainer.findById(decoded.id).select("_id role name fullName fullname email");
     } else if (decoded.role === "admin") {
-      account = await Admin.findById(decoded.id).select(
-        "_id role name fullName fullname email"
-      );
-
+      account = await Admin.findById(decoded.id).select("_id role name fullName fullname email");
       if (!account) {
-        account = await User.findById(decoded.id).select(
-          "_id role name fullName fullname email"
-        );
+        account = await User.findById(decoded.id).select("_id role name fullName fullname email");
       }
     } else {
-      account = await User.findById(decoded.id).select(
-        "_id role fullname name fullName email"
-      );
+      account = await User.findById(decoded.id).select("_id role fullname name fullName email");
     }
 
-    if (!account) {
-      console.log("❌ SOCKET AUTH: Account not found for id:", decoded.id);
-      return next(new Error("Account not found"));
-    }
+    if (!account) return next(new Error("Account not found"));
 
     socket.user = {
       id: String(account._id),
@@ -241,10 +219,8 @@ io.use(async (socket, next) => {
       name: account.fullname || account.fullName || account.name || "User",
     };
 
-    console.log("✅ SOCKET AUTH OK:", socket.user);
     return next();
   } catch (e) {
-    console.log("❌ SOCKET AUTH FAIL:", e?.message);
     return next(new Error("Socket auth failed"));
   }
 });
@@ -252,9 +228,6 @@ io.use(async (socket, next) => {
 io.on("connection", (socket) => {
   console.log("✅ SOCKET connected:", socket.id, socket.user?.role);
 
-  // =========================
-  // 1) MEMBER ↔ TRAINER CHAT
-  // =========================
   socket.on("chat:join", async ({ trainerId, memberId }) => {
     try {
       const me = socket.user;
@@ -343,9 +316,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  // =========================
-  // 2) ADMIN ↔ TRAINER CHAT
-  // =========================
   socket.on("adminTrainer:join", async ({ chatId }) => {
     try {
       const me = socket.user;
@@ -355,10 +325,8 @@ io.on("connection", (socket) => {
       const chat = await AdminTrainerChat.findById(chatId).lean();
       if (!chat) throw new Error("Chat not found");
 
-      const isAdmin =
-        me.role === "admin" && String(chat.adminId) === String(me.id);
-      const isTrainer =
-        me.role === "trainer" && String(chat.trainerId) === String(me.id);
+      const isAdmin = me.role === "admin" && String(chat.adminId) === String(me.id);
+      const isTrainer = me.role === "trainer" && String(chat.trainerId) === String(me.id);
 
       if (!isAdmin && !isTrainer) throw new Error("Forbidden");
 
@@ -381,10 +349,8 @@ io.on("connection", (socket) => {
       const chat = await AdminTrainerChat.findById(chatId).lean();
       if (!chat) throw new Error("Chat not found");
 
-      const isAdmin =
-        me.role === "admin" && String(chat.adminId) === String(me.id);
-      const isTrainer =
-        me.role === "trainer" && String(chat.trainerId) === String(me.id);
+      const isAdmin = me.role === "admin" && String(chat.adminId) === String(me.id);
+      const isTrainer = me.role === "trainer" && String(chat.trainerId) === String(me.id);
 
       if (!isAdmin && !isTrainer) throw new Error("Forbidden");
 
@@ -421,7 +387,6 @@ io.on("connection", (socket) => {
   });
 });
 
-// ================= ERROR HANDLER =================
 app.use((err, _req, res, _next) => {
   console.error("Error:", err.stack || err);
   res.status(err.statusCode || 500).json({
@@ -430,7 +395,6 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-// ============= Start Server =============
 const PORT = process.env.PORT || 4000;
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server + Socket.IO running on port ${PORT}`);
