@@ -1,6 +1,15 @@
-import React, { useRef } from "react";
-import { motion, useInView } from "framer-motion";//eslint-disable-line no-unused-vars
-import { Dumbbell, Utensils, BarChart3, ArrowRight, Users, Target, Award } from "lucide-react";
+import React, { useRef, useState, useEffect } from "react";
+import { motion, useInView } from "framer-motion"; //eslint-disable-line no-unused-vars
+import {
+  Dumbbell,
+  Utensils,
+  BarChart3,
+  ArrowRight,
+  Users,
+  Target,
+  Award,
+  ChevronDown,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { Typewriter } from "react-simple-typewriter";
 
@@ -29,11 +38,7 @@ const features = [
   },
 ];
 
-const stats = [
-  { value: "50k+", label: "Active Users", icon: <Users size={20} /> },
-  { value: "95%", label: "Success Rate", icon: <Target size={20} /> },
-  { value: "10k+", label: "Workouts", icon: <Award size={20} /> },
-];
+
 
 // ====== Animation Wrapper ======
 const ScrollAnimation = ({ children, variants, className = "" }) => {
@@ -107,81 +112,110 @@ const Header = () => (
 );
 
 // Hero Section
-const Hero = () => (
-  <section className="relative bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white py-24 px-6 text-center overflow-hidden">
-    {/* Decorative circles */}
-    <div className="absolute top-0 left-0 w-full h-full opacity-10">
-      <div className="absolute top-10 left-20 w-72 h-72 bg-white rounded-full"></div>
-      <div className="absolute bottom-10 right-20 w-96 h-96 bg-purple-300 rounded-full"></div>
-    </div>
+const Hero = () => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
-    <div className="container mx-auto relative z-10">
-      <ScrollAnimation variants={animations.slideDown}>
-        <h1 className="text-4xl md:text-6xl font-bold mb-10">
-          <Typewriter
-            words={["Unlock the Power of Fitness", "Track. Train. Transform."]}
-            loop
-            cursor
-            cursorStyle="|"
-            typeSpeed={70}
-            deleteSpeed={50}
-            delaySpeed={1200}
-          />
-        </h1>
-      </ScrollAnimation>
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
 
-      <ScrollAnimation variants={animations.fadeIn}>
-        <p className="mt-4 text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto">
-          Track workouts, monitor nutrition, and achieve your fitness goals with our all-in-one platform.
-        </p>
-      </ScrollAnimation>
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
-      <ScrollAnimation variants={animations.fadeIn}>
-        <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            to="/register"
-            className="bg-white text-blue-700 px-8 py-4 rounded-full font-semibold flex items-center justify-center gap-2 hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl"
-          >
-            Get Started <ArrowRight size={18} />
-          </Link>
-          <Link
-            to="/trainerLogin"
-            className="inline-flex items-center bg-white text-blue-700 px-8 py-4 rounded-full font-semibold text-lg hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl"
-          >
-            TrainerLogin<ArrowRight size={20} className="ml-2" />
-          </Link>
-          <Link
-            to="/adminLogin"
-            className="inline-flex items-center bg-white text-blue-700 px-8 py-4 rounded-full font-semibold text-lg hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl"
-          >
-          AdminLogin<ArrowRight size={20} className="ml-2" />
-          </Link>
-        
-        </div>
-      </ScrollAnimation>
-      
-    </div>
-  </section>
-);
+  return (
+    <section className="relative h-[600px] bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white py-24 px-6 text-center overflow-hidden">
+      {/* Decorative circles */}
+      <div className="absolute top-0 left-0 w-full h-full opacity-10">
+        <div className="absolute top-10 left-20 w-72 h-72 bg-white rounded-full"></div>
+        <div className="absolute bottom-10 right-20 w-96 h-96 bg-purple-300 rounded-full"></div>
+      </div>
+
+      <div className="container mx-auto relative z-10">
+        <ScrollAnimation variants={animations.slideDown}>
+          <h1 className="text-4xl md:text-6xl font-bold mb-10">
+            <Typewriter
+              words={["Unlock the Power of Fitness", "Track. Train. Transform."]}
+              loop
+              cursor
+              cursorStyle="|"
+              typeSpeed={70}
+              deleteSpeed={50}
+              delaySpeed={1200}
+            />
+          </h1>
+        </ScrollAnimation>
+
+        <ScrollAnimation variants={animations.fadeIn}>
+          <p className="mt-4 text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto">
+            Track workouts, monitor nutrition, and achieve your fitness goals with our all-in-one platform.
+          </p>
+        </ScrollAnimation>
+
+        <ScrollAnimation variants={animations.fadeIn}>
+          <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center">
+            {/* Get Started Dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen((prev) => !prev)}
+                className="bg-white text-blue-700 px-8 py-4 rounded-full font-semibold flex items-center justify-center gap-2 hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl"
+              >
+                Get Started
+                <ChevronDown
+                  size={18}
+                  className={`transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : "rotate-0"
+                    }`}
+                />
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-64 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200 z-50">
+                  <Link
+                    to="/register"
+                    className="flex items-center justify-between px-5 py-4 text-gray-800 hover:bg-blue-50 transition-colors duration-200 border-b border-gray-100"
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    <span className="font-medium">Member Sign Up</span>
+                    <ArrowRight size={18} className="text-blue-600" />
+                  </Link>
+
+                  <Link
+                    to="/trainerLogin"
+                    className="flex items-center justify-between px-5 py-4 text-gray-800 hover:bg-blue-50 transition-colors duration-200 border-b border-gray-100"
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    <span className="font-medium">Trainer Login</span>
+                    <ArrowRight size={18} className="text-blue-600" />
+                  </Link>
+
+                  <Link
+                    to="/adminLogin"
+                    className="flex items-center justify-between px-5 py-4 text-gray-800 hover:bg-blue-50 transition-colors duration-200"
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    <span className="font-medium">Admin Login</span>
+                    <ArrowRight size={18} className="text-blue-600" />
+                  </Link>
+                </div>
+              )}
+            </div>
+
+
+          </div>
+        </ScrollAnimation>
+      </div>
+    </section>
+  );
+};
 
 // Stats Section
-const Stats = () => (
-  <section className="py-16 px-6 bg-white">
-    <div className="container mx-auto">
-      <ScrollAnimation variants={animations.staggerContainer} className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {stats.map((stat, index) => (
-          <ScrollAnimation key={index} variants={animations.staggerItem} className="text-center p-6 rounded-xl">
-            <div className="flex justify-center mb-4">
-              <div className="p-3 bg-blue-100 rounded-full text-blue-600">{stat.icon}</div>
-            </div>
-            <h3 className="text-4xl font-bold text-gray-800 mb-2">{stat.value}</h3>
-            <p className="text-gray-600 text-lg">{stat.label}</p>
-          </ScrollAnimation>
-        ))}
-      </ScrollAnimation>
-    </div>
-  </section>
-);
 
 // Features Section
 const Features = () => (
@@ -238,7 +272,6 @@ const CTA = () => (
           Start Your Journey Today <ArrowRight size={20} className="ml-2" />
         </Link>
       </ScrollAnimation>
-
     </div>
   </section>
 );
@@ -277,7 +310,7 @@ const WelcomePage = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Header />
       <Hero />
-      <Stats />
+
       <Features />
       <CTA />
       <Footer />

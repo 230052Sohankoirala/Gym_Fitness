@@ -1,39 +1,103 @@
-// src/components/Navbar.jsx
-import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line no-unused-vars
-import { Dumbbell, Menu, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { AnimatePresence, motion } from "framer-motion";// eslint-disable-line no-unused-vars
+import {
+  Dumbbell,
+  Menu,
+  X,
+  Home as HomeIcon,
+  Activity,
+  Utensils,
+  TrendingUp,
+  CalendarDays,
+  Bell,
+  User,
+} from "lucide-react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import ThemeToggle from "../ThemeToggle";
 import { useTheme } from "../../context/ThemeContext";
 
-const links = [
-  { name: "Home", to: "/home" },
-  { name: "Workouts", to: "/workouts" },
-  { name: "Nutrition", to: "/nutrition" },
-  { name: "Progress", to: "/progress" },
-  { name: "Meals", to: "/userMeals" },
-  { name: "Class", to: "/userClasses" },
-];
 
-const Navbar = () => {
+
+const Navbar = ({ notifications = 0 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const menuRef = useRef();
-  const { darkMode } = useTheme();
+  const [user, setUser] = useState(() => {
+    try {
+      const raw =
+        localStorage.getItem("user") || sessionStorage.getItem("user") || "null";
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  });
 
-  // Close menu when clicking outside
+  const menuRef = useRef(null);
+  const { darkMode } = useTheme();
+  const location = useLocation();
+
+  const avatarSrc = useMemo(() => {
+    if (!user?.avatar) return "";
+    return user.avatar;
+  }, [user?.avatar]);
+
+  useEffect(() => {
+    const syncUserFromStorage = () => {
+      try {
+        const raw =
+          localStorage.getItem("user") || sessionStorage.getItem("user") || "null";
+        const parsed = JSON.parse(raw);
+        setUser(parsed);
+      } catch {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener("storage", syncUserFromStorage);
+    window.addEventListener("user-profile-updated", syncUserFromStorage);
+    window.addEventListener("auth-user-updated", syncUserFromStorage);
+
+    return () => {
+      window.removeEventListener("storage", syncUserFromStorage);
+      window.removeEventListener("user-profile-updated", syncUserFromStorage);
+      window.removeEventListener("auth-user-updated", syncUserFromStorage);
+    };
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location.pathname]);
+
+  const links = [
+    { name: "Home", to: "/home", icon: <HomeIcon size={18} /> },
+    { name: "Workouts", to: "/workouts", icon: <Activity size={18} /> },
+    { name: "Nutrition", to: "/nutrition", icon: <Utensils size={18} /> },
+    { name: "Progress", to: "/progress", icon: <TrendingUp size={18} /> },
+    { name: "Meals", to: "/userMeals", icon: <Utensils size={18} /> },
+    { name: "Class", to: "/userClasses", icon: <CalendarDays size={18} /> },
+    { name: "Generator", to: "/workout-plan", icon: <Dumbbell size={18} /> },
+  ];
+
   const menuVariants = {
-    hidden: { opacity: 0, y: -10, transition: { duration: 0.2, ease: "easeInOut" } },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut", staggerChildren: 0.05 } },
+    hidden: {
+      opacity: 0,
+      y: -10,
+      transition: { duration: 0.2, ease: "easeInOut" },
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.25, ease: "easeOut", staggerChildren: 0.05 },
+    },
   };
 
   const itemVariants = {
@@ -41,18 +105,36 @@ const Navbar = () => {
     visible: { opacity: 1, x: 0 },
   };
 
-  // Dummy profile image, replace with user avatar if available
-  const profilePic = "https://i.pravatar.cc/40";
+  const baseBg = darkMode ? "bg-gray-800" : "bg-white";
+  const baseText = darkMode ? "text-gray-200" : "text-gray-800";
+  const hoverText = darkMode ? "hover:text-blue-400" : "hover:text-blue-600";
+
+  const avatarNode = (
+    <Link to="/profile" className="block">
+      {avatarSrc ? (
+        <img
+          src={avatarSrc}
+          alt="Profile"
+          draggable={false}
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+
+          }}
+          className="w-10 h-10 rounded-full border-2 border-blue-500 object-cover cursor-pointer select-none"
+        />
+      ) : (
+        <div className="w-10 h-10 rounded-full border-2 border-blue-500 bg-gray-200 flex items-center justify-center">
+          <User size={20} className="text-gray-500" />
+        </div>
+      )}
+    </Link>
+  );
 
   return (
-    <motion.nav
-      initial={{ y: -60, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
-      className={`shadow-md  w-full top-0 left-0 z-50 transition-colors duration-200 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+    <nav
+      className={`shadow-md w-full top-0 left-0 z-50 transition-colors duration-200 ${baseBg}`}
     >
       <div className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
-        {/* Logo */}
         <Link
           to="/home"
           className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 font-bold text-xl transition-colors duration-200"
@@ -61,48 +143,59 @@ const Navbar = () => {
           <span>FitTrack</span>
         </Link>
 
-        {/* Desktop Links */}
-        <div className="hidden md:flex items-center space-x-6">
+        <div className="hidden md:flex items-center space-x-2">
           {links.map((link) => (
-            <Link
+            <NavLink
               key={link.name}
               to={link.to}
-              className={`text-black hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 ${darkMode ? "text-gray-200" : "text-gray-800"}`}
+              className={({ isActive }) =>
+                `px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${baseText} ${hoverText} ${isActive ? (darkMode ? "bg-gray-700" : "bg-gray-100") : ""
+                }`
+              }
             >
+              {link.icon}
               {link.name}
-            </Link>
+            </NavLink>
           ))}
-          <ThemeToggle />
-          {/* Profile Picture */}
-          <div className="ml-4">
-            <Link to="/profile">
-            <img
-              src={profilePic}
-              alt="Profile"
-              className="w-10 h-10 rounded-full border-2 border-blue-500 object-cover cursor-pointer"
+
+          <Link
+            to="/notifications"
+            className={`relative ml-2 p-2 rounded-full transition-colors ${hoverText}`}
+            aria-label="Notifications"
+          >
+            <Bell
+              size={20}
+              className={darkMode ? "text-gray-200" : "text-gray-800"}
             />
-            </Link>
+            {notifications > 0 && (
+              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center text-[10px] leading-none font-bold rounded-full bg-red-500 text-white h-4 min-w-4 px-1">
+                {notifications > 9 ? "9+" : notifications}
+              </span>
+            )}
+          </Link>
+
+          <div className="ml-2">
+            <ThemeToggle />
           </div>
+
+          <div className="ml-2">{avatarNode}</div>
         </div>
 
-        {/* Mobile Menu Button */}
         <div className="md:hidden flex items-center">
           <ThemeToggle />
-          <img
-            src={profilePic}
-            alt="Profile"
-            className="w-8 h-8 rounded-full border-2 border-blue-500 object-cover ml-2"
-          />
+          <div className="ml-2">{avatarNode}</div>
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="focus:outline-none ml-2 text-white dark:text-black transition-colors duration-200"
+            className={`focus:outline-none ml-2 ${darkMode ? "text-gray-200" : "text-gray-800"
+              } transition-colors duration-200`}
+            aria-label="Toggle menu"
+            aria-expanded={isOpen}
           >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Menu */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -111,27 +204,40 @@ const Navbar = () => {
             animate="visible"
             exit="hidden"
             variants={menuVariants}
-            className={`md:hidden border-t transition-colors  ${darkMode ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"}`}
+            className={`md:hidden border-t transition-colors ${darkMode ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"
+              }`}
           >
             {links.map((link) => (
               <motion.div
                 key={link.name}
                 variants={itemVariants}
-                className={`px-4 py-3 border-b transition-colors  ${darkMode ? "border-gray-700" : "border-gray-200"}`}
+                className={`px-4 py-3 border-b transition-colors ${darkMode ? "border-gray-700" : "border-gray-200"
+                  }`}
               >
-                <Link
+                <NavLink
                   to={link.to}
-                  className={`block text-black hover:text-blue-600 dark:hover:text-blue-400 transition-colors  ${darkMode ? "text-gray-200" : "text-gray-800"}`}
-                  onClick={() => setIsOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 ${darkMode ? "text-gray-200" : "text-gray-800"
+                    } ${hoverText} ${isActive ? (darkMode ? "bg-gray-800" : "bg-gray-100") : ""
+                    } px-2 py-2 rounded-lg`
+                  }
                 >
-                  {link.name}
-                </Link>
+                  {link.icon}
+                  <span>{link.name}</span>
+                </NavLink>
               </motion.div>
             ))}
+
+            <motion.div
+              variants={itemVariants}
+              className="px-4 py-3 flex items-center justify-between"
+            >
+              <ThemeToggle />
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.nav>
+    </nav>
   );
 };
 

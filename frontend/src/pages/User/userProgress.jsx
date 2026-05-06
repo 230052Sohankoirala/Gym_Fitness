@@ -480,7 +480,7 @@ export default function UserProgress() {
       </div>
 
       {/* Challenge Control Card */}
-      <div className={`border rounded-xl p-4 shadow ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white text-gray-900'}`}>
+      <div className={`border rounded-xl p-4 shadow transition-colors duration-200 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white text-gray-900'}`}>
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold">Today’s Challenge</h2>
@@ -536,8 +536,8 @@ export default function UserProgress() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className={`border rounded-xl p-4 shadow ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white text-gray-900'}`}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 transition-colors duration-200">
+        <div className={`border rounded-xl p-4 shadow transition-colors duration-200 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white text-gray-900'}`}>
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <span className="text-orange-500">🔥</span> Current Streak
           </h2>
@@ -545,7 +545,7 @@ export default function UserProgress() {
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>In a row from your completed challenges.</p>
         </div>
 
-        <div className={`border rounded-xl p-4 shadow ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white text-gray-900'}`}>
+        <div className={`border rounded-xl p-4 shadow transition-colors duration-200 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white text-gray-900'}`}>
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <span className="text-green-500">📆</span> Week Calories (avg)
           </h2>
@@ -558,7 +558,7 @@ export default function UserProgress() {
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Only from completed sessions this week.</p>
         </div>
 
-        <div className={`border rounded-xl p-4 shadow ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white text-gray-900'}`}>
+        <div className={`border rounded-xl p-4 shadow transition-colors duration-200 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white text-gray-900'}`}>
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <span className="text-blue-500">✅</span> Sessions (7d)
           </h2>
@@ -568,7 +568,7 @@ export default function UserProgress() {
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Completed challenges in the last 7 days.</p>
         </div>
 
-        <div className={`border rounded-xl p-4 shadow ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white text-gray-900'}`}>
+        <div className={`border rounded-xl p-4 shadow transition-colors duration-200 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white text-gray-900'}`}>
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <span className="text-purple-500">🏁</span> Today
           </h2>
@@ -582,7 +582,7 @@ export default function UserProgress() {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Login Streak */}
-        <div className={`border rounded-xl p-4 shadow ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}>
+        <div className={`border rounded-xl p-4 shadow transition-colors duration-200 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}>
           <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Progress — Login Streak</h3>
           <div className="h-72">
             <Line ref={streakRef} data={streakData} options={streakOptions} />
@@ -590,7 +590,7 @@ export default function UserProgress() {
         </div>
 
         {/* Daily Login */}
-        <div className={`border rounded-xl p-4 shadow ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}>
+        <div className={`border rounded-xl p-4 shadow transition-colors duration-200 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}>
           <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Daily Login</h3>
           <div className="h-72">
             <Bar ref={dailyLoginRef} data={dailyLoginData} options={dailyLoginOptions} />
@@ -598,7 +598,7 @@ export default function UserProgress() {
         </div>
 
         {/* Workout Distribution */}
-        <div className={`border rounded-xl p-4 shadow ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}>
+        <div className={`border rounded-xl p-4 shadow transition-colors duration-200 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}>
           <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Workout Distribution</h3>
           <div className="h-72">
             <Doughnut ref={doughnutRef} data={workoutDistributionData} options={baseOptions("Workout Types")} />
@@ -606,7 +606,7 @@ export default function UserProgress() {
         </div>
 
         {/* Performance */}
-        <div className={`border rounded-xl p-4 shadow ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}>
+        <div className={`border rounded-xl p-4 shadow transition-colors duration-200 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}>
           <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Performance Analysis</h3>
           <div className="h-72">
             <Radar ref={radarRef} data={performanceData} options={radarOptions} />
@@ -614,7 +614,7 @@ export default function UserProgress() {
         </div>
 
         {/* Weekly Calories */}
-        <div className={`border rounded-xl p-4 shadow ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'} lg:col-span-2`}>
+        <div className={`border rounded-xl p-4 shadow transition-colors duration-200 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'} lg:col-span-2`}>
           <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Weekly Calories</h3>
           <div className="h-72">
             <Bar ref={caloriesRef} data={caloriesData} options={baseOptions("Calories Burned (This Week)")} />
@@ -625,14 +625,13 @@ export default function UserProgress() {
       {/* Badges Section */}
       <div className={`border rounded-xl p-4 shadow transition-colors duration-200 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}>
         <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Gamification Badges</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { name: "First Workout", emoji: "🏆", earned: true },
             { name: "5-Week Goal", emoji: "🎯", earned: true },
             { name: "Streak Master", emoji: "🔥", earned: true },
             { name: "Consistency King", emoji: "👑", earned: true },
-            { name: "Marathon Runner", emoji: "🏃", earned: false },
-            { name: "Early Bird", emoji: "🐦", earned: false },
+          
           ].map((badge, index) => (
             <div
               key={index}

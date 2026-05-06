@@ -1,312 +1,1343 @@
-import React, { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";// eslint-disable-line no-unused-vars
-import { Send, Search, X, Phone, Video, Paperclip, User } from "lucide-react";
+/* eslint-disable no-unused-vars */
+// src/pages/trainer/TrainerMessages.jsx
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { io } from "socket.io-client";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Send,
+  Search,
+  RefreshCw,
+  ArrowLeft,
+  Wifi,
+  WifiOff,
+  Sparkles,
+  MessagesSquare,
+  Paperclip,
+  ImageIcon,
+  Video,
+} from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
-/**
- * TrainerMessages.jsx — Clean & Spacious Chat UI
- * ------------------------------------------------------
- * ✅ Smooth transitions (duration-200)
- * ✅ Spacious, minimal chat bubbles
- * ✅ Responsive sidebar & layout
- * ✅ Dark mode ready
- * ✅ Non-congested with breathing room
- */
+const API_BASE = "http://localhost:4000/api";
+const SOCKET_BASE = "http://localhost:4000";
 
-const timeFmt = (d = new Date()) =>
-    new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-/* -------------------- Message Bubble -------------------- */
-const MessageBubble = ({ message, isOwn }) => (
-    <motion.div
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
-        className={`flex items-end gap-4 ${isOwn ? "justify-end flex-row-reverse" : "justify-start"
-            }`}
-    >
-        {/* Avatar */}
-        <div
-            className={`h-10 w-10 flex items-center justify-center rounded-full shadow-sm ${isOwn
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-100"
-                } transition-colors duration-200`}
-        >
-            <User size={18} />
-        </div>
-
-        {/* Bubble */}
-        <div
-            className={`max-w-[70%] rounded-2xl px-5 py-3 text-sm shadow-sm transition-colors duration-200 ${isOwn
-                    ? "bg-gradient-to-r from-indigo-500 to-indigo-600 text-white"
-                    : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
-                }`}
-        >
-            <p className="leading-relaxed break-words">{message.text}</p>
-            <div
-                className={`mt-2 text-[11px] ${isOwn ? "text-white/80 text-right" : "text-gray-400 dark:text-gray-400"
-                    }`}
-            >
-                {timeFmt(message.time)}
-            </div>
-        </div>
-    </motion.div>
-);
-
-/* -------------------- Message Input -------------------- */
-const MessageInput = ({ value, setValue, onSend, darkMode }) => {
-    const handleKeyDown = (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            if (value.trim()) onSend();
-        }
-    };
-
-    return (
-        <div
-            className={`w-full border-t px-4 sm:px-6 py-4 backdrop-blur transition-colors duration-200 ${darkMode
-                    ? "bg-gray-900/70 border-gray-800"
-                    : "bg-white/90 border-gray-200"
-                }`}
-        >
-            <div className="max-w-5xl mx-auto flex items-center gap-4">
-                <button
-                    className={`p-3 rounded-xl transition-colors duration-200 ${darkMode ? "hover:bg-gray-800" : "hover:bg-gray-100"
-                        }`}
-                >
-                    <Paperclip
-                        size={20}
-                        className={darkMode ? "text-gray-300" : "text-gray-600"}
-                    />
-                </button>
-
-                <textarea
-                    rows={1}
-                    value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Type a message..."
-                    className={`flex-1 resize-none rounded-2xl px-4 py-3 text-[15px] outline-none focus:ring-2 focus:ring-indigo-400 border transition-colors duration-200 ${darkMode
-                            ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400"
-                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                        }`}
-                />
-
-                <button
-                    onClick={onSend}
-                    disabled={!value.trim()}
-                    className="rounded-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors duration-200 p-3 text-white shadow-md"
-                >
-                    <Send size={18} />
-                </button>
-            </div>
-        </div>
-    );
+/* ---------------- Helpers ---------------- */
+const prettyTime = (iso) => {
+  try {
+    return new Date(iso).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
 };
 
-/* -------------------- Main Layout -------------------- */
-const TrainerMessages = () => {
-    const { darkMode } = useTheme?.() ?? { darkMode: false };
-    const scrollerRef = useRef(null);
-    const [input, setInput] = useState("");
-    const [mobileOpen, setMobileOpen] = useState(false);
+const initials = (name = "") =>
+  String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "U";
 
-    const [clients] = useState([
-        { id: "c1", name: "Samrat Bam", emoji: "🧔", last: "Can we move to 7am?", unread: 2 },
-        { id: "c2", name: "Satya Shrestha", emoji: "👩", last: "Meal plan looks great!", unread: 0 },
-        { id: "c3", name: "Ritwiz Acharya", emoji: "👨‍💻", last: "Please review my form video.", unread: 1 },
-    ]);
+const toDate = (v) => {
+  try {
+    if (!v) return null;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d;
+  } catch {
+    return null;
+  }
+};
 
-    const threads = {
-        c1: [
-            { id: "m1", role: "member", text: "Coach, can we switch to 7am?", time: new Date(Date.now() - 1000 * 60 * 60) },
-            { id: "m2", role: "trainer", text: "7am works. See you then!", time: new Date() },
-        ],
-        c2: [
-            { id: "m3", role: "member", text: "Meal plan looks great!", time: new Date(Date.now() - 1000 * 60 * 75) },
-            { id: "m4", role: "trainer", text: "Awesome — keep me posted.", time: new Date(Date.now() - 1000 * 60 * 70) },
-        ],
-        c3: [{ id: "m5", role: "member", text: "Please review my form video.", time: new Date(Date.now() - 1000 * 60 * 25) }],
-    };
+const msToCountdown = (ms) => {
+  if (!Number.isFinite(ms) || ms <= 0) return "Expired";
+  const totalSec = Math.floor(ms / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hrs = Math.floor((totalSec % 86400) / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  if (days > 0) return `${days}d ${hrs}h`;
+  if (hrs > 0) return `${hrs}h ${mins}m`;
+  return `${mins}m`;
+};
 
-    const [activeId, setActiveId] = useState("c1");
-    const [messages, setMessages] = useState(threads["c1"]);
-    const [search, setSearch] = useState("");
-
-    useEffect(() => {
-        setMessages(threads[activeId] || []);
-    }, [activeId]);
-
-    useEffect(() => {
-        const el = scrollerRef.current;
-        if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-    }, [messages]);
-
-    const handleSend = () => {
-        if (!input.trim()) return;
-        setMessages((m) => [
-            ...m,
-            { id: Math.random().toString(36).slice(2), role: "trainer", text: input, time: new Date() },
-        ]);
-        setInput("");
-    };
-
-    const baseBg = darkMode ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-900";
-    const cardBg = darkMode ? "bg-gray-800" : "bg-white";
-    const borderColor = darkMode ? "border-gray-700" : "border-gray-200";
-    const hoverBg = darkMode ? "hover:bg-gray-800" : "hover:bg-gray-100";
-
+const isSameDay = (a, b) => {
+  try {
+    const da = new Date(a);
+    const db = new Date(b);
     return (
-        <div className={`h-screen w-full flex ${baseBg} transition-colors duration-200`}>
-            {/* Sidebar */}
+      da.getFullYear() === db.getFullYear() &&
+      da.getMonth() === db.getMonth() &&
+      da.getDate() === db.getDate()
+    );
+  } catch {
+    return false;
+  }
+};
+
+const dayLabel = (iso) => {
+  try {
+    const d = new Date(iso);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const diff = Math.round((dd.getTime() - today.getTime()) / 86400000);
+    if (diff === 0) return "Today";
+    if (diff === -1) return "Yesterday";
+    return d.toLocaleDateString([], {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return "";
+  }
+};
+
+const cacheBust = (url, updatedAt) => {
+  if (!url) return "";
+  const stamp = updatedAt ? new Date(updatedAt).getTime() : Date.now();
+  const join = url.includes("?") ? "&" : "?";
+  return `${url}${join}v=${stamp}`;
+};
+
+const safeJson = async (res) => {
+  try {
+    return await res.json();
+  } catch {
+    return {};
+  }
+};
+
+const authHeaders = (token, extra = {}) => {
+  const h = { ...extra };
+  if (token) h.Authorization = `Bearer ${token}`;
+  return h;
+};
+
+const isImageMime = (mime = "") => String(mime).startsWith("image/");
+const isVideoMime = (mime = "") => String(mime).startsWith("video/");
+
+/* ---------------- Avatar ---------------- */
+function Avatar({
+  name,
+  src,
+  updatedAt,
+  darkMode,
+  size = 40,
+  ring = false,
+  className = "",
+}) {
+  const [broken, setBroken] = useState(false);
+  const finalSrc = useMemo(() => cacheBust(src, updatedAt), [src, updatedAt]);
+
+  useEffect(() => setBroken(false), [finalSrc]);
+
+  const baseFallback = darkMode
+    ? "bg-white/10 text-white"
+    : "bg-indigo-100 text-indigo-900";
+  const ringCls = ring
+    ? darkMode
+      ? "ring-2 ring-indigo-400/40"
+      : "ring-2 ring-indigo-500/25"
+    : "";
+
+  if (!finalSrc || broken) {
+    return (
+      <div
+        className={`rounded-2xl flex items-center justify-center font-semibold shadow-sm ${baseFallback} ${ringCls} ${className}`}
+        style={{ width: size, height: size }}
+        aria-label="avatar-fallback"
+      >
+        {initials(name)}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={finalSrc}
+      alt={name || "avatar"}
+      onError={() => setBroken(true)}
+      className={`rounded-2xl object-cover shadow-sm ${ringCls} ${className}`}
+      style={{ width: size, height: size }}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+    />
+  );
+}
+
+export default function TrainerMessages() {
+  const theme = useTheme?.() ?? { darkMode: false };
+  const darkMode = theme?.darkMode ?? false;
+
+  const token = useMemo(() => {
+    return (
+      localStorage.getItem("trainerToken") ||
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("trainerToken") ||
+      sessionStorage.getItem("token") ||
+      ""
+    );
+  }, []);
+
+  const socketRef = useRef(null);
+  const scrollerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const [trainerId, setTrainerId] = useState(null);
+
+  const [threads, setThreads] = useState([]);
+  const [activeThread, setActiveThread] = useState(null);
+  const [messages, setMessages] = useState([]);
+
+  const [input, setInput] = useState("");
+  const [files, setFiles] = useState([]);
+  const [search, setSearch] = useState("");
+
+  const [loadingThreads, setLoadingThreads] = useState(true);
+  const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  const [unreadMap, setUnreadMap] = useState({});
+  const [lastSeenMap, setLastSeenMap] = useState({});
+
+  const [mobileView, setMobileView] = useState("list");
+  const [nowTick, setNowTick] = useState(Date.now());
+
+  const [isPageVisible, setIsPageVisible] = useState(true);
+  const [socketState, setSocketState] = useState("connecting");
+
+  const activeThreadRef = useRef(activeThread);
+  const pageVisibleRef = useRef(isPageVisible);
+
+  useEffect(() => {
+    activeThreadRef.current = activeThread;
+  }, [activeThread]);
+
+  useEffect(() => {
+    pageVisibleRef.current = isPageVisible;
+  }, [isPageVisible]);
+
+  const scrollBottom = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+  }, []);
+
+  const autoGrow = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 140) + "px";
+  }, []);
+
+  useEffect(() => {
+    autoGrow();
+  }, [input, autoGrow]);
+
+  /* ---------------- Visibility ---------------- */
+  useEffect(() => {
+    const onVis = () => setIsPageVisible(document.visibilityState === "visible");
+    onVis();
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  /* ---------------- Countdown tick ---------------- */
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  /* ---------------- file pick ---------------- */
+  const pickFiles = useCallback((e) => {
+    const selected = Array.from(e.target.files || []);
+    if (!selected.length) return;
+    const filtered = selected.filter(
+      (f) => isImageMime(f.type) || isVideoMime(f.type)
+    );
+    setFiles((prev) => [...prev, ...filtered].slice(0, 5));
+    e.target.value = "";
+  }, []);
+
+  const removeFile = useCallback((idx) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const clearFiles = useCallback(() => setFiles([]), []);
+
+  /* ---------------- 1) trainerId ---------------- */
+  useEffect(() => {
+    (async () => {
+      if (!token) return;
+      try {
+        const res = await fetch(`${API_BASE}/trainers/me`, {
+          method: "GET",
+          headers: authHeaders(token),
+          credentials: "include",
+        });
+
+        const data = await safeJson(res);
+        if (!res.ok) {
+          throw new Error(data?.message || "Failed to load trainer profile");
+        }
+
+        const id = data?._id || data?.id;
+        if (!id) throw new Error("Trainer _id missing from /trainers/me");
+
+        setTrainerId(id);
+      } catch (e) {
+        setError(e?.message || "Failed to load trainer profile");
+      }
+    })();
+  }, [token]);
+
+  /* ---------------- 2) threads ---------------- */
+  const normalizeThread = useCallback((t) => {
+    const expires = t?.chatExpiresAt || t?.expiresAt || t?.accessExpiresAt || null;
+
+    return {
+      memberId: t?.memberId || t?.member?._id || t?.member || t?.userId,
+      name: t?.name || t?.memberName || t?.fullname || "Member",
+      email: t?.email || t?.memberEmail || "",
+      lastText: t?.lastText || "",
+      lastAt: t?.lastAt || t?.lastMessageAt || null,
+      chatExpiresAt: expires,
+      avatarUrl: t?.avatarUrl || "",
+      avatarUpdatedAt: t?.avatarUpdatedAt || null,
+    };
+  }, []);
+
+  const loadThreads = useCallback(async () => {
+    if (!token) return;
+    setLoadingThreads(true);
+    setError("");
+
+    try {
+      const res = await fetch(`${API_BASE}/messages/threads`, {
+        method: "GET",
+        headers: authHeaders(token, { "Content-Type": "application/json" }),
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data?.message || "Failed to load threads");
+
+      const list = Array.isArray(data)
+        ? data.map(normalizeThread).filter((x) => x?.memberId)
+        : [];
+
+      setUnreadMap((prev) => {
+        const next = { ...prev };
+        const ids = new Set(list.map((x) => String(x.memberId)));
+        Object.keys(next).forEach((k) => {
+          if (!ids.has(String(k))) delete next[k];
+        });
+        return next;
+      });
+
+      setThreads(list);
+
+      setActiveThread((cur) => {
+        if (
+          cur?.memberId &&
+          list.some((x) => String(x.memberId) === String(cur.memberId))
+        ) {
+          return cur;
+        }
+        return list[0] || null;
+      });
+    } catch (e) {
+      setError(e?.message || "Failed to load threads");
+    } finally {
+      setLoadingThreads(false);
+    }
+  }, [token, normalizeThread]);
+
+  useEffect(() => {
+    loadThreads();
+  }, [loadThreads]);
+
+  /* ---------------- 3) connect socket ---------------- */
+  useEffect(() => {
+    if (!token) return;
+
+    setSocketState("connecting");
+
+    const socket = io(SOCKET_BASE, {
+      transports: ["websocket", "polling"],
+      auth: { token },
+      reconnection: true,
+      reconnectionAttempts: 8,
+      reconnectionDelay: 600,
+      timeout: 12000,
+      withCredentials: true,
+    });
+
+    socketRef.current = socket;
+
+    const onConnect = () => setSocketState("online");
+    const onDisconnect = () => setSocketState("offline");
+
+    const onConnectError = (err) => {
+      setSocketState("offline");
+      setError(err?.message || "Socket connection failed");
+      console.log("socket connect_error:", err?.message, err);
+    };
+
+    const onChatError = (payload) => {
+      setError(payload?.message || "Chat error");
+    };
+
+    const onChatNew = (msg) => {
+      const memberId = String(msg?.member || "");
+      if (!memberId) return;
+
+      const lastAt = msg?.createdAt || new Date().toISOString();
+      const lastText =
+        msg?.text ||
+        (Array.isArray(msg?.attachments) && msg.attachments.length > 0
+          ? "📎 Attachment"
+          : "");
+
+      setThreads((prev) => {
+        const next = [...prev];
+        const idx = next.findIndex((t) => String(t.memberId) === memberId);
+
+        if (idx >= 0) {
+          next[idx] = { ...next[idx], lastAt, lastText };
+          const [moved] = next.splice(idx, 1);
+          next.unshift(moved);
+          return next;
+        }
+
+        next.unshift({
+          memberId,
+          name: msg?.sender?.fullName || msg?.sender?.name || "Member",
+          email: msg?.sender?.email || "",
+          lastText,
+          lastAt,
+          chatExpiresAt: null,
+          avatarUrl: msg?.senderAvatarUrl || "",
+          avatarUpdatedAt: msg?.senderAvatarUpdatedAt || null,
+        });
+
+        return next;
+      });
+
+      const active = activeThreadRef.current;
+      const isActive = String(active?.memberId) === memberId;
+
+      if (isActive) {
+        setMessages((prev) => {
+          const id = msg?._id;
+          if (id && prev.some((p) => String(p?._id) === String(id))) return prev;
+          return [...prev, msg];
+        });
+
+        if (pageVisibleRef.current) {
+          setUnreadMap((prev) => ({ ...prev, [memberId]: 0 }));
+          setLastSeenMap((prev) => ({
+            ...prev,
+            [memberId]: new Date().toISOString(),
+          }));
+        } else {
+          setUnreadMap((prev) => ({
+            ...prev,
+            [memberId]: (prev?.[memberId] || 0) + 1,
+          }));
+        }
+
+        scrollBottom();
+        return;
+      }
+
+      setUnreadMap((prev) => ({
+        ...prev,
+        [memberId]: (prev?.[memberId] || 0) + 1,
+      }));
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("connect_error", onConnectError);
+    socket.on("chat:error", onChatError);
+    socket.on("chat:new", onChatNew);
+
+    return () => {
+      try {
+        socket.off("connect", onConnect);
+        socket.off("disconnect", onDisconnect);
+        socket.off("connect_error", onConnectError);
+        socket.off("chat:error", onChatError);
+        socket.off("chat:new", onChatNew);
+        socket.disconnect();
+      } catch {
+        // ignore
+      }
+      socketRef.current = null;
+    };
+  }, [token, scrollBottom]);
+
+  /* ---------------- 4) load saved messages ---------------- */
+  const loadMessages = useCallback(
+    async (memberId) => {
+      if (!trainerId || !memberId) return;
+
+      setLoadingMsgs(true);
+      setError("");
+
+      try {
+        const res = await fetch(
+          `${API_BASE}/messages/${trainerId}?memberId=${memberId}`,
+          {
+            method: "GET",
+            headers: authHeaders(token, { "Content-Type": "application/json" }),
+            credentials: "include",
+            cache: "no-store",
+          }
+        );
+
+        const data = await safeJson(res);
+        if (!res.ok) throw new Error(data?.message || "Failed to load messages");
+
+        setMessages(Array.isArray(data) ? data : []);
+        scrollBottom();
+      } catch (e) {
+        setError(e?.message || "Failed to load messages");
+      } finally {
+        setLoadingMsgs(false);
+      }
+    },
+    [token, trainerId, scrollBottom]
+  );
+
+  /* ---------------- 5) switching thread ---------------- */
+  const openThread = useCallback((t) => {
+    if (!t?.memberId) return;
+    setActiveThread(t);
+    setMobileView("chat");
+
+    const mid = String(t.memberId);
+    setUnreadMap((prev) => ({ ...prev, [mid]: 0 }));
+    setLastSeenMap((prev) => ({ ...prev, [mid]: new Date().toISOString() }));
+  }, []);
+
+  useEffect(() => {
+    if (!trainerId || !activeThread?.memberId) return;
+    if (!socketRef.current) return;
+
+    socketRef.current.emit("chat:join", {
+      trainerId,
+      memberId: activeThread.memberId,
+    });
+
+    loadMessages(activeThread.memberId);
+
+    const mid = String(activeThread.memberId);
+    setUnreadMap((prev) => ({ ...prev, [mid]: 0 }));
+    setLastSeenMap((prev) => ({ ...prev, [mid]: new Date().toISOString() }));
+  }, [trainerId, activeThread?.memberId, loadMessages]);
+
+  /* ---------------- 6) expires ---------------- */
+  const activeExpiresAt = useMemo(
+    () => toDate(activeThread?.chatExpiresAt),
+    [activeThread?.chatExpiresAt]
+  );
+
+  const chatExpired = useMemo(() => {
+    if (!activeExpiresAt) return false;
+    return Date.now() > activeExpiresAt.getTime();
+  }, [activeExpiresAt, nowTick]);
+
+  const timeLeftText = useMemo(() => {
+    if (!activeExpiresAt) return null;
+    return msToCountdown(activeExpiresAt.getTime() - Date.now());
+  }, [activeExpiresAt, nowTick]);
+
+  /* ---------------- 7) send TEXT (socket) ---------------- */
+  const sendText = useCallback(async () => {
+    const clean = input.trim();
+    if (!clean || !trainerId || !activeThread?.memberId) return;
+
+    if (chatExpired) {
+      setError("Chat expired. Member must book again to unlock for 30 days.");
+      return;
+    }
+
+    setSending(true);
+    setError("");
+
+    try {
+      socketRef.current?.emit("chat:send", {
+        trainerId,
+        memberId: activeThread.memberId,
+        text: clean,
+      });
+      setInput("");
+      scrollBottom();
+    } catch {
+      setError("Send failed");
+    } finally {
+      setSending(false);
+    }
+  }, [input, trainerId, activeThread?.memberId, chatExpired, scrollBottom]);
+
+  /* ---------------- 8) send MEDIA (fetch FormData) ---------------- */
+  const sendMedia = useCallback(async () => {
+    const clean = input.trim();
+    if (!trainerId || !activeThread?.memberId) return;
+    if (!clean && files.length === 0) return;
+
+    if (chatExpired) {
+      setError("Chat expired. Member must book again to unlock for 30 days.");
+      return;
+    }
+
+    setSending(true);
+    setError("");
+
+    try {
+      const fd = new FormData();
+      fd.append("memberId", activeThread.memberId);
+      fd.append("text", clean);
+      files.forEach((f) => fd.append("files", f));
+
+      const res = await fetch(`${API_BASE}/messages/${trainerId}/media`, {
+        method: "POST",
+        headers: authHeaders(token),
+        body: fd,
+        credentials: "include",
+      });
+
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data?.message || "Media upload failed");
+
+      setMessages((prev) => {
+        const id = data?._id;
+        if (id && prev.some((p) => String(p?._id) === String(id))) return prev;
+        return [...prev, data];
+      });
+
+      setThreads((prev) => {
+        const next = [...prev];
+        const idx = next.findIndex(
+          (t) => String(t.memberId) === String(activeThread.memberId)
+        );
+        const lastAt = data?.createdAt || new Date().toISOString();
+        const lastText =
+          data?.text ||
+          (Array.isArray(data?.attachments) && data.attachments.length
+            ? "📎 Attachment"
+            : "");
+        if (idx >= 0) {
+          next[idx] = { ...next[idx], lastAt, lastText };
+          const [moved] = next.splice(idx, 1);
+          next.unshift(moved);
+          return next;
+        }
+        return next;
+      });
+
+      setInput("");
+      clearFiles();
+      scrollBottom();
+    } catch (e) {
+      setError(e?.message || "Media upload failed");
+    } finally {
+      setSending(false);
+    }
+  }, [
+    input,
+    files,
+    token,
+    trainerId,
+    activeThread?.memberId,
+    chatExpired,
+    clearFiles,
+    scrollBottom,
+  ]);
+
+  const handleSend = useCallback(async () => {
+    if (files.length > 0) return sendMedia();
+    return sendText();
+  }, [files.length, sendMedia, sendText]);
+
+  /* ---------------- UI derived ---------------- */
+  const filteredThreads = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return threads;
+    return threads.filter((t) =>
+      (t?.name || "").toLowerCase().includes(q)
+    );
+  }, [threads, search]);
+
+  const messagesWithSeparators = useMemo(() => {
+    if (!Array.isArray(messages)) return [];
+    const out = [];
+    for (let i = 0; i < messages.length; i++) {
+      const cur = messages[i];
+      const prev = messages[i - 1];
+      const curAt = cur?.createdAt;
+      const prevAt = prev?.createdAt;
+      const shouldSep = curAt && (!prevAt || !isSameDay(prevAt, curAt));
+      if (shouldSep) {
+        out.push({
+          _type: "sep",
+          id: `sep-${curAt}-${i}`,
+          label: dayLabel(curAt),
+        });
+      }
+      out.push({ _type: "msg", ...cur });
+    }
+    return out;
+  }, [messages]);
+
+  /* ---------------- Theme ---------------- */
+  const pageBg = darkMode
+    ? "bg-gradient-to-br from-[#08111f] via-[#0f172a] to-[#111827]"
+    : "bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/60";
+
+  const shellCard = darkMode
+    ? "bg-white/[0.04] border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.35)]"
+    : "bg-white/80 border-slate-200/70 shadow-[0_12px_40px_rgba(15,23,42,0.08)]";
+
+  const panelCard = darkMode
+    ? "bg-white/[0.03] border-white/10"
+    : "bg-white/75 border-slate-200/70";
+
+  const subtleBorder = darkMode ? "border-white/10" : "border-slate-200/70";
+
+  const hover = darkMode
+    ? "hover:bg-white/[0.06]"
+    : "hover:bg-slate-50";
+
+  const textMain = darkMode ? "text-white" : "text-slate-900";
+  const textSoft = darkMode ? "text-slate-300" : "text-slate-600";
+  const textFaint = darkMode ? "text-slate-400" : "text-slate-500";
+
+  const inputCls = darkMode
+    ? "bg-black/25 border-white/10 text-white placeholder:text-white/35"
+    : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400";
+
+  const statusPill =
+    socketState === "online"
+      ? darkMode
+        ? "bg-emerald-400/15 text-emerald-200 border-emerald-400/25"
+        : "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
+      : socketState === "connecting"
+        ? darkMode
+          ? "bg-indigo-400/15 text-indigo-200 border-indigo-400/25"
+          : "bg-indigo-500/10 text-indigo-700 border-indigo-500/20"
+        : darkMode
+          ? "bg-rose-400/15 text-rose-200 border-rose-400/25"
+          : "bg-rose-500/10 text-rose-700 border-rose-500/20";
+
+  const statusIcon =
+    socketState === "online" ? (
+      <Wifi size={14} />
+    ) : socketState === "connecting" ? (
+      <Wifi size={14} className="animate-pulse" />
+    ) : (
+      <WifiOff size={14} />
+    );
+
+  const canType = !!activeThread?.memberId && !chatExpired;
+  const activeMemberAvatar = activeThread?.avatarUrl || "";
+  const activeMemberAvatarUpdatedAt = activeThread?.avatarUpdatedAt || null;
+
+  return (
+    <div className={`h-[100dvh] w-full ${pageBg} transition-colors duration-200`}>
+      <div className="h-full w-full p-3 md:p-4">
+        <div
+          className={`h-full w-full overflow-hidden rounded-[2rem] border ${shellCard} transition-colors duration-200 backdrop-blur-2xl`}
+        >
+          <div className="h-full w-full flex">
+            {/* ===================== Sidebar ===================== */}
             <aside
-                className={`${mobileOpen ? "fixed inset-0 z-40 flex" : "hidden md:flex"}
-        flex-col w-full md:w-80 border-r ${borderColor} ${cardBg} p-5 transition-all duration-200`}
+              className={`
+                w-full md:w-[360px] shrink-0 border-r ${subtleBorder}
+                ${panelCard}
+                ${mobileView === "chat" ? "hidden md:flex" : "flex"}
+                flex-col backdrop-blur-xl transition-colors duration-200
+              `}
             >
-                {/* Search */}
-                <div className="mb-4">
-                    <div className="relative">
-                        <Search
-                            className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-500"
-                                } transition-colors duration-200`}
-                            size={16}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Search clients"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className={`w-full pl-9 pr-3 py-2 rounded-xl border text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-colors duration-200 ${darkMode
-                                    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                                }`}
-                        />
+              {/* Top */}
+              <div
+                className={`p-5 border-b ${subtleBorder} sticky top-0 z-10 backdrop-blur-xl ${darkMode ? "bg-black/10" : "bg-white/60"
+                  }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className={`font-semibold flex items-center gap-2 ${textMain}`}>
+                      <div
+                        className={`w-10 h-10 rounded-2xl flex items-center justify-center ${darkMode
+                            ? "bg-indigo-500/15 text-indigo-200"
+                            : "bg-indigo-50 text-indigo-700"
+                          }`}
+                      >
+                        <MessagesSquare size={18} />
+                      </div>
+                      <div>
+                        <div className="text-base">Messages</div>
+                        <div className={`text-xs font-normal ${textFaint}`}>
+                          Member inbox
+                        </div>
+                      </div>
                     </div>
-                </div>
+                  </div>
 
-                {/* Client List */}
-                <div className="flex-1 overflow-y-auto space-y-2">
-                    {clients
-                        .filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
-                        .map((c) => (
-                            <button
-                                key={c.id}
-                                onClick={() => {
-                                    setActiveId(c.id);
-                                    setMobileOpen(false);
-                                }}
-                                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 ${activeId === c.id
-                                        ? "bg-indigo-100 dark:bg-indigo-600/30"
-                                        : hoverBg
-                                    }`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div
-                                        className={`h-9 w-9 rounded-full flex items-center justify-center ${darkMode ? "bg-gray-700" : "bg-indigo-50"
-                                            } text-xl transition-colors duration-200`}
-                                    >
-                                        {c.emoji}
-                                    </div>
-                                    <div className="text-left">
-                                        <p className="font-semibold text-sm">{c.name}</p>
-                                        <p
-                                            className={`text-xs truncate ${darkMode ? "text-gray-400" : "text-gray-500"
-                                                } transition-colors duration-200`}
-                                        >
-                                            {c.last}
-                                        </p>
-                                    </div>
-                                </div>
-                                {c.unread > 0 && (
-                                    <span className="rounded-full bg-indigo-600 text-white text-[11px] px-2 py-0.5 min-w-[20px] text-center">
-                                        {c.unread}
-                                    </span>
-                                )}
-                            </button>
-                        ))}
-                </div>
-
-                {/* Close on mobile */}
-                {mobileOpen && (
-                    <button
-                        onClick={() => setMobileOpen(false)}
-                        className={`absolute top-4 right-4 p-2 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-100"
-                            } transition-colors duration-200`}
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`px-3 py-1.5 rounded-full border text-xs flex items-center gap-2 ${statusPill}`}
                     >
-                        <X size={18} className={darkMode ? "text-gray-300" : "text-gray-600"} />
+                      {statusIcon}
+                      {socketState === "online"
+                        ? "Online"
+                        : socketState === "connecting"
+                          ? "Connecting"
+                          : "Offline"}
+                    </div>
+
+                    <button
+                      onClick={loadThreads}
+                      className={`p-2.5 rounded-2xl border ${subtleBorder} ${hover} transition-colors duration-200`}
+                      title="Refresh"
+                    >
+                      <RefreshCw size={16} className={textMain} />
                     </button>
+                  </div>
+                </div>
+
+                {/* Search */}
+                <div className="mt-4 relative">
+                  <Search
+                    size={16}
+                    className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-white/40" : "text-slate-400"
+                      }`}
+                  />
+                  <input
+                    className={`w-full pl-10 pr-3 py-3 rounded-2xl border text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 transition-colors duration-200 ${inputCls}`}
+                    placeholder="Search members"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+
+                {error && (
+                  <div
+                    className={`mt-3 text-xs rounded-2xl px-3 py-2 border ${darkMode
+                        ? "text-rose-200 bg-rose-400/10 border-rose-400/20"
+                        : "text-rose-700 bg-rose-50 border-rose-200"
+                      }`}
+                  >
+                    {error}
+                  </div>
                 )}
+              </div>
+
+              {/* Thread list */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {loadingThreads ? (
+                  <div
+                    className={`rounded-3xl border ${subtleBorder} p-4 text-sm ${textSoft}`}
+                  >
+                    Loading threads...
+                  </div>
+                ) : filteredThreads.length === 0 ? (
+                  <div
+                    className={`rounded-3xl border ${subtleBorder} p-4 text-sm ${textSoft}`}
+                  >
+                    No members available
+                  </div>
+                ) : (
+                  filteredThreads.map((t) => {
+                    const active =
+                      String(activeThread?.memberId) === String(t.memberId);
+                    const unread = unreadMap?.[String(t.memberId)] || 0;
+
+                    const tExpires = toDate(t?.chatExpiresAt);
+                    const expired = tExpires
+                      ? Date.now() > tExpires.getTime()
+                      : false;
+
+                    return (
+                      <motion.button
+                        layout
+                        key={String(t.memberId)}
+                        onClick={() => openThread(t)}
+                        whileTap={{ scale: 0.99 }}
+                        className={`w-full flex items-center justify-between px-3.5 py-3.5 rounded-[1.4rem] transition-colors duration-200 border ${active
+                            ? darkMode
+                              ? "bg-indigo-500/12 border-indigo-400/20 shadow-[0_0_0_1px_rgba(99,102,241,.18)]"
+                              : "bg-indigo-50 border-indigo-200"
+                            : `border-transparent ${hover}`
+                          }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Avatar
+                            name={t?.name}
+                            src={t?.avatarUrl}
+                            updatedAt={t?.avatarUpdatedAt}
+                            darkMode={darkMode}
+                            size={46}
+                            ring={active}
+                          />
+
+                          <div className="text-left min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p
+                                className={`font-semibold text-sm truncate max-w-[170px] ${textMain}`}
+                              >
+                                {t?.name}
+                              </p>
+                              {expired && (
+                                <span
+                                  className={`text-[10px] px-2 py-0.5 rounded-full border ${darkMode
+                                      ? "border-rose-400/25 bg-rose-400/10 text-rose-200"
+                                      : "border-rose-200 bg-rose-50 text-rose-700"
+                                    }`}
+                                >
+                                  Expired
+                                </span>
+                              )}
+                            </div>
+
+                            <p className={`text-xs truncate ${textFaint}`}>
+                              {t?.lastText || "No messages yet"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1 pl-2">
+                          <div className={`text-[11px] ${textFaint}`}>
+                            {t?.lastAt ? prettyTime(t.lastAt) : ""}
+                          </div>
+
+                          {unread > 0 && (
+                            <div className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-indigo-600 text-white shadow">
+                              {unread > 99 ? "99+" : unread}
+                            </div>
+                          )}
+                        </div>
+                      </motion.button>
+                    );
+                  })
+                )}
+              </div>
             </aside>
 
-            {/* Chat Section */}
-            <section className="flex-1 flex flex-col h-full min-w-0">
-                {/* Header */}
-                <div
-                    className={`flex items-center justify-between px-4 sm:px-6 py-4 border-b ${borderColor} transition-colors duration-200 ${darkMode ? "bg-gray-900/70" : "bg-white/80"
-                        } backdrop-blur-md`}
-                >
-                    <div>
-                        <h3 className="text-sm font-semibold transition-colors duration-200">
-                            {clients.find((x) => x.id === activeId)?.name}
-                        </h3>
-                        <p className="text-xs text-green-500">Active now</p>
-                    </div>
+            {/* ===================== Chat Panel ===================== */}
+            <section
+              className={`flex-1 flex flex-col h-full min-w-0 ${mobileView === "list" ? "hidden md:flex" : "flex"
+                }`}
+            >
+              {/* Header */}
+              <div
+                className={`px-4 md:px-6 py-4 border-b ${subtleBorder} sticky top-0 z-10 backdrop-blur-xl ${darkMode ? "bg-black/10" : "bg-white/60"
+                  }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    className={`md:hidden inline-flex items-center gap-2 px-3 py-2 rounded-2xl border ${subtleBorder} ${hover} transition-colors duration-200 ${textMain}`}
+                    onClick={() => setMobileView("list")}
+                  >
+                    <ArrowLeft size={16} />
+                    Threads
+                  </button>
 
-                    <div className="flex items-center gap-3">
-                        {[Paperclip, Phone, Video].map((Icon, i) => (
-                            <button
-                                key={i}
-                                className={`p-2 rounded-lg transition-colors duration-200 ${hoverBg}`}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar
+                      name={activeThread?.name || "Member"}
+                      src={activeMemberAvatar}
+                      updatedAt={activeMemberAvatarUpdatedAt}
+                      darkMode={darkMode}
+                      size={46}
+                      ring
+                    />
+
+                    <div className="min-w-0">
+                      <div className={`font-semibold truncate ${textMain}`}>
+                        {activeThread?.name || "Select a member"}
+                      </div>
+                      <div className={`text-xs truncate ${textFaint}`}>
+                        {activeThread?.email ||
+                          (activeThread?.memberId ? "Member" : "—")}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right hidden sm:block">
+                    {activeThread?.memberId ? (
+                      <>
+                        {activeExpiresAt ? (
+                          <div className={`text-xs ${textSoft}`}>
+                            <span>Chat expires in </span>
+                            <span
+                              className={`font-semibold ${chatExpired
+                                  ? "text-rose-400"
+                                  : darkMode
+                                    ? "text-emerald-300"
+                                    : "text-emerald-600"
+                                }`}
                             >
-                                <Icon
-                                    size={18}
-                                    className={darkMode ? "text-gray-300" : "text-gray-600"}
-                                />
-                            </button>
-                        ))}
+                              {timeLeftText}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className={`text-xs ${textSoft}`}>Live chat</div>
+                        )}
 
-                        {/* Mobile sidebar toggle */}
-                        <button
-                            className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
-                            onClick={() => setMobileOpen(true)}
+                        <div
+                          className={`text-[11px] mt-0.5 flex items-center justify-end gap-2 ${textFaint}`}
                         >
-                            <Search
-                                size={18}
-                                className={darkMode ? "text-gray-300" : "text-gray-600"}
-                            />
-                        </button>
-                    </div>
+                          <Sparkles
+                            size={12}
+                            className={
+                              darkMode ? "text-indigo-200" : "text-indigo-700"
+                            }
+                          />
+                          Live • Saved
+                        </div>
+                      </>
+                    ) : (
+                      <div className={`text-xs ${textSoft}`}>
+                        Pick a member to view messages
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Messages */}
-                <div
-                    ref={scrollerRef}
-                    className={`flex-1 overflow-y-auto px-4 sm:px-6 py-6 transition-colors duration-200 ${darkMode
-                            ? "bg-gradient-to-b from-gray-900 to-gray-950"
-                            : "bg-gradient-to-b from-gray-50 to-white"
+                {activeThread?.memberId && chatExpired && (
+                  <div
+                    className={`mt-3 text-sm px-4 py-3 rounded-2xl border ${darkMode
+                        ? "border-rose-400/25 bg-rose-400/10 text-rose-200"
+                        : "border-rose-200 bg-rose-50 text-rose-700"
+                      }`}
+                  >
+                    Chat expired. Member must book again to unlock chat for 30 days.
+                  </div>
+                )}
+              </div>
+
+              {/* Messages */}
+              <div
+                ref={scrollerRef}
+                className="flex-1 overflow-y-auto px-4 md:px-6 py-6"
+              >
+                <div className="max-w-4xl mx-auto flex flex-col gap-4">
+                  {!activeThread?.memberId ? (
+                    <div className="py-20 text-center">
+                      <div
+                        className={`mx-auto mb-4 h-16 w-16 rounded-3xl flex items-center justify-center ${darkMode
+                            ? "bg-white/5 text-white/70"
+                            : "bg-white text-slate-500 shadow-sm"
+                          }`}
+                      >
+                        <MessagesSquare size={28} />
+                      </div>
+                      <p className={`text-base font-medium ${textMain}`}>
+                        No conversation selected
+                      </p>
+                      <p className={`mt-2 text-sm ${textFaint}`}>
+                        Choose a member from the left to start chatting.
+                      </p>
+                    </div>
+                  ) : loadingMsgs ? (
+                    <div className={`text-sm ${textSoft}`}>Loading messages...</div>
+                  ) : messages.length === 0 ? (
+                    <div className="py-16 text-center">
+                      <div
+                        className={`mx-auto mb-4 h-16 w-16 rounded-3xl flex items-center justify-center ${darkMode
+                            ? "bg-white/5 text-white/70"
+                            : "bg-white text-slate-500 shadow-sm"
+                          }`}
+                      >
+                        <Sparkles size={26} />
+                      </div>
+                      <p className={`text-base font-medium ${textMain}`}>
+                        No messages yet
+                      </p>
+                      <p className={`mt-2 text-sm ${textFaint}`}>
+                        Send the first message to begin the conversation.
+                      </p>
+                    </div>
+                  ) : (
+                    <AnimatePresence initial={false}>
+                      {messagesWithSeparators.map((item, idx) => {
+                        if (item._type === "sep") {
+                          return (
+                            <motion.div
+                              key={item.id}
+                              initial={{ opacity: 0, y: 6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="flex justify-center"
+                            >
+                              <div
+                                className={`text-[11px] px-3 py-1 rounded-full border ${subtleBorder} ${darkMode
+                                    ? "bg-white/5 text-white/70"
+                                    : "bg-white text-slate-600"
+                                  }`}
+                              >
+                                {item.label}
+                              </div>
+                            </motion.div>
+                          );
+                        }
+
+                        const m = item;
+                        const senderRole =
+                          m?.sender?.role ||
+                          (m?.senderModel === "Trainer" ? "trainer" : "member");
+                        const isOwn = senderRole === "trainer";
+                        const label = isOwn
+                          ? "You"
+                          : activeThread?.name || "Member";
+
+                        const ownBubble =
+                          "bg-gradient-to-br from-indigo-600 via-violet-600 to-blue-600 text-white shadow-[0_10px_30px_rgba(79,70,229,0.25)]";
+                        const otherBubble = darkMode
+                          ? "bg-white/[0.05] border border-white/10 text-white"
+                          : "bg-white border border-slate-200 text-slate-900 shadow-sm";
+
+                        const atts = Array.isArray(m?.attachments)
+                          ? m.attachments
+                          : [];
+
+                        return (
+                          <motion.div
+                            key={m._id || `m-${idx}`}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={`w-full flex gap-2 ${isOwn ? "justify-end" : "justify-start"
+                              }`}
+                          >
+                            {!isOwn && (
+                              <Avatar
+                                name={activeThread?.name || "Member"}
+                                src={m?.senderAvatarUrl || activeMemberAvatar}
+                                updatedAt={
+                                  m?.senderAvatarUpdatedAt ||
+                                  activeMemberAvatarUpdatedAt
+                                }
+                                darkMode={darkMode}
+                                size={34}
+                                className="shrink-0 mt-[18px]"
+                              />
+                            )}
+
+                            <div className="max-w-[80%]">
+                              <div
+                                className={`text-[11px] mb-1 ${isOwn ? "text-right" : "text-left"
+                                  } ${textFaint}`}
+                              >
+                                <span className="font-medium">{label}</span>
+                                <span> • {prettyTime(m.createdAt)}</span>
+                              </div>
+
+                              <div
+                                className={`px-4 py-3 rounded-[1.6rem] ${isOwn
+                                    ? `${ownBubble} rounded-br-md`
+                                    : `${otherBubble} rounded-bl-md`
+                                  }`}
+                              >
+                                {m?.text ? (
+                                  <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                                    {m.text}
+                                  </p>
+                                ) : null}
+
+                                {atts.length > 0 && (
+                                  <div className={`${m?.text ? "mt-3" : ""} space-y-2`}>
+                                    {atts.map((a, i) => {
+                                      const key = a?.url || `${m._id || idx}-att-${i}`;
+
+                                      if (a?.type === "image") {
+                                        return (
+                                          <img
+                                            key={key}
+                                            src={a.url}
+                                            alt={a.filename || "image"}
+                                            className="max-w-sm rounded-2xl border border-white/10"
+                                            loading="lazy"
+                                          />
+                                        );
+                                      }
+
+                                      if (a?.type === "video") {
+                                        return (
+                                          <video
+                                            key={key}
+                                            src={a.url}
+                                            controls
+                                            className="max-w-full rounded-2xl border border-white/10"
+                                          />
+                                        );
+                                      }
+
+                                      return (
+                                        <a
+                                          key={key}
+                                          href={a.url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-xs underline"
+                                        >
+                                          {a.filename || "Download file"}
+                                        </a>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  )}
+                </div>
+              </div>
+
+              {/* Input */}
+              <div
+                className={`border-t ${subtleBorder} px-4 md:px-6 py-4 backdrop-blur-xl ${darkMode ? "bg-black/10" : "bg-white/60"
+                  }`}
+              >
+                <div className="max-w-4xl mx-auto flex flex-col gap-3">
+                  <input
+                    id="trainer-chat-media"
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    className="hidden"
+                    onChange={pickFiles}
+                  />
+
+                  <div className="flex items-end gap-3">
+                    <label
+                      htmlFor="trainer-chat-media"
+                      className={`inline-flex items-center justify-center rounded-2xl h-12 w-12 border cursor-pointer transition-colors duration-200 ${darkMode
+                          ? "bg-white/5 hover:bg-white/10 text-white border-white/10"
+                          : "bg-white hover:bg-slate-50 text-slate-800 border-slate-200"
                         }`}
-                >
-                    <div className="max-w-4xl mx-auto flex flex-col gap-6">
-                        {messages.map((m) => (
-                            <MessageBubble
-                                key={m.id}
-                                message={m}
-                                isOwn={m.role === "trainer"}
-                            />
-                        ))}
+                      title="Attach image/video"
+                    >
+                      <Paperclip size={18} />
+                    </label>
+
+                    <div className="flex-1 relative">
+                      <textarea
+                        ref={inputRef}
+                        rows={1}
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        placeholder={
+                          !activeThread?.memberId
+                            ? "Select a member first..."
+                            : chatExpired
+                              ? "Chat expired..."
+                              : "Type a message…"
+                        }
+                        className={`w-full resize-none rounded-[1.6rem] px-4 py-3.5 pr-4 text-sm outline-none border focus:ring-2 focus:ring-indigo-500/30 transition-colors duration-200 ${inputCls} ${!canType ? "opacity-70" : ""
+                          }`}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSend();
+                          }
+                        }}
+                        disabled={!activeThread?.memberId || chatExpired}
+                      />
                     </div>
+
+                    <button
+                      onClick={handleSend}
+                      disabled={
+                        sending ||
+                        (!input.trim() && files.length === 0) ||
+                        !activeThread?.memberId ||
+                        chatExpired
+                      }
+                      className={`rounded-[1.3rem] px-5 h-12 text-white shadow-md transition-colors duration-200 font-semibold flex items-center gap-2 ${sending ||
+                          (!input.trim() && files.length === 0) ||
+                          !activeThread?.memberId ||
+                          chatExpired
+                          ? darkMode
+                            ? "bg-white/10 text-white/50 cursor-not-allowed"
+                            : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                          : "bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 hover:from-indigo-500 hover:via-violet-500 hover:to-blue-500"
+                        }`}
+                      title={
+                        !activeThread?.memberId
+                          ? "Select a member first"
+                          : chatExpired
+                            ? "Chat expired"
+                            : "Send"
+                      }
+                    >
+                      <Send size={16} />
+                      {sending ? "Sending..." : "Send"}
+                    </button>
+                  </div>
+
+                  {files.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {files.map((f, idx) => (
+                        <div
+                          key={`${f.name}-${idx}`}
+                          className={`text-xs px-3 py-2 rounded-2xl border ${subtleBorder} ${darkMode ? "bg-white/5 text-white" : "bg-white text-slate-700"
+                            } flex items-center gap-2`}
+                          title={f.type}
+                        >
+                          {isImageMime(f.type) ? (
+                            <ImageIcon size={14} />
+                          ) : (
+                            <Video size={14} />
+                          )}
+                          <span className="max-w-[220px] truncate">{f.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(idx)}
+                            className="opacity-70 hover:opacity-100"
+                            title="Remove"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={clearFiles}
+                        className={`text-xs underline ${textFaint} hover:opacity-100 opacity-80`}
+                      >
+                        Clear all
+                      </button>
+                    </div>
+                  )}
+
+                  <div className={`text-[11px] flex items-center justify-between ${textFaint}`}>
+                    <span>Enter = send • Shift + Enter = new line</span>
+                    <span>
+                      {socketState === "online"
+                        ? "Secure session"
+                        : "Trying to reconnect..."}
+                    </span>
+                  </div>
                 </div>
-
-                {/* Input */}
-                <MessageInput
-                    value={input}
-                    setValue={setInput}
-                    onSend={handleSend}
-                    darkMode={darkMode}
-                />
+              </div>
             </section>
+          </div>
         </div>
-    );
-};
-
-export default TrainerMessages;
+      </div>
+    </div>
+  );
+}

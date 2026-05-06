@@ -1,161 +1,118 @@
-import React, { useState } from 'react'
-import { FaArrowLeft, FaCheck, FaRunning, FaDumbbell, FaHeartbeat, FaYinYang, FaFistRaised } from 'react-icons/fa'
-import { motion } from 'framer-motion'// eslint-disable-line no-unused-vars
-import { Link, useNavigate } from 'react-router-dom'
-import { Typewriter } from 'react-simple-typewriter'
+// src/pages/User/InfoUser/UserGoal.jsx
+import React, { useState } from "react";
+import { FaArrowLeft, FaCheck, FaRunning, FaDumbbell, FaHeartbeat, FaYinYang, FaFistRaised } from "react-icons/fa";
+import { motion } from "framer-motion";// eslint-disable-line no-unused-vars
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const UserGoal = () => {
-    const navigate = useNavigate();
-    const [selectedGoals, setSelectedGoals] = useState([]);
+  const navigate = useNavigate();
+  const [selectedGoals, setSelectedGoals] = useState([]);
+  const [error, setError] = useState("");
 
-    const goals = [
-        {
-            id: 1,
-            title: 'Lose Weight',
-            icon: <FaRunning className="text-xl" />,
-            color: 'from-rose-500 to-pink-500',
-            bgColor: 'bg-gradient-to-br from-rose-50 to-pink-50'
-        },
-        {
-            id: 2,
-            title: 'Build Muscle',
-            icon: <FaDumbbell className="text-xl" />,
-            color: 'from-blue-500 to-indigo-500',
-            bgColor: 'bg-gradient-to-br from-blue-50 to-indigo-50'
-        },
-        {
-            id: 3,
-            title: 'Improve Cardio',
-            icon: <FaHeartbeat className="text-xl" />,
-            color: 'from-emerald-500 to-teal-500',
-            bgColor: 'bg-gradient-to-br from-emerald-50 to-teal-50'
-        },
-        {
-            id: 4,
-            title: 'Improve Flexibility',
-            icon: <FaYinYang className="text-xl" />,
-            color: 'from-purple-500 to-violet-500',
-            bgColor: 'bg-gradient-to-br from-purple-50 to-violet-50'
-        },
-        {
-            id: 5,
-            title: 'Improve Strength',
-            icon: <FaFistRaised className="text-xl" />,
-            color: 'from-amber-500 to-orange-500',
-            bgColor: 'bg-gradient-to-br from-amber-50 to-orange-50'
-        },
-    ];
+  const goals = [
+    { id: "Lose Weight", title: "Lose Weight", icon: <FaRunning /> },
+    { id: "Build Muscle", title: "Build Muscle", icon: <FaDumbbell /> },
+    { id: "Improve Cardio", title: "Improve Cardio", icon: <FaHeartbeat /> },
+    { id: "Improve Flexibility", title: "Improve Flexibility", icon: <FaYinYang /> },
+    { id: "Improve Strength", title: "Improve Strength", icon: <FaFistRaised /> },
+  ];
 
-    const toggleGoal = (goalId) => {
-        if (selectedGoals.includes(goalId)) {
-            setSelectedGoals(selectedGoals.filter(id => id !== goalId));
-        } else {
-            setSelectedGoals([...selectedGoals, goalId]);
-        }
-    };
+  const toggleGoal = (goalId) => {
+    setSelectedGoals((prev) =>
+      prev.includes(goalId)
+        ? prev.filter((id) => id !== goalId)
+        : [...prev, goalId]
+    );
+  };
 
-    const handleContinue = () => {
-        if (selectedGoals.length > 0) {
-            // Here you would typically navigate to the next screen
-            console.log("Selected goals:", selectedGoals);
-            // navigate('/next-page');
-        }
-    };
+  const handleContinue = async () => {
+    if (selectedGoals.length === 0) return;
+    try {
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
 
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 p-6">
-            <div className="w-full max-w-lg">
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="mb-4 text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-2 font-medium p-2 rounded-lg hover:bg-blue-50"
-                    onClick={() => navigate(-1)}
-                >
-                    <FaArrowLeft />
-                    Back
-                </motion.button>
+      await axios.put(
+        "http://localhost:4000/api/users/me",
+        { goals: selectedGoals },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="bg-white shadow-2xl rounded-3xl p-8 w-full overflow-hidden relative"
-                >
-                    {/* Decorative header */}
-                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 to-blue-500"></div>
+      navigate("/home"); // go to dashboard after saving
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to save goals");
+    }
+  };
 
-                    <h2 className="text-3xl font-bold text-center mb-2 text-gray-800 mt-2">
-                        <Typewriter
-                            words={['Your Fitness Goals?']}
-                            loop={1}
-                            cursor
-                            cursorStyle="_"
-                            typeSpeed={70}
-                            deleteSpeed={50}
-                        />
-                    </h2>
-                    <p className="text-center text-gray-500 mb-8">Select one or more fitness goals:</p>
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 p-6">
+      <div className="w-full max-w-lg">
+        {/* Back button */}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => navigate(-1)}
+          className="mb-4 text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-2 font-medium"
+        >
+          <FaArrowLeft /> Back
+        </motion.button>
 
-                    <div className="grid grid-cols-1 gap-4 mb-8">
-                        {goals.map((goal) => (
-                            <motion.div
-                                key={goal.id}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between ${
-                                    selectedGoals.includes(goal.id)
-                                        ? `border-transparent bg-gradient-to-r ${goal.color} text-white`
-                                        : `border-gray-200 ${goal.bgColor} hover:border-gray-300`
-                                }`}
-                                onClick={() => toggleGoal(goal.id)}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`text-blue-500 p-3 rounded-lg ${
-                                        selectedGoals.includes(goal.id)
-                                            ? 'bg-white/20'
-                                            : 'bg-white'
-                                    }`}>
-                                        {goal.icon}
-                                    </div>
-                                    <span className="text-gray-800 font-medium">{goal.title}</span>
-                                </div>
+        <motion.div className="bg-white shadow-2xl rounded-3xl p-8 relative">
+          <h2 className="text-3xl font-bold text-center mb-2 text-gray-800">
+            Your Fitness Goals
+          </h2>
+          <p className="text-center text-gray-500 mb-6">
+            Select one or more:
+          </p>
 
-                                {selectedGoals.includes(goal.id) && (
-                                    <motion.div
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        className="w-6 h-6 rounded-full bg-white flex items-center justify-center"
-                                    >
-                                        <FaCheck className="text-green-500" />
-                                    </motion.div>
-                                )}
-                            </motion.div>
-                        ))}
-                    </div>
+          {error && (
+            <p className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 mb-4 rounded-lg text-sm">
+              {error}
+            </p>
+          )}
 
-                    <motion.button
-                        whileHover={{
-                            scale: selectedGoals.length > 0 ? 1.03 : 1,
-                            boxShadow: selectedGoals.length > 0 ? "0 10px 25px -5px rgba(128, 90, 213, 0.5)" : "none"
-                        }}
-                        whileTap={{ scale: selectedGoals.length > 0 ? 0.98 : 1 }}
-                        onClick={handleContinue}
-                        disabled={selectedGoals.length === 0}
-                        className={`w-full py-4 rounded-xl font-semibold text-lg transition-all ${
-                            selectedGoals.length > 0
-                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md'
-                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        }`}
-                    >
-                        <Link to="/home">Continue</Link>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 inline-block ml-2" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                    </motion.button>
-                </motion.div>
-            </div>
-        </div>
-    )
-}
+          {/* Goal cards */}
+          <div className="grid grid-cols-1 gap-4 mb-8">
+            {goals.map((goal) => (
+              <motion.div
+                key={goal.id}
+                whileHover={{ scale: 1.02 }}
+                onClick={() => toggleGoal(goal.id)}
+                className={`text-black p-4 rounded-xl border-2 cursor-pointer flex justify-between items-center ${
+                  selectedGoals.includes(goal.id)
+                    ? "bg-gradient-to-r from-purple-600 to-blue-600 text-blue-500 border-blue-600"
+                    : "bg-gray-50 border-gray-200"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white rounded-lg">{goal.icon}</div>
+                  <span className="font-medium">{goal.title}</span>
+                </div>
+                {selectedGoals.includes(goal.id) && (
+                  <FaCheck className="text-green-400" />
+                )}
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Continue button */}
+          <motion.button
+            whileHover={{ scale: selectedGoals.length > 0 ? 1.02 : 1 }}
+            whileTap={{ scale: selectedGoals.length > 0 ? 0.98 : 1 }}
+            onClick={handleContinue}
+            disabled={selectedGoals.length === 0}
+            className={`w-full py-3 rounded-xl font-semibold text-lg ${
+              selectedGoals.length > 0
+                ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            }`}
+          >
+            Save & Continue →
+          </motion.button>
+        </motion.div>
+      </div>
+    </div>
+  );
+};
 
 export default UserGoal;

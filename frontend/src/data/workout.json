@@ -13,7 +13,8 @@
         "Jump your feet out to the sides while raising your arms above your head.",
         "Jump back to the starting position.",
         "Repeat continuously for the duration."
-      ]
+      ],
+      "goals": ["Lose Weight", "Improve Cardio"]
     },
     {
       "id": 2,
@@ -30,7 +31,8 @@
         "Immediately return your feet to the squat position.",
         "Jump up from the squat and reach your arms overhead.",
         "Repeat."
-      ]
+      ],
+      "goals": ["Lose Weight", "Build Muscle", "Improve Cardio", "Improve Strength"]
     },
     {
       "id": 3,
@@ -45,7 +47,8 @@
         "Bring your right knee towards your chest.",
         "Switch legs quickly, bringing your left knee forward as your right goes back.",
         "Continue alternating legs at a fast pace."
-      ]
+      ],
+      "goals": ["Lose Weight", "Improve Cardio", "Improve Strength"]
     },
     {
       "id": 4,
@@ -60,7 +63,8 @@
         "Lift your knees towards your chest as high as possible, one at a time.",
         "Pump your arms as you move.",
         "Maintain a fast pace throughout."
-      ]
+      ],
+      "goals": ["Lose Weight", "Improve Cardio", "Improve Strength"]
     },
     {
       "id": 5,
@@ -75,7 +79,8 @@
         "Lift your knees and run in place.",
         "Swing your arms naturally.",
         "Keep a steady pace for the duration."
-      ]
+      ],
+      "goals": ["Lose Weight", "Improve Cardio"]
     },
     {
       "id": 6,
@@ -90,7 +95,8 @@
         "Jump sideways to the left, landing on your left leg.",
         "Swing your right leg behind you and arms for balance.",
         "Continue jumping side to side."
-      ]
+      ],
+      "goals": ["Lose Weight", "Improve Cardio", "Improve Flexibility"]
     },
     {
       "id": 7,
@@ -105,7 +111,8 @@
         "Swing the rope over your head and jump as it passes your feet.",
         "Keep a steady rhythm and pace.",
         "Continue for the set duration."
-      ]
+      ],
+      "goals": ["Lose Weight", "Improve Cardio"]
     },
     {
       "id": 8,
@@ -120,7 +127,8 @@
         "Kick your heels up towards your glutes alternately.",
         "Pump your arms naturally.",
         "Keep moving at a consistent pace."
-      ]
+      ],
+      "goals": ["Lose Weight", "Improve Cardio"]
     },
     {
       "id": 9,
@@ -134,7 +142,8 @@
         "Sprint at maximum effort for 30 seconds.",
         "Walk or jog for 1 minute to recover.",
         "Repeat the sprint/rest cycle for the duration."
-      ]
+      ],
+      "goals": ["Lose Weight", "Improve Cardio", "Improve Strength"]
     },
     {
       "id": 10,
@@ -149,9 +158,11 @@
         "Shuffle to the right quickly for 3-5 steps.",
         "Shuffle back to the left.",
         "Keep your torso low and move quickly."
-      ]
+      ],
+      "goals": ["Lose Weight", "Improve Cardio", "Improve Flexibility"]
     }
   ],
+
   "Back": [
     {
       "id": 11,
@@ -166,7 +177,8 @@
         "Hang with arms fully extended.",
         "Pull your body up until your chin is over the bar.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 12,
@@ -181,7 +193,8 @@
         "Bend at hips and knees to grab the bar.",
         "Lift the bar by straightening your legs and back.",
         "Lower it slowly back to the ground and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 13,
@@ -196,7 +209,8 @@
         "Bend forward at the waist, keeping your back straight.",
         "Pull dumbbells to your torso.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 14,
@@ -211,7 +225,8 @@
         "Pull the bar to your chest.",
         "Slowly return to starting position.",
         "Repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 15,
@@ -226,7 +241,8 @@
         "Lift arms, chest, and legs off the ground.",
         "Hold for 2-3 seconds.",
         "Lower and repeat."
-      ]
+      ],
+      "goals": ["Improve Strength", "Improve Flexibility"]
     },
     {
       "id": 16,
@@ -241,7 +257,8 @@
         "Grab handles and pull towards your torso.",
         "Squeeze shoulder blades together.",
         "Return slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 17,
@@ -255,7 +272,8 @@
         "Hold dumbbells, bend slightly at waist.",
         "Raise arms to side until level with shoulders.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 18,
@@ -269,7 +287,8 @@
         "Grab bar with palms facing you.",
         "Pull body up until chin reaches the bar.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 19,
@@ -283,7 +302,8 @@
         "Stand with feet shoulder-width apart, bar on shoulders.",
         "Hinge at hips keeping back straight, bend forward.",
         "Return to upright position and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength", "Improve Flexibility"]
     },
     {
       "id": 20,
@@ -298,9 +318,11 @@
         "Cross arms over chest.",
         "Lift upper body until spine is in line with legs.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Improve Strength", "Build Muscle"]
     }
   ],
+
   "Chest": [
     {
       "id": 21,
@@ -315,7 +337,8 @@
         "Lower your body until your chest nearly touches the floor.",
         "Push back up to the starting position.",
         "Repeat for the duration."
-      ]
+      ],
+      "goals": ["Build Muscle", "Lose Weight", "Improve Strength"]
     },
     {
       "id": 22,
@@ -331,7 +354,8 @@
         "Lower the bar to your chest.",
         "Press it back up until arms are extended.",
         "Repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 23,
@@ -346,7 +370,8 @@
         "Hold dumbbells at chest level.",
         "Press dumbbells upward until arms are extended.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 24,
@@ -361,7 +386,8 @@
         "Extend arms above chest, palms facing each other.",
         "Lower arms wide until chest stretches.",
         "Bring arms back together and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Flexibility", "Improve Strength"]
     },
     {
       "id": 25,
@@ -376,7 +402,8 @@
         "Grab handles with each hand.",
         "Pull handles together in front of chest.",
         "Return slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 26,
@@ -390,7 +417,8 @@
         "Place hands on elevated surface (bench).",
         "Lower chest to bench and push back up.",
         "Repeat for duration."
-      ]
+      ],
+      "goals": ["Build Muscle", "Lose Weight", "Improve Strength"]
     },
     {
       "id": 27,
@@ -404,7 +432,8 @@
         "Place feet on elevated surface.",
         "Lower chest to floor and push up.",
         "Repeat for duration."
-      ]
+      ],
+      "goals": ["Build Muscle", "Lose Weight", "Improve Strength"]
     },
     {
       "id": 28,
@@ -418,7 +447,8 @@
         "Place hands together under chest forming a diamond.",
         "Lower chest to hands and push up.",
         "Repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Lose Weight", "Improve Strength"]
     },
     {
       "id": 29,
@@ -432,7 +462,8 @@
         "Sit at the machine with back against pad.",
         "Place forearms on pads and bring arms together.",
         "Return slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 30,
@@ -447,9 +478,11 @@
         "Rotate your body to one side, lifting one arm up.",
         "Return to push-up and rotate to other side.",
         "Repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Lose Weight", "Improve Strength", "Improve Flexibility"]
     }
   ],
+
   "Legs": [
     {
       "id": 31,
@@ -464,7 +497,8 @@
         "Lower body until thighs are parallel to floor.",
         "Push through heels to return to start.",
         "Repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Lose Weight", "Improve Strength"]
     },
     {
       "id": 32,
@@ -479,7 +513,8 @@
         "Lower body until front thigh is parallel to floor.",
         "Push back to starting position.",
         "Switch legs and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Lose Weight", "Improve Strength", "Improve Flexibility"]
     },
     {
       "id": 33,
@@ -493,7 +528,8 @@
         "Sit on leg press machine, feet shoulder-width on platform.",
         "Push platform away, extending legs without locking knees.",
         "Return slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 34,
@@ -507,7 +543,8 @@
         "Stand upright on edge of step.",
         "Lift heels as high as possible.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 35,
@@ -521,7 +558,8 @@
         "Lie on back, knees bent, feet flat.",
         "Lift hips until shoulders-knees-hips form a line.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 36,
@@ -536,7 +574,8 @@
         "Bring left foot up, stand tall.",
         "Step down with right foot, then left.",
         "Repeat switching leading leg."
-      ]
+      ],
+      "goals": ["Build Muscle", "Lose Weight", "Improve Strength"]
     },
     {
       "id": 37,
@@ -550,7 +589,8 @@
         "Stand a few feet in front of bench, one foot on bench behind you.",
         "Lower body until front thigh parallel to floor.",
         "Push back to start and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 38,
@@ -564,7 +604,8 @@
         "Sit on leg extension machine.",
         "Extend legs until parallel to floor.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 39,
@@ -578,7 +619,8 @@
         "Lie face down on hamstring curl machine.",
         "Curl legs towards glutes.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 40,
@@ -593,9 +635,11 @@
         "Step to right, bend right knee, keep left leg straight.",
         "Push back to center and switch sides.",
         "Repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Lose Weight", "Improve Strength", "Improve Flexibility"]
     }
   ],
+
   "Biceps": [
     {
       "id": 41,
@@ -609,7 +653,8 @@
         "Stand with dumbbells in each hand, arms at sides.",
         "Curl dumbbells toward shoulders.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 42,
@@ -623,7 +668,8 @@
         "Hold dumbbells with palms facing each other.",
         "Curl dumbbells toward shoulders.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 43,
@@ -638,7 +684,8 @@
         "Rest elbow on inner thigh.",
         "Curl dumbbell slowly, squeeze bicep.",
         "Lower and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 44,
@@ -652,7 +699,8 @@
         "Sit on preacher bench, arms over pad holding dumbbells.",
         "Curl weights towards shoulders.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 45,
@@ -666,7 +714,8 @@
         "Stand at cable machine with bar attachment.",
         "Curl bar toward shoulders.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 46,
@@ -680,7 +729,8 @@
         "Sit on incline bench holding dumbbells.",
         "Curl arms toward shoulders slowly.",
         "Lower and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 47,
@@ -694,7 +744,8 @@
         "Curl dumbbells with palms up.",
         "Rotate wrists palms down at top.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 48,
@@ -708,7 +759,8 @@
         "Hold dumbbells with palms facing down.",
         "Curl weights toward shoulders.",
         "Lower slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 49,
@@ -721,7 +773,8 @@
       "steps": [
         "Perform 7 partial bottom curls, 7 partial top curls, 7 full curls.",
         "Repeat sequence."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 50,
@@ -735,9 +788,11 @@
         "Hold dumbbell in right hand.",
         "Curl across body to left shoulder.",
         "Switch sides and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     }
   ],
+
   "Triceps": [
     {
       "id": 51,
@@ -751,7 +806,8 @@
         "Place hands behind on bench, feet forward.",
         "Lower body by bending elbows.",
         "Push back up and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 52,
@@ -765,7 +821,8 @@
         "Hold dumbbell overhead with both hands.",
         "Lower behind head by bending elbows.",
         "Raise back and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 53,
@@ -779,7 +836,8 @@
         "Hold dumbbells, bend torso forward.",
         "Push dumbbells backward, extending arms fully.",
         "Return slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 54,
@@ -793,7 +851,8 @@
         "Lie on bench, grip bar narrower than shoulder width.",
         "Lower to chest and push back up.",
         "Repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 55,
@@ -807,7 +866,8 @@
         "Lie on bench with barbell/dumbbells.",
         "Lower weight toward forehead.",
         "Extend arms back to start."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 56,
@@ -821,7 +881,8 @@
         "Stand at cable machine, grab rope with palms facing each other.",
         "Push rope down until arms fully extended.",
         "Return slowly and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 57,
@@ -835,7 +896,8 @@
         "Hands together under chest forming diamond.",
         "Lower chest to hands and push up.",
         "Repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Lose Weight", "Improve Strength"]
     },
     {
       "id": 58,
@@ -849,7 +911,8 @@
         "Place hands behind on bench, feet on elevated surface.",
         "Lower and raise body by bending elbows.",
         "Repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 59,
@@ -863,7 +926,8 @@
         "Hold dumbbell in one hand overhead.",
         "Lower behind head and raise.",
         "Switch arms and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength"]
     },
     {
       "id": 60,
@@ -877,7 +941,8 @@
         "Hold dumbbells at sides.",
         "Punch arms backward extending fully.",
         "Return and repeat."
-      ]
+      ],
+      "goals": ["Build Muscle", "Improve Strength", "Improve Cardio"]
     }
   ]
 }

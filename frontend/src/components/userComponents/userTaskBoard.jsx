@@ -1,94 +1,115 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Reorder } from "framer-motion";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import axios from "axios";
 import { useTheme } from "../../context/ThemeContext";
 
-// Columns info
+// Columns
 const columns = [
   { key: "todo", label: "To Do", color: "bg-blue-100 dark:bg-blue-900" },
   { key: "inProgress", label: "In Progress", color: "bg-yellow-100 dark:bg-yellow-900" },
   { key: "completed", label: "Completed", color: "bg-green-100 dark:bg-green-900" },
 ];
 
-// Initial tasks
-const initialTasks = {
-  todo: [{ id: 1, title: "Morning Yoga" }, { id: 2, title: "Track Breakfast" }],
-  inProgress: [{ id: 3, title: "Upper Body Workout" }],
-  completed: [{ id: 4, title: "Weight Check" }],
-};
-
 const UserTaskBoard = () => {
-  const [tasks, setTasks] = useState(initialTasks);
+  const { darkMode } = useTheme();
+
+  const [tasks, setTasks] = useState([]);
   const [errors, setErrors] = useState({});
   const [taskInputs, setTaskInputs] = useState({
     todo: { show: false, title: "" },
     inProgress: { show: false, title: "" },
     completed: { show: false, title: "" },
-
   });
 
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
 
+  // 🔹 Fetch tasks on load
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const { data } = await axios.get("http://localhost:4000/api/tasks", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setTasks(data);
+      } catch (err) {
+        console.error("Error fetching tasks:", err);
+      }
+    };
+    fetchTasks();
+  }, [token]);
 
-
-  const { darkMode } = useTheme(); //dark mode
-
-  // Add new task
-  const addTask = (colKey) => {
-    const newTasks = { id: new Date().getTime(), title: taskInputs[colKey].title };
-    if (!newTasks.title.trim()) {
-      setErrors((prev) =>
-      ({
-        ...prev,
-        [colKey]: "Task title is required"
-      }));
+  // 🔹 Add new task
+  const addTask = async (colKey) => {
+    const title = taskInputs[colKey].title.trim();
+    if (!title) {
+      setErrors((prev) => ({ ...prev, [colKey]: "Task title is required" }));
       return;
     }
-    setTasks((prev) => ({
-      ...prev,
-      [colKey]: [...prev[colKey], newTasks],
 
+    try {
+      const { data } = await axios.post(
+        "http://localhost:4000/api/tasks",
+        { title, column: colKey },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
+      setTasks((prev) => [...prev, data]);
 
+      setTaskInputs((prev) => ({
+        ...prev,
+        [colKey]: { show: false, title: "" },
+      }));
 
+      setErrors((prev) => ({ ...prev, [colKey]: "" }));
+    } catch (err) {
+      console.error("Error adding task:", err);
+    }
+  };
 
+  // 🔹 Move task to another column
+  const moveTask = async (task, newCol) => {
+    try {
+      const { data } = await axios.put(
+        `http://localhost:4000/api/tasks/${task._id}`,
+        { column: newCol },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-    }))
+      setTasks((prev) =>
+        prev.map((t) => (t._id === data._id ? data : t))
+      );
+    } catch (err) {
+      console.error("Error moving task:", err);
+    }
+  };
 
-    setTaskInputs((prev) => ({
-      ...prev,
-      [colKey]: { show: false, title: "" },
-    }));
+  // 🔹 Delete task
+  const deleteTask = async (taskId) => {
+    try {
+      await axios.delete(`http://localhost:4000/api/tasks/${taskId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    setErrors((prev) => ({
-      ...prev,
-      [colKey]: "",
-    }));
-
-  }
-
-  // Move task to another column
-  const moveTask = (task, from, to) => {
-    setTasks((prev)=>({
-      ...prev,
-      [from]:prev[from].filter((t) => t.id !== task.id),
-      [to]:[...prev[to],task]
-
-
-
-    }))
+      setTasks((prev) => prev.filter((t) => t._id !== taskId));
+    } catch (err) {
+      console.error("Error deleting task:", err);
+    }
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:w-3/2 gap-4 mt-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
       {columns.map((col) => (
         <div
           key={col.key}
-          className={`rounded-xl shadow-sm p-4 border transition-colors ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
-            }`}
+          className={`rounded-xl shadow-sm p-4 border transition-colors ${
+            darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+          }`}
         >
           <h3
-            className={`font-bold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"
-              }`}
+            className={`font-bold mb-4 ${
+              darkMode ? "text-gray-200" : "text-gray-800"
+            }`}
           >
             {col.label}
           </h3>
@@ -96,43 +117,51 @@ const UserTaskBoard = () => {
           {/* Tasks List */}
           <Reorder.Group
             axis="y"
-            values={tasks[col.key]}
-            onReorder={(newOrder) =>
-              setTasks((prev) => ({ ...prev, [col.key]: newOrder }))
-            }
+            values={tasks.filter((t) => t.column === col.key)}
+            onReorder={() => {}} // backend handles order
             className="space-y-3"
           >
-            {tasks[col.key].map((task) => (
-              <Reorder.Item
-                key={task.id}
-                value={task}
-                className={`p-3 rounded-lg shadow-sm cursor-grab ${col.color} ${darkMode ? "text-gray-200" : "text-gray-800"
+            {tasks
+              .filter((t) => t.column === col.key)
+              .map((task) => (
+                <Reorder.Item
+                  key={task._id}
+                  value={task}
+                  className={`p-3 rounded-lg shadow-sm cursor-grab ${col.color} ${
+                    darkMode ? "text-gray-200" : "text-gray-800"
                   }`}
-                whileDrag={{ scale: 1.05 }}
-              >
-                <div className="flex justify-between items-center">
-                  <span>{task.title}</span>
+                  whileDrag={{ scale: 1.05 }}
+                >
+                  <div className="flex justify-between items-center">
+                    <span>{task.title}</span>
 
-                  {/* Move buttons */}
-                  <div className="flex space-x-1">
-                    {columns
-                      .filter((c) => c.key !== col.key)
-                      .map((c) => (
-                        <button
-                          key={c.key}
-                          onClick={() => moveTask(task, col.key, c.key)}
-                          className={`text-xs px-2 py-1 rounded transition-colors ${darkMode
-                            ? "bg-gray-700 hover:bg-gray-600 text-gray-200"
-                            : "bg-gray-200 hover:bg-gray-300 text-gray-800"
+                    {/* Move + Delete */}
+                    <div className="flex space-x-1">
+                      {columns
+                        .filter((c) => c.key !== col.key)
+                        .map((c) => (
+                          <button
+                            key={c.key}
+                            onClick={() => moveTask(task, c.key)}
+                            className={`text-xs px-2 py-1 rounded transition-colors ${
+                              darkMode
+                                ? "bg-gray-700 hover:bg-gray-600 text-gray-200"
+                                : "bg-gray-200 hover:bg-gray-300 text-gray-800"
                             }`}
-                        >
-                          {c.label}
-                        </button>
-                      ))}
+                          >
+                            {c.label}
+                          </button>
+                        ))}
+                      <button
+                        onClick={() => deleteTask(task._id)}
+                        className="p-1 rounded bg-red-500 text-white hover:bg-red-600"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </Reorder.Item>
-            ))}
+                </Reorder.Item>
+              ))}
           </Reorder.Group>
 
           {/* Add Task Input */}
@@ -149,12 +178,13 @@ const UserTaskBoard = () => {
                   }))
                 }
                 onKeyDown={(e) => e.key === "Enter" && addTask(col.key)}
-                className={`flex-1 p-2 rounded border transition-colors ${errors[col.key]
-                  ? "border-red-500 placeholder-red-500 focus:ring-red-500"
-                  : darkMode
+                className={`flex-1 p-2 rounded border transition-colors ${
+                  errors[col.key]
+                    ? "border-red-500 placeholder-red-500 focus:ring-red-500"
+                    : darkMode
                     ? "bg-gray-700 border-gray-600 text-gray-200"
                     : "bg-white border-gray-300 text-gray-800"
-                  }`}
+                }`}
               />
 
               <button

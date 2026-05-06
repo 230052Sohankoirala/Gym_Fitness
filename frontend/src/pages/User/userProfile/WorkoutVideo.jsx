@@ -2,7 +2,7 @@
 import React, { useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { motion } from "framer-motion";// eslint-disable-line no-unused-vars
+import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { useTheme } from "../../../context/ThemeContext";
 
 // Import your media here so refresh/deep-link works
@@ -14,9 +14,9 @@ import BackWorkout from "../../../video/BackWorkout.mp4";
 // Map a clean slug to each video & title
 const VIDEO_MAP = {
   chestworkouts: { title: "Chest Workouts", src: ChestWorkout },
-  backworkouts:  { title: "Back Workouts",  src: BackWorkout  },
-  armsworkouts:  { title: "Arms Workouts",  src: ArmsWorkout  },
-  legworkouts:   { title: "Legs Workouts",  src: LegsWorkout   },
+  backworkouts: { title: "Back Workouts", src: BackWorkout },
+  armsworkouts: { title: "Arms Workouts", src: ArmsWorkout },
+  legworkouts: { title: "Legs Workouts", src: LegsWorkout },
 };
 
 const WorkoutVideo = () => {
@@ -27,13 +27,19 @@ const WorkoutVideo = () => {
 
   // Prefer the state passed from navigation, but fall back to slug mapping
   const { title, src } = useMemo(() => {
-    const fromState = location.state && typeof location.state === "object" ? location.state : {};
+    const fromState =
+      location.state && typeof location.state === "object" ? location.state : {};
+
     if (fromState?.src) {
-      return { title: fromState.title || "Workout Video", src: fromState.src };
+      return {
+        title: fromState.title || "Workout Video",
+        src: fromState.src,
+      };
     }
-    // fallback via slug
+
     const key = (slug || "").toLowerCase();
     if (VIDEO_MAP[key]) return VIDEO_MAP[key];
+
     return { title: "Workout Video", src: "" };
   }, [location.state, slug]);
 
@@ -45,7 +51,7 @@ const WorkoutVideo = () => {
     >
       {/* Header */}
       <div
-        className={`w-full sticky top-0 z-10 ${
+        className={`w-full sticky top-0 z-10 transition-colors duration-200 ${
           darkMode ? "bg-gray-900" : "bg-gray-100"
         }`}
       >
@@ -53,14 +59,15 @@ const WorkoutVideo = () => {
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate(-1)}
-            className={`p-2 rounded-full mr-3 ${
+            className={`p-2 rounded-full mr-3 transition-colors duration-200 ${
               darkMode ? "hover:bg-gray-800" : "hover:bg-gray-200"
             }`}
             aria-label="Go back"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft className="transition-colors duration-200" size={20} />
           </motion.button>
-          <h1 className={`text-xl md:text-2xl font-semibold`}>
+
+          <h1 className="text-xl md:text-2xl font-semibold transition-colors duration-200">
             {title}
           </h1>
         </div>
@@ -69,7 +76,7 @@ const WorkoutVideo = () => {
       {/* Player Card */}
       <div className="w-full max-w-3xl mx-auto px-4 pb-8">
         <div
-          className={`mt-4 rounded-xl shadow-sm p-4 md:p-6 ${
+          className={`mt-4 rounded-xl shadow-sm p-4 md:p-6 transition-colors duration-200 ${
             darkMode ? "bg-gray-800" : "bg-white"
           }`}
         >
@@ -86,14 +93,24 @@ const WorkoutVideo = () => {
 
               {/* Optional: simple meta/details */}
               <div className="mt-4">
-                <h2 className="text-lg font-semibold">{title}</h2>
-                <p className={`${darkMode ? "text-gray-300" : "text-gray-600"} mt-1 text-sm`}>
+                <h2 className="text-lg font-semibold transition-colors duration-200">
+                  {title}
+                </h2>
+                <p
+                  className={`mt-1 text-sm transition-colors duration-200 ${
+                    darkMode ? "text-gray-300" : "text-gray-600"
+                  }`}
+                >
                   Enjoy the session! Remember to warm up, focus on form, and cool down.
                 </p>
               </div>
             </div>
           ) : (
-            <p className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+            <p
+              className={`transition-colors duration-200 ${
+                darkMode ? "text-gray-300" : "text-gray-700"
+              }`}
+            >
               No video source found. Please go back and choose a workout again.
             </p>
           )}
