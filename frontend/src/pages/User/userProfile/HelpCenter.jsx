@@ -269,13 +269,8 @@ export default function HelpCenter() {
             icon: <Mail size={16} />,
             content: (
               <p className="text-sm md:text-base">
-                Reach us at <span className="font-medium">support@fittrack.app</span> (24–48h response).
-                <Link
-                  to="/contact"
-                  className="inline-flex items-center rounded-lg px-3 ml-3 py-1.5 text-sm font-medium border border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  Contact form
-                </Link>
+                Reach us at <span className="font-medium">fittrack001@gmail.com</span> (24–48h response).
+            
               </p>
             ),
           },

@@ -15,6 +15,7 @@ import {
     Menu,
     X,
     DatabaseIcon,
+    
 } from "lucide-react";
 import ThemeToggle from "../ThemeToggle";
 import { useTheme } from "../../context/ThemeContext";
@@ -29,6 +30,7 @@ const ADMIN_LINKS = [
     { name: "Reports", to: "/admin/reports", icon: <FileText size={18} /> },
     { name: "Settings", to: "/admin/settings", icon: <Settings size={18} /> },
     { name: "Feedback", to: "/admin/feedback", icon: <DatabaseIcon size={18} /> },
+  
 ];
 
 /**
@@ -72,7 +74,7 @@ const AdminNavbar = ({ notifications = 0 }) => {
         <nav
             className={`${baseBg} ${baseText} border-b ${baseBorder} sticky top-0 z-40 transition-colors duration-200`}
         >
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
                 {/* Top bar */}
                 <div className="h-16 flex items-center justify-between">
                     {/* Brand */}

@@ -27,35 +27,87 @@ function getToken() {
 }
 
 /** ---------- Helpers ---------- */
+
 function safe(v) {
     if (v === null || v === undefined) return "";
     return String(v).replace(/\s+/g, " ").trim();
 }
 
+function normalizeArray(responseData, possibleKeys = []) {
+    if (Array.isArray(responseData)) {
+        return responseData;
+    }
+
+    for (const key of possibleKeys) {
+        if (Array.isArray(responseData?.[key])) {
+            return responseData[key];
+        }
+    }
+
+    if (Array.isArray(responseData?.data)) {
+        return responseData.data;
+    }
+
+    if (Array.isArray(responseData?.result)) {
+        return responseData.result;
+    }
+
+    if (Array.isArray(responseData?.results)) {
+        return responseData.results;
+    }
+
+    return [];
+}
+
+function normalizeObject(responseData, fallback = {}) {
+    if (!responseData || typeof responseData !== "object") {
+        return fallback;
+    }
+
+    if (responseData.data && typeof responseData.data === "object" && !Array.isArray(responseData.data)) {
+        return responseData.data;
+    }
+
+    return responseData;
+}
+
 function toCSV(rows, headers) {
-    const headerLine = headers.map((h) => `"${safe(h.label).replaceAll('"', '""')}"`).join(",");
+    const headerLine = headers
+        .map((h) => `"${safe(h.label).replaceAll('"', '""')}"`)
+        .join(",");
+
     const lines = rows.map((r) =>
         headers
             .map((h) => `"${safe(r?.[h.key]).replaceAll('"', '""')}"`)
             .join(",")
     );
+
     return [headerLine, ...lines].join("\n");
 }
 
 function downloadBlob(filename, content, type) {
-    const blob = new Blob([content], { type });
+    const blob = new Blob(["\uFEFF" + content], { type });
     const url = URL.createObjectURL(blob);
+
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
+
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
+
     URL.revokeObjectURL(url);
 }
 
 function formatMoney(n, currency = "AUD") {
     const val = Number(n || 0);
+
     try {
-        return new Intl.NumberFormat("en-AU", { style: "currency", currency }).format(val);
+        return new Intl.NumberFormat("en-AU", {
+            style: "currency",
+            currency,
+        }).format(val);
     } catch {
         return `${currency} ${val.toFixed(2)}`;
     }
@@ -63,8 +115,13 @@ function formatMoney(n, currency = "AUD") {
 
 function formatDateTime(d) {
     if (!d) return "";
+
     const dt = new Date(d);
-    if (Number.isNaN(dt.getTime())) return safe(d);
+
+    if (Number.isNaN(dt.getTime())) {
+        return safe(d);
+    }
+
     return dt.toLocaleString();
 }
 
@@ -74,13 +131,19 @@ const AdminReports = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    const [stats, setStats] = useState({ members: 0, trainers: 0, sessions: 0 });
+    const [stats, setStats] = useState({
+        members: 0,
+        trainers: 0,
+        sessions: 0,
+    });
+
     const [revenue, setRevenue] = useState({
         totalRevenue: 0,
         adminRevenue: 0,
         trainerRevenue: 0,
         transactions: 0,
     });
+
     const [activity, setActivity] = useState([]);
     const [trainers, setTrainers] = useState([]);
     const [users, setUsers] = useState([]);
@@ -113,7 +176,9 @@ const AdminReports = () => {
     const api = useMemo(() => {
         return axios.create({
             baseURL: BASE_URL,
-            headers: { Authorization: `Bearer ${token}` },
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
         });
     }, [token]);
 
@@ -135,19 +200,63 @@ const AdminReports = () => {
                 api.get("/api/admin/users"),
             ]);
 
-            setStats(statsRes.data || { members: 0, trainers: 0, sessions: 0 });
-            setRevenue(
-                revRes.data || {
-                    totalRevenue: 0,
-                    adminRevenue: 0,
-                    trainerRevenue: 0,
-                    transactions: 0,
-                }
-            );
-            setActivity(Array.isArray(actRes.data) ? actRes.data : []);
-            setTrainers(Array.isArray(trainersRes.data) ? trainersRes.data : []);
-            setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
+            console.log("Stats response:", statsRes.data);
+            console.log("Revenue response:", revRes.data);
+            console.log("Activity response:", actRes.data);
+            console.log("Trainers response:", trainersRes.data);
+            console.log("Users response:", usersRes.data);
+
+            const normalizedStats = normalizeObject(statsRes.data, {
+                members: 0,
+                trainers: 0,
+                sessions: 0,
+            });
+
+            const normalizedRevenue = normalizeObject(revRes.data, {
+                totalRevenue: 0,
+                adminRevenue: 0,
+                trainerRevenue: 0,
+                transactions: 0,
+            });
+
+            const normalizedActivity = normalizeArray(actRes.data, [
+                "activity",
+                "activities",
+                "recentActivity",
+                "logs",
+            ]);
+
+            const normalizedTrainers = normalizeArray(trainersRes.data, [
+                "trainers",
+                "trainerList",
+                "users",
+            ]);
+
+            const normalizedUsers = normalizeArray(usersRes.data, [
+                "users",
+                "userList",
+                "members",
+                "accounts",
+            ]);
+
+            setStats({
+                members: normalizedStats.members ?? normalizedStats.totalMembers ?? 0,
+                trainers: normalizedStats.trainers ?? normalizedStats.totalTrainers ?? 0,
+                sessions: normalizedStats.sessions ?? normalizedStats.totalSessions ?? 0,
+            });
+
+            setRevenue({
+                totalRevenue: normalizedRevenue.totalRevenue ?? 0,
+                adminRevenue: normalizedRevenue.adminRevenue ?? 0,
+                trainerRevenue: normalizedRevenue.trainerRevenue ?? 0,
+                transactions: normalizedRevenue.transactions ?? normalizedRevenue.totalTransactions ?? 0,
+            });
+
+            setActivity(normalizedActivity);
+            setTrainers(normalizedTrainers);
+            setUsers(normalizedUsers);
         } catch (e) {
+            console.error("Admin report fetch error:", e);
             setError(e?.response?.data?.message || "Failed to load admin reports.");
         } finally {
             setLoading(false);
@@ -165,6 +274,7 @@ const AdminReports = () => {
             const isActive = u.isActive !== undefined ? Boolean(u.isActive) : true;
 
             const roleOk = roleFilter === "all" || role === roleFilter;
+
             const statusOk =
                 statusFilter === "all" ||
                 (statusFilter === "active" && isActive) ||
@@ -175,9 +285,10 @@ const AdminReports = () => {
     }, [users, roleFilter, statusFilter]);
 
     /** ---------- CSV ---------- */
+
     const downloadUsersCSV = () => {
         const rows = filteredUsers.map((u) => ({
-            name: u.fullName || u.fullname || u.name || "Unnamed",
+            name: u.fullName || u.fullname || u.name || u.username || "Unnamed",
             email: u.email || "",
             role: u.role || "member",
             isActive: u.isActive !== undefined ? String(Boolean(u.isActive)) : "true",
@@ -197,10 +308,10 @@ const AdminReports = () => {
 
     const downloadTrainersCSV = () => {
         const rows = trainers.map((t) => ({
-            name: t.name || "",
-            email: t.email || "",
-            speciality: t.speciality || "",
-            experience: t.experience || "",
+            name: t.name || t.fullName || t.fullname || t.user?.fullName || "",
+            email: t.email || t.user?.email || "",
+            speciality: t.speciality || t.specialty || t.specialization || "",
+            experience: t.experience || t.experienceYears || "",
             rating: t.rating ?? "",
             createdAt: formatDateTime(t.createdAt),
         }));
@@ -219,9 +330,9 @@ const AdminReports = () => {
 
     const downloadActivityCSV = () => {
         const rows = activity.map((a) => ({
-            type: a.type || "",
-            message: a.message || "",
-            time: formatDateTime(a.time),
+            type: a.type || a.action || "",
+            message: a.message || a.description || "",
+            time: formatDateTime(a.time || a.createdAt || a.date),
         }));
 
         const csv = toCSV(rows, [
@@ -234,6 +345,7 @@ const AdminReports = () => {
     };
 
     /** ---------- PDF ---------- */
+
     const downloadFullPDF = () => {
         const doc = new jsPDF("p", "mm", "a4");
 
@@ -256,12 +368,16 @@ const AdminReports = () => {
                 ["Trainer Revenue", formatMoney(revenue.trainerRevenue)],
                 ["Transactions", String(revenue.transactions ?? 0)],
             ],
-            styles: { fontSize: 10 },
-            headStyles: { fillColor: [33, 33, 33] },
+            styles: {
+                fontSize: 10,
+            },
+            headStyles: {
+                fillColor: [33, 33, 33],
+            },
         });
 
         const usersRows = filteredUsers.slice(0, 25).map((u) => [
-            u.fullName || u.fullname || u.name || "Unnamed",
+            u.fullName || u.fullname || u.name || u.username || "Unnamed",
             u.email || "",
             u.role || "member",
             u.isActive !== undefined ? (u.isActive ? "Active" : "Inactive") : "Active",
@@ -271,14 +387,18 @@ const AdminReports = () => {
             startY: doc.lastAutoTable.finalY + 8,
             head: [["Users (Top 25)", "Email", "Role", "Status"]],
             body: usersRows.length ? usersRows : [["No users", "", "", ""]],
-            styles: { fontSize: 9 },
-            headStyles: { fillColor: [33, 33, 33] },
+            styles: {
+                fontSize: 9,
+            },
+            headStyles: {
+                fillColor: [33, 33, 33],
+            },
         });
 
         const trainersRows = trainers.slice(0, 15).map((t) => [
-            t.name || "",
-            t.email || "",
-            t.speciality || "",
+            t.name || t.fullName || t.fullname || t.user?.fullName || "",
+            t.email || t.user?.email || "",
+            t.speciality || t.specialty || t.specialization || "",
             String(t.rating ?? ""),
         ]);
 
@@ -286,28 +406,37 @@ const AdminReports = () => {
             startY: doc.lastAutoTable.finalY + 8,
             head: [["Trainers (Top 15)", "Email", "Speciality", "Rating"]],
             body: trainersRows.length ? trainersRows : [["No trainers", "", "", ""]],
-            styles: { fontSize: 9 },
-            headStyles: { fillColor: [33, 33, 33] },
+            styles: {
+                fontSize: 9,
+            },
+            headStyles: {
+                fillColor: [33, 33, 33],
+            },
         });
 
         const actRows = activity.slice(0, 10).map((a) => [
-            a.type || "",
-            a.message || "",
-            formatDateTime(a.time),
+            a.type || a.action || "",
+            a.message || a.description || "",
+            formatDateTime(a.time || a.createdAt || a.date),
         ]);
 
         autoTable(doc, {
             startY: doc.lastAutoTable.finalY + 8,
             head: [["Recent Activity (Top 10)", "Message", "Time"]],
             body: actRows.length ? actRows : [["No activity", "", ""]],
-            styles: { fontSize: 9 },
-            headStyles: { fillColor: [33, 33, 33] },
+            styles: {
+                fontSize: 9,
+            },
+            headStyles: {
+                fillColor: [33, 33, 33],
+            },
         });
 
         doc.save("admin_full_report.pdf");
     };
 
-    /** ---------- Small UI ---------- */
+    /** ---------- Small UI Components ---------- */
+
     const StatCard = ({ icon, title, value, note, accent }) => (
         <div className={`rounded-3xl p-5 transition-all duration-200 ${cardBg}`}>
             <div className="flex items-start justify-between gap-4">
@@ -316,7 +445,10 @@ const AdminReports = () => {
                     <p className="text-3xl font-bold tracking-tight mt-2">{value}</p>
                     {note ? <p className={`text-xs mt-2 ${mutedSoft}`}>{note}</p> : null}
                 </div>
-                <div className={`p-3 rounded-2xl ${accent || pillBg}`}>{icon}</div>
+
+                <div className={`p-3 rounded-2xl ${accent || pillBg}`}>
+                    {icon}
+                </div>
             </div>
         </div>
     );
@@ -328,29 +460,40 @@ const AdminReports = () => {
                     {icon || <FileText size={18} className="text-indigo-500" />}
                     {title}
                 </h2>
+
                 {desc ? <p className={`text-sm mt-1 ${muted}`}>{desc}</p> : null}
             </div>
+
             {right ? <div className="flex items-center gap-2 flex-wrap">{right}</div> : null}
         </div>
     );
 
     const RoleIcon = ({ role }) => {
         const r = String(role || "").toLowerCase();
-        if (r === "admin") return <Shield size={16} className="text-indigo-500" />;
-        if (r === "trainer") return <UserCircle size={16} className="text-emerald-500" />;
+
+        if (r === "admin") {
+            return <Shield size={16} className="text-indigo-500" />;
+        }
+
+        if (r === "trainer") {
+            return <UserCircle size={16} className="text-emerald-500" />;
+        }
+
         return <Users size={16} className="text-blue-500" />;
     };
 
     const ActionButton = ({ children, onClick, primary = false, icon }) => (
         <button
+            type="button"
             onClick={onClick}
             className={
                 primary
                     ? "inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 transition-all duration-200 shadow-lg"
-                    : `inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all duration-200 ${darkMode
-                        ? "border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
-                        : "border-slate-200 bg-white hover:bg-slate-50"
-                    }`
+                    : `inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all duration-200 ${
+                          darkMode
+                              ? "border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
+                              : "border-slate-200 bg-white hover:bg-slate-50"
+                      }`
             }
         >
             {icon}
@@ -374,13 +517,25 @@ const AdminReports = () => {
             <div className={`min-h-screen p-6 ${pageBg}`}>
                 <div className={`max-w-7xl mx-auto rounded-3xl p-6 ${cardBg}`}>
                     <div className="animate-pulse space-y-4">
-                        <div className={`h-6 w-52 rounded-xl ${darkMode ? "bg-white/10" : "bg-slate-200"}`} />
-                        <div className={`h-4 w-80 rounded-xl ${darkMode ? "bg-white/10" : "bg-slate-200"}`} />
+                        <div
+                            className={`h-6 w-52 rounded-xl ${
+                                darkMode ? "bg-white/10" : "bg-slate-200"
+                            }`}
+                        />
+
+                        <div
+                            className={`h-4 w-80 rounded-xl ${
+                                darkMode ? "bg-white/10" : "bg-slate-200"
+                            }`}
+                        />
+
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
                             {[...Array(4)].map((_, i) => (
                                 <div
                                     key={i}
-                                    className={`h-28 rounded-3xl ${darkMode ? "bg-white/10" : "bg-slate-200"}`}
+                                    className={`h-28 rounded-3xl ${
+                                        darkMode ? "bg-white/10" : "bg-slate-200"
+                                    }`}
                                 />
                             ))}
                         </div>
@@ -395,13 +550,16 @@ const AdminReports = () => {
             <div className={`min-h-screen p-6 ${pageBg}`}>
                 <div className="max-w-7xl mx-auto">
                     <div
-                        className={`p-5 flex items-center gap-3 rounded-3xl border transition-all duration-200 ${darkMode
-                            ? "bg-red-900/20 border-red-500/20 text-red-200"
-                            : "bg-red-50 border-red-200 text-red-700"
-                            }`}
+                        className={`p-5 flex items-center gap-3 rounded-3xl border transition-all duration-200 ${
+                            darkMode
+                                ? "bg-red-900/20 border-red-500/20 text-red-200"
+                                : "bg-red-50 border-red-200 text-red-700"
+                        }`}
                     >
                         <AlertCircle size={20} />
+
                         <div className="flex-1">{error}</div>
+
                         <ActionButton onClick={fetchAll} icon={<RefreshCw size={16} />}>
                             Retry
                         </ActionButton>
@@ -417,17 +575,24 @@ const AdminReports = () => {
                 {/* Header */}
                 <div className={`rounded-[2rem] p-6 sm:p-7 mb-6 relative overflow-hidden ${cardBg}`}>
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-violet-500/10 to-cyan-500/10 pointer-events-none" />
+
                     <div className="relative z-10 flex items-start justify-between gap-4 flex-wrap">
                         <div>
-                            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-3 ${darkMode
-                                ? "bg-indigo-500/10 text-indigo-300 border border-indigo-400/20"
-                                : "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                                }`}>
+                            <div
+                                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-3 ${
+                                    darkMode
+                                        ? "bg-indigo-500/10 text-indigo-300 border border-indigo-400/20"
+                                        : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                }`}
+                            >
                                 <Sparkles size={14} />
                                 Reporting Center
                             </div>
 
-                            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Admin Reports</h1>
+                            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                                Admin Reports
+                            </h1>
+
                             <p className={`mt-2 ${muted}`}>
                                 Generate downloadable reports for users, trainers, revenue, and activity.
                             </p>
@@ -463,12 +628,14 @@ const AdminReports = () => {
                         value={stats.members ?? 0}
                         accent={darkMode ? "bg-blue-500/10" : "bg-blue-50"}
                     />
+
                     <StatCard
                         icon={<UserCircle size={20} className="text-emerald-500" />}
                         title="Trainers"
                         value={stats.trainers ?? 0}
                         accent={darkMode ? "bg-emerald-500/10" : "bg-emerald-50"}
                     />
+
                     <StatCard
                         icon={<Activity size={20} className="text-violet-500" />}
                         title="Sessions"
@@ -485,18 +652,21 @@ const AdminReports = () => {
                         note={`${revenue.transactions ?? 0} transactions`}
                         accent={darkMode ? "bg-green-500/10" : "bg-green-50"}
                     />
+
                     <StatCard
                         icon={<BarChart3 size={20} className="text-indigo-500" />}
                         title="Admin Revenue"
                         value={formatMoney(revenue.adminRevenue)}
                         accent={darkMode ? "bg-indigo-500/10" : "bg-indigo-50"}
                     />
+
                     <StatCard
                         icon={<DollarSign size={20} className="text-orange-500" />}
                         title="Trainer Revenue"
                         value={formatMoney(revenue.trainerRevenue)}
                         accent={darkMode ? "bg-orange-500/10" : "bg-orange-50"}
                     />
+
                     <StatCard
                         icon={<CalendarRange size={20} className="text-slate-500" />}
                         title="Generated"
@@ -513,14 +683,20 @@ const AdminReports = () => {
                         icon={<Users size={18} className="text-indigo-500" />}
                         right={
                             <>
-                                <SelectField value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+                                <SelectField
+                                    value={roleFilter}
+                                    onChange={(e) => setRoleFilter(e.target.value)}
+                                >
                                     <option value="all">All Roles</option>
                                     <option value="member">Members</option>
                                     <option value="trainer">Trainers</option>
                                     <option value="admin">Admins</option>
                                 </SelectField>
 
-                                <SelectField value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                                <SelectField
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                >
                                     <option value="all">All Status</option>
                                     <option value="active">Active</option>
                                     <option value="inactive">Inactive</option>
@@ -538,7 +714,11 @@ const AdminReports = () => {
                         <span className="font-semibold">{users.length}</span> users
                     </p>
 
-                    <div className={`overflow-x-auto rounded-2xl border ${darkMode ? "border-white/10" : "border-slate-200"}`}>
+                    <div
+                        className={`overflow-x-auto rounded-2xl border ${
+                            darkMode ? "border-white/10" : "border-slate-200"
+                        }`}
+                    >
                         <table className="w-full text-sm">
                             <thead className={darkMode ? "bg-white/[0.03]" : "bg-slate-50"}>
                                 <tr className={tableHeader}>
@@ -549,40 +729,53 @@ const AdminReports = () => {
                                     <th className="text-left py-3 px-4">Created</th>
                                 </tr>
                             </thead>
+
                             <tbody>
                                 {filteredUsers.slice(0, 20).map((u) => {
-                                    const name = u.fullName || u.fullname || u.name || "Unnamed";
-                                    const isActive = u.isActive !== undefined ? Boolean(u.isActive) : true;
+                                    const name =
+                                        u.fullName ||
+                                        u.fullname ||
+                                        u.name ||
+                                        u.username ||
+                                        "Unnamed";
+
+                                    const isActive =
+                                        u.isActive !== undefined ? Boolean(u.isActive) : true;
 
                                     return (
                                         <tr
-                                            key={u._id}
-                                            className={`border-t transition-all duration-200 ${rowBorder} ${darkMode ? "hover:bg-white/[0.03]" : "hover:bg-slate-50"
-                                                }`}
+                                            key={u._id || u.id || u.email}
+                                            className={`border-t transition-all duration-200 ${rowBorder} ${
+                                                darkMode ? "hover:bg-white/[0.03]" : "hover:bg-slate-50"
+                                            }`}
                                         >
                                             <td className="py-3 px-4 font-medium">{name}</td>
                                             <td className="py-3 px-4">{u.email || ""}</td>
+
                                             <td className="py-3 px-4">
                                                 <span className="inline-flex items-center gap-2">
                                                     <RoleIcon role={u.role} />
                                                     <span className="capitalize">{u.role || "member"}</span>
                                                 </span>
                                             </td>
+
                                             <td className="py-3 px-4">
                                                 <span
-                                                    className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-xl ${isActive
-                                                        ? darkMode
-                                                            ? "bg-emerald-500/10 text-emerald-300"
-                                                            : "bg-emerald-50 text-emerald-700"
-                                                        : darkMode
-                                                            ? "bg-red-500/10 text-red-300"
-                                                            : "bg-red-50 text-red-700"
-                                                        }`}
+                                                    className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-xl ${
+                                                        isActive
+                                                            ? darkMode
+                                                                ? "bg-emerald-500/10 text-emerald-300"
+                                                                : "bg-emerald-50 text-emerald-700"
+                                                            : darkMode
+                                                              ? "bg-red-500/10 text-red-300"
+                                                              : "bg-red-50 text-red-700"
+                                                    }`}
                                                 >
                                                     {isActive ? <BadgeCheck size={14} /> : <BadgeX size={14} />}
                                                     {isActive ? "Active" : "Inactive"}
                                                 </span>
                                             </td>
+
                                             <td className="py-3 px-4">{formatDateTime(u.createdAt)}</td>
                                         </tr>
                                     );
@@ -619,9 +812,15 @@ const AdminReports = () => {
                         }
                     />
 
-                    <p className={`text-sm ${muted} mb-4`}>Total trainers: {trainers.length}</p>
+                    <p className={`text-sm ${muted} mb-4`}>
+                        Total trainers: {trainers.length}
+                    </p>
 
-                    <div className={`overflow-x-auto rounded-2xl border ${darkMode ? "border-white/10" : "border-slate-200"}`}>
+                    <div
+                        className={`overflow-x-auto rounded-2xl border ${
+                            darkMode ? "border-white/10" : "border-slate-200"
+                        }`}
+                    >
                         <table className="w-full text-sm">
                             <thead className={darkMode ? "bg-white/[0.03]" : "bg-slate-50"}>
                                 <tr className={tableHeader}>
@@ -632,17 +831,29 @@ const AdminReports = () => {
                                     <th className="text-left py-3 px-4">Created</th>
                                 </tr>
                             </thead>
+
                             <tbody>
                                 {trainers.slice(0, 15).map((t) => (
                                     <tr
-                                        key={t._id}
-                                        className={`border-t transition-all duration-200 ${rowBorder} ${darkMode ? "hover:bg-white/[0.03]" : "hover:bg-slate-50"
-                                            }`}
+                                        key={t._id || t.id || t.email}
+                                        className={`border-t transition-all duration-200 ${rowBorder} ${
+                                            darkMode ? "hover:bg-white/[0.03]" : "hover:bg-slate-50"
+                                        }`}
                                     >
-                                        <td className="py-3 px-4 font-medium">{t.name || ""}</td>
-                                        <td className="py-3 px-4">{t.email || ""}</td>
-                                        <td className="py-3 px-4">{t.speciality || ""}</td>
+                                        <td className="py-3 px-4 font-medium">
+                                            {t.name || t.fullName || t.fullname || t.user?.fullName || ""}
+                                        </td>
+
+                                        <td className="py-3 px-4">
+                                            {t.email || t.user?.email || ""}
+                                        </td>
+
+                                        <td className="py-3 px-4">
+                                            {t.speciality || t.specialty || t.specialization || ""}
+                                        </td>
+
                                         <td className="py-3 px-4">{String(t.rating ?? "")}</td>
+
                                         <td className="py-3 px-4">{formatDateTime(t.createdAt)}</td>
                                     </tr>
                                 ))}
@@ -678,20 +889,30 @@ const AdminReports = () => {
                         }
                     />
 
-                    <p className={`text-sm ${muted} mb-4`}>Showing latest activities (top 10 on screen)</p>
+                    <p className={`text-sm ${muted} mb-4`}>
+                        Showing latest activities, top 10 on screen.
+                    </p>
 
                     <div className="space-y-3">
                         {activity.slice(0, 10).map((a, idx) => (
                             <div
-                                key={`${a.type}-${idx}`}
-                                className={`rounded-2xl p-4 border transition-all duration-200 ${darkMode
-                                    ? "border-white/10 bg-white/[0.03] hover:bg-white/[0.05]"
-                                    : "border-slate-200 bg-slate-50/80 hover:bg-slate-100"
-                                    }`}
+                                key={`${a.type || a.action || "activity"}-${idx}`}
+                                className={`rounded-2xl p-4 border transition-all duration-200 ${
+                                    darkMode
+                                        ? "border-white/10 bg-white/[0.03] hover:bg-white/[0.05]"
+                                        : "border-slate-200 bg-slate-50/80 hover:bg-slate-100"
+                                }`}
                             >
-                                <p className="font-medium">{a.message}</p>
+                                <p className="font-medium">
+                                    {a.message || a.description || "No message"}
+                                </p>
+
                                 <p className={`text-xs mt-1.5 ${muted}`}>
-                                    Type: <span className="capitalize">{a.type}</span> • {formatDateTime(a.time)}
+                                    Type:{" "}
+                                    <span className="capitalize">
+                                        {a.type || a.action || "activity"}
+                                    </span>{" "}
+                                    • {formatDateTime(a.time || a.createdAt || a.date)}
                                 </p>
                             </div>
                         ))}

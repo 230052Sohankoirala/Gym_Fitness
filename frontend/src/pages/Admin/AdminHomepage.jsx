@@ -223,7 +223,7 @@ const AdminHomepage = () => {
 
       setOpenChatBusyId(trainerId);
 
-      navigate(`/admin/chat/${trainerId}`, {
+      navigate(`/admin/messages/${trainerId}`, {
         state: {
           trainerId,
           trainerName: trainer?.name || trainer?.fullName || "Trainer",
@@ -291,14 +291,7 @@ const AdminHomepage = () => {
 
           <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-3">
-              <button
-                onClick={() => navigate("/")}
-                className={`mt-1 p-2.5 rounded-2xl border transition-colors duration-200 ${subtleBorder} ${hoverSoft}`}
-                aria-label="Back"
-                title="Back"
-              >
-                <ArrowLeft size={18} />
-              </button>
+             
 
               <div>
                 <div

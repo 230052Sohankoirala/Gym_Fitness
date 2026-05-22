@@ -143,13 +143,7 @@ const AdminSettings = () => {
     <div className={`min-h-screen p-6 ${page}`}>
       {/* Header */}
       <div className="max-w-4xl mx-auto flex items-center gap-3 mb-6">
-        <button
-          onClick={() => navigate("/admin")}
-          className={`p-2 rounded-xl transition ${darkMode ? "hover:bg-gray-800" : "hover:bg-gray-200"}`}
-          title="Back to Dashboard"
-        >
-          <ArrowLeft size={18} />
-        </button>
+      
 
         <div className="min-w-0">
           <h1 className="text-2xl font-bold">Admin Settings</h1>
