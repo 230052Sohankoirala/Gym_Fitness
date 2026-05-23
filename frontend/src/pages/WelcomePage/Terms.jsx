@@ -123,7 +123,7 @@ const Terms = () => {
                             href="mailto:support@fittrack.com"
                             className="text-blue-600 dark:text-blue-400 underline"
                         >
-                            support@fittrack.com
+                            fittrack001@gmail.com
                         </a>
                     </p>
                 </section>
