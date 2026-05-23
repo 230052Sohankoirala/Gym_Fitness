@@ -409,12 +409,14 @@ export const login = async (req, res) => {
 };
 
 /* ---------------- Google OAuth ---------------- */
+/* ---------------- Google OAuth ---------------- */
 export const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
 
     if (!token) {
       return res.status(400).json({
+        success: false,
         message: "Google token required",
       });
     }
@@ -428,6 +430,7 @@ export const googleLogin = async (req, res) => {
 
     if (!payload) {
       return res.status(400).json({
+        success: false,
         message: "Invalid Google token payload",
       });
     }
@@ -441,16 +444,73 @@ export const googleLogin = async (req, res) => {
 
     if (!email) {
       return res.status(400).json({
+        success: false,
         message: "Google account email not found",
+      });
+    }
+
+    if (!email_verified) {
+      return res.status(400).json({
+        success: false,
+        message: "Your Google email is not verified.",
       });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    let user = await User.findOne({ email: normalizedEmail });
-    let isNewUser = false;
+    let user = await User.findOne({
+      email: normalizedEmail,
+    });
 
-    /* CASE 1: User exists but email not verified */
+    /*
+      CASE 1:
+      New Google account
+      - Create user
+      - Set isVerified false
+      - Send verification code
+      - Send frontend to /verify-email
+    */
+    if (!user) {
+      const code = crypto.randomInt(100000, 999999).toString();
+
+      user = await User.create({
+        fullname: name || "Google User",
+        username: normalizedEmail.split("@")[0],
+        email: normalizedEmail,
+        googleId: googleId,
+        isVerified: false,
+        verificationCode: code,
+        verificationCodeExpires: Date.now() + 15 * 60 * 1000,
+        resetCode: null,
+        resetCodeExpires: null,
+        resetCodeVerified: false,
+      });
+
+      await sendVerificationEmail(user.email, code, user.fullname);
+
+      return res.status(201).json({
+        success: true,
+        message: "New Google account created. Please verify your email.",
+        isNewUser: true,
+        requiresVerification: true,
+        email: user.email,
+        user: {
+          id: user._id,
+          fullname: user.fullname,
+          email: user.email,
+          username: user.username,
+          role: user.role,
+          isVerified: user.isVerified,
+        },
+      });
+    }
+
+    /*
+      CASE 2:
+      User exists but not verified
+      - Resend verification code
+      - Send frontend to /verify-email
+    */
     if (user && !user.isVerified) {
       const code = crypto.randomInt(100000, 999999).toString();
 
@@ -464,47 +524,9 @@ export const googleLogin = async (req, res) => {
 
       return res.status(200).json({
         success: true,
-        message: "Verification code sent to your email. Please verify to continue.",
-        requiresVerification: true,
-        isNewUser: false,
-        email: user.email,
-        user: {
-          id: user._id,
-          fullname: user.fullname,
-          email: user.email,
-          username: user.username,
-          role: user.role,
-          isVerified: user.isVerified,
-        },
-      });
-    }
-
-    /* CASE 2: New Google user */
-    if (!user) {
-      const code = crypto.randomInt(100000, 999999).toString();
-
-      user = await User.create({
-        fullname: name || "Google User",
-        username: normalizedEmail.split("@")[0],
-        email: normalizedEmail,
-        googleId,
-        isVerified: false,
-        verificationCode: code,
-        verificationCodeExpires: Date.now() + 15 * 60 * 1000,
-        resetCode: null,
-        resetCodeExpires: null,
-        resetCodeVerified: false,
-      });
-
-      isNewUser = true;
-
-      await sendVerificationEmail(user.email, code, user.fullname);
-
-      return res.status(201).json({
-        success: true,
-        message: "New Google user. Verification email sent.",
-        requiresVerification: true,
+        message: "Please verify your email before continuing.",
         isNewUser: true,
+        requiresVerification: true,
         email: user.email,
         user: {
           id: user._id,
@@ -517,25 +539,25 @@ export const googleLogin = async (req, res) => {
       });
     }
 
-    /* CASE 3: Existing verified user */
-    if (!user.isVerified) {
-      return res.status(400).json({
-        message: "Please verify your email before login.",
-      });
-    }
-
+    /*
+      CASE 3:
+      Old verified Google account
+      - Login successfully
+      - Send frontend to /home
+    */
     if (!user.googleId) {
       user.googleId = googleId;
       await user.save();
     }
 
-    const jwtToken = generateToken(user._id, user.role);
+    const jwtToken = generateToken(user._id, user.role, true);
 
     return res.status(200).json({
       success: true,
       message: "Google login successful",
+      isNewUser: false,
+      requiresVerification: false,
       token: jwtToken,
-      isNewUser,
       email: user.email,
       user: {
         id: user._id,
@@ -545,18 +567,16 @@ export const googleLogin = async (req, res) => {
         role: user.role,
         isVerified: user.isVerified,
       },
-      google: {
-        email_verified: !!email_verified,
-      },
     });
   } catch (error) {
     console.error("❌ Google login error:", error);
+
     return res.status(500).json({
+      success: false,
       message: "Server error during Google login",
     });
   }
 };
-
 /* ---------------- Logout ---------------- */
 export const logout = (req, res) => {
   return res.json({ message: "Logout successful" });
