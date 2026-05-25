@@ -53,29 +53,33 @@ const isDev = process.env.NODE_ENV !== "production";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/* absolute upload folders */
+/* ---------------- Upload folders ---------------- */
 const uploadsRoot = path.join(process.cwd(), "uploads");
 const avatarsDir = path.join(uploadsRoot, "avatars");
 const trainerAvatarsDir = path.join(uploadsRoot, "trainer-avatars");
 const chatDir = path.join(uploadsRoot, "chat");
 const trainerCertificatesDir = path.join(uploadsRoot, "trainer-certificates");
 
-/* ensure folders exist */
 fs.mkdirSync(uploadsRoot, { recursive: true });
 fs.mkdirSync(avatarsDir, { recursive: true });
 fs.mkdirSync(trainerAvatarsDir, { recursive: true });
 fs.mkdirSync(chatDir, { recursive: true });
 fs.mkdirSync(trainerCertificatesDir, { recursive: true });
 
-// ================= CORS =================
+/* ---------------- CORS ---------------- */
 const allowedOrigins = ["http://localhost:3000", "http://localhost:5173"];
 
 app.use(
   cors({
     origin(origin, callback) {
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
       console.log("❌ Blocked by CORS origin:", origin);
+
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
@@ -94,6 +98,7 @@ app.use(
 app.use(morgan("dev"));
 app.use(cookieParser());
 
+/* ---------------- Stripe webhook before JSON parser ---------------- */
 app.post(
   "/api/payments/webhook",
   express.raw({ type: "application/json" }),
@@ -103,9 +108,11 @@ app.post(
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-connectDB().catch((err) => console.error("MongoDB connection error:", err));
+connectDB().catch((err) => {
+  console.error("MongoDB connection error:", err);
+});
 
-// ================= API Routes =================
+/* ---------------- API Routes ---------------- */
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
@@ -130,24 +137,52 @@ app.use("/api/trainer-applications", trainerApplicationRoutes);
 app.use("/api/admin-messages", adminMessageRoutes);
 app.use("/api/trainer", trainerAdminChatRoutes);
 
-// ================= STATIC FILES =================
+/* ---------------- Static Files ---------------- */
 const staticHeaders = (res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
 };
 
-app.use("/uploads", express.static(uploadsRoot, { setHeaders: staticHeaders }));
-app.use("/uploads/avatars", express.static(avatarsDir, { setHeaders: staticHeaders }));
-app.use("/uploads/chat", express.static(chatDir, { setHeaders: staticHeaders }));
+app.use(
+  "/uploads",
+  express.static(uploadsRoot, {
+    setHeaders: staticHeaders,
+  })
+);
+
+app.use(
+  "/uploads/avatars",
+  express.static(avatarsDir, {
+    setHeaders: staticHeaders,
+  })
+);
+
+app.use(
+  "/uploads/chat",
+  express.static(chatDir, {
+    setHeaders: staticHeaders,
+  })
+);
+
 app.use(
   "/uploads/trainer-certificates",
-  express.static(trainerCertificatesDir, { setHeaders: staticHeaders })
+  express.static(trainerCertificatesDir, {
+    setHeaders: staticHeaders,
+  })
 );
-app.use("/trainer-avatars", express.static(trainerAvatarsDir, { setHeaders: staticHeaders }));
 
-app.get("/", (_req, res) => res.send("🚀 API is running..."));
+app.use(
+  "/trainer-avatars",
+  express.static(trainerAvatarsDir, {
+    setHeaders: staticHeaders,
+  })
+);
 
-// ================= SOCKET.IO =================
+app.get("/", (_req, res) => {
+  res.send("🚀 API is running...");
+});
+
+/* ---------------- Socket.IO Server ---------------- */
 const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
@@ -161,6 +196,13 @@ const io = new Server(httpServer, {
   pingInterval: 20000,
 });
 
+/**
+ * Important:
+ * This allows controllers, such as messageController.js,
+ * to access Socket.IO using req.app.get("io").
+ */
+app.set("io", io);
+
 io.engine.on("connection_error", (err) => {
   console.log("🧨 ENGINE connection_error:", {
     code: err.code,
@@ -169,6 +211,7 @@ io.engine.on("connection_error", (err) => {
   });
 });
 
+/* ---------------- Chat Access Helper ---------------- */
 async function verifyChatAccess30Days(trainerId, memberId) {
   const access = await ChatAccess.findOne({
     trainer: trainerId,
@@ -183,35 +226,52 @@ async function verifyChatAccess30Days(trainerId, memberId) {
   return true;
 }
 
+/* ---------------- Socket Authentication ---------------- */
 io.use(async (socket, next) => {
   try {
     const rawAuthHeader = socket.handshake.headers?.authorization || "";
+
     const headerToken = rawAuthHeader.startsWith("Bearer ")
       ? rawAuthHeader.replace("Bearer ", "")
       : "";
 
     const token = socket.handshake.auth?.token || headerToken;
 
-    if (!token) return next(new Error("No token"));
+    if (!token) {
+      return next(new Error("No token"));
+    }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    if (!decoded?.id) return next(new Error("Invalid token"));
+    if (!decoded?.id) {
+      return next(new Error("Invalid token"));
+    }
 
     let account = null;
 
     if (decoded.role === "trainer") {
-      account = await Trainer.findById(decoded.id).select("_id role name fullName fullname email");
+      account = await Trainer.findById(decoded.id).select(
+        "_id role name fullName fullname email"
+      );
     } else if (decoded.role === "admin") {
-      account = await Admin.findById(decoded.id).select("_id role name fullName fullname email");
+      account = await Admin.findById(decoded.id).select(
+        "_id role name fullName fullname email"
+      );
+
       if (!account) {
-        account = await User.findById(decoded.id).select("_id role name fullName fullname email");
+        account = await User.findById(decoded.id).select(
+          "_id role name fullName fullname email"
+        );
       }
     } else {
-      account = await User.findById(decoded.id).select("_id role fullname name fullName email");
+      account = await User.findById(decoded.id).select(
+        "_id role fullname name fullName email"
+      );
     }
 
-    if (!account) return next(new Error("Account not found"));
+    if (!account) {
+      return next(new Error("Account not found"));
+    }
 
     socket.user = {
       id: String(account._id),
@@ -220,25 +280,35 @@ io.use(async (socket, next) => {
     };
 
     return next();
-  } catch (e) {
+  } catch (error) {
     return next(new Error("Socket auth failed"));
   }
 });
 
+/* ---------------- Socket Events ---------------- */
 io.on("connection", (socket) => {
   console.log("✅ SOCKET connected:", socket.id, socket.user?.role);
 
+  /* ---------------- Member/Trainer Chat Join ---------------- */
   socket.on("chat:join", async ({ trainerId, memberId }) => {
     try {
       const me = socket.user;
 
-      if (!trainerId) throw new Error("trainerId required");
+      if (!trainerId) {
+        throw new Error("trainerId required");
+      }
 
       if (me.role === "member") {
         await verifyChatAccess30Days(trainerId, me.id);
+
         const room = `chat:${trainerId}:${me.id}`;
+
         socket.join(room);
-        socket.emit("chat:joined", { room });
+
+        socket.emit("chat:joined", {
+          room,
+        });
+
         return;
       }
 
@@ -247,28 +317,44 @@ io.on("connection", (socket) => {
           throw new Error("TrainerId mismatch");
         }
 
-        if (!memberId) throw new Error("memberId required");
+        if (!memberId) {
+          throw new Error("memberId required");
+        }
 
         await verifyChatAccess30Days(trainerId, memberId);
+
         const room = `chat:${trainerId}:${memberId}`;
+
         socket.join(room);
-        socket.emit("chat:joined", { room });
+
+        socket.emit("chat:joined", {
+          room,
+        });
+
         return;
       }
 
       throw new Error("Not allowed");
-    } catch (err) {
-      socket.emit("chat:error", { message: err.message || "Join failed" });
+    } catch (error) {
+      socket.emit("chat:error", {
+        message: error.message || "Join failed",
+      });
     }
   });
 
+  /* ---------------- Member/Trainer Text Message ---------------- */
   socket.on("chat:send", async ({ trainerId, memberId, text }) => {
     try {
       const me = socket.user;
       const clean = String(text || "").trim();
 
-      if (!clean) throw new Error("Message cannot be empty");
-      if (!trainerId) throw new Error("trainerId required");
+      if (!clean) {
+        throw new Error("Message cannot be empty");
+      }
+
+      if (!trainerId) {
+        throw new Error("trainerId required");
+      }
 
       let memberFinal = null;
       let senderModel = null;
@@ -276,16 +362,20 @@ io.on("connection", (socket) => {
       if (me.role === "member") {
         memberFinal = me.id;
         senderModel = "User";
+
         await verifyChatAccess30Days(trainerId, memberFinal);
       } else if (me.role === "trainer") {
         if (String(me.id) !== String(trainerId)) {
           throw new Error("TrainerId mismatch");
         }
 
-        if (!memberId) throw new Error("memberId required");
+        if (!memberId) {
+          throw new Error("memberId required");
+        }
 
         memberFinal = memberId;
         senderModel = "Trainer";
+
         await verifyChatAccess30Days(trainerId, memberFinal);
       } else {
         throw new Error("Not allowed");
@@ -305,54 +395,92 @@ io.on("connection", (socket) => {
         member: memberFinal,
         text: clean,
         senderModel,
-        sender: { _id: me.id, role: me.role, name: me.name },
+        sender: {
+          _id: me.id,
+          role: me.role,
+          name: me.name,
+        },
         createdAt: msg.createdAt,
       };
 
       const room = `chat:${trainerId}:${memberFinal}`;
+
       io.to(room).emit("chat:new", payload);
-    } catch (err) {
-      socket.emit("chat:error", { message: err.message || "Send failed" });
+    } catch (error) {
+      socket.emit("chat:error", {
+        message: error.message || "Send failed",
+      });
     }
   });
 
+  /* ---------------- Admin-Trainer Chat Join ---------------- */
   socket.on("adminTrainer:join", async ({ chatId }) => {
     try {
       const me = socket.user;
 
-      if (!chatId) throw new Error("chatId required");
+      if (!chatId) {
+        throw new Error("chatId required");
+      }
 
       const chat = await AdminTrainerChat.findById(chatId).lean();
-      if (!chat) throw new Error("Chat not found");
 
-      const isAdmin = me.role === "admin" && String(chat.adminId) === String(me.id);
-      const isTrainer = me.role === "trainer" && String(chat.trainerId) === String(me.id);
+      if (!chat) {
+        throw new Error("Chat not found");
+      }
 
-      if (!isAdmin && !isTrainer) throw new Error("Forbidden");
+      const isAdmin =
+        me.role === "admin" && String(chat.adminId) === String(me.id);
+
+      const isTrainer =
+        me.role === "trainer" && String(chat.trainerId) === String(me.id);
+
+      if (!isAdmin && !isTrainer) {
+        throw new Error("Forbidden");
+      }
 
       const room = `adminTrainer:${chatId}`;
+
       socket.join(room);
-      socket.emit("adminTrainer:joined", { room });
-    } catch (e) {
-      socket.emit("adminTrainer:error", { message: e.message || "Join failed" });
+
+      socket.emit("adminTrainer:joined", {
+        room,
+      });
+    } catch (error) {
+      socket.emit("adminTrainer:error", {
+        message: error.message || "Join failed",
+      });
     }
   });
 
+  /* ---------------- Admin-Trainer Text Message ---------------- */
   socket.on("adminTrainer:send", async ({ chatId, text }) => {
     try {
       const me = socket.user;
       const clean = String(text || "").trim();
 
-      if (!chatId) throw new Error("chatId required");
-      if (!clean) throw new Error("Message cannot be empty");
+      if (!chatId) {
+        throw new Error("chatId required");
+      }
+
+      if (!clean) {
+        throw new Error("Message cannot be empty");
+      }
 
       const chat = await AdminTrainerChat.findById(chatId).lean();
-      if (!chat) throw new Error("Chat not found");
 
-      const isAdmin = me.role === "admin" && String(chat.adminId) === String(me.id);
-      const isTrainer = me.role === "trainer" && String(chat.trainerId) === String(me.id);
+      if (!chat) {
+        throw new Error("Chat not found");
+      }
 
-      if (!isAdmin && !isTrainer) throw new Error("Forbidden");
+      const isAdmin =
+        me.role === "admin" && String(chat.adminId) === String(me.id);
+
+      const isTrainer =
+        me.role === "trainer" && String(chat.trainerId) === String(me.id);
+
+      if (!isAdmin && !isTrainer) {
+        throw new Error("Forbidden");
+      }
 
       const senderRole = isAdmin ? "admin" : "trainer";
 
@@ -377,25 +505,32 @@ io.on("connection", (socket) => {
       };
 
       io.to(`adminTrainer:${chatId}`).emit("adminTrainer:new", payload);
-    } catch (e) {
-      socket.emit("adminTrainer:error", { message: e.message || "Send failed" });
+    } catch (error) {
+      socket.emit("adminTrainer:error", {
+        message: error.message || "Send failed",
+      });
     }
   });
 
+  /* ---------------- Disconnect ---------------- */
   socket.on("disconnect", (reason) => {
     console.log("🔴 SOCKET disconnected:", socket.id, reason);
   });
 });
 
+/* ---------------- Error Handler ---------------- */
 app.use((err, _req, res, _next) => {
   console.error("Error:", err.stack || err);
+
   res.status(err.statusCode || 500).json({
     success: false,
     message: err.message || "Server Error",
   });
 });
 
+/* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 4000;
+
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server + Socket.IO running on port ${PORT}`);
 });

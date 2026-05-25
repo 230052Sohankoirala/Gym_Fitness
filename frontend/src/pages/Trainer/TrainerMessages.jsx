@@ -1,8 +1,18 @@
 /* eslint-disable no-unused-vars */
 // src/pages/trainer/TrainerMessages.jsx
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
+
 import { io } from "socket.io-client";
+
 import { motion, AnimatePresence } from "framer-motion";
+
 import {
   Send,
   Search,
@@ -16,12 +26,14 @@ import {
   ImageIcon,
   Video,
 } from "lucide-react";
+
 import { useTheme } from "../../context/ThemeContext";
 
 const API_BASE = "http://localhost:4000/api";
 const SOCKET_BASE = "http://localhost:4000";
 
 /* ---------------- Helpers ---------------- */
+
 const prettyTime = (iso) => {
   try {
     return new Date(iso).toLocaleTimeString([], {
@@ -31,6 +43,34 @@ const prettyTime = (iso) => {
   } catch {
     return "";
   }
+};
+
+const normalizeUrl = (u) => {
+  if (!u) return "";
+
+  const s = String(u).trim();
+
+  if (!s) return "";
+
+  if (s.startsWith("http://") || s.startsWith("https://")) {
+    return s;
+  }
+
+  if (s.startsWith("/")) {
+    return `${SOCKET_BASE}${s}`;
+  }
+
+  return `${SOCKET_BASE}/${s}`;
+};
+
+const normalizeChatUploadPath = (u) => {
+  const normalizedUrl = normalizeUrl(u);
+
+  return normalizedUrl.replace("/upload/chat/", "/uploads/chat/");
+};
+
+const getMessageMemberId = (msg) => {
+  return String(msg?.member?._id || msg?.member || msg?.memberId || "");
 };
 
 const initials = (name = "") =>
@@ -46,7 +86,9 @@ const initials = (name = "") =>
 const toDate = (v) => {
   try {
     if (!v) return null;
+
     const d = new Date(v);
+
     return Number.isNaN(d.getTime()) ? null : d;
   } catch {
     return null;
@@ -55,12 +97,16 @@ const toDate = (v) => {
 
 const msToCountdown = (ms) => {
   if (!Number.isFinite(ms) || ms <= 0) return "Expired";
+
   const totalSec = Math.floor(ms / 1000);
+
   const days = Math.floor(totalSec / 86400);
   const hrs = Math.floor((totalSec % 86400) / 3600);
   const mins = Math.floor((totalSec % 3600) / 60);
+
   if (days > 0) return `${days}d ${hrs}h`;
   if (hrs > 0) return `${hrs}h ${mins}m`;
+
   return `${mins}m`;
 };
 
@@ -68,6 +114,7 @@ const isSameDay = (a, b) => {
   try {
     const da = new Date(a);
     const db = new Date(b);
+
     return (
       da.getFullYear() === db.getFullYear() &&
       da.getMonth() === db.getMonth() &&
@@ -81,12 +128,22 @@ const isSameDay = (a, b) => {
 const dayLabel = (iso) => {
   try {
     const d = new Date(iso);
+
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const today = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    );
+
     const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
     const diff = Math.round((dd.getTime() - today.getTime()) / 86400000);
+
     if (diff === 0) return "Today";
     if (diff === -1) return "Yesterday";
+
     return d.toLocaleDateString([], {
       year: "numeric",
       month: "short",
@@ -99,9 +156,16 @@ const dayLabel = (iso) => {
 
 const cacheBust = (url, updatedAt) => {
   if (!url) return "";
+
+  const safeUrl = String(url).trim();
+
+  if (!safeUrl) return "";
+
   const stamp = updatedAt ? new Date(updatedAt).getTime() : Date.now();
-  const join = url.includes("?") ? "&" : "?";
-  return `${url}${join}v=${stamp}`;
+
+  const join = safeUrl.includes("?") ? "&" : "?";
+
+  return `${safeUrl}${join}v=${stamp}`;
 };
 
 const safeJson = async (res) => {
@@ -114,7 +178,11 @@ const safeJson = async (res) => {
 
 const authHeaders = (token, extra = {}) => {
   const h = { ...extra };
-  if (token) h.Authorization = `Bearer ${token}`;
+
+  if (token) {
+    h.Authorization = `Bearer ${token}`;
+  }
+
   return h;
 };
 
@@ -122,6 +190,7 @@ const isImageMime = (mime = "") => String(mime).startsWith("image/");
 const isVideoMime = (mime = "") => String(mime).startsWith("video/");
 
 /* ---------------- Avatar ---------------- */
+
 function Avatar({
   name,
   src,
@@ -132,13 +201,19 @@ function Avatar({
   className = "",
 }) {
   const [broken, setBroken] = useState(false);
-  const finalSrc = useMemo(() => cacheBust(src, updatedAt), [src, updatedAt]);
 
-  useEffect(() => setBroken(false), [finalSrc]);
+  const finalSrc = useMemo(() => {
+    return cacheBust(src, updatedAt);
+  }, [src, updatedAt]);
+
+  useEffect(() => {
+    setBroken(false);
+  }, [finalSrc]);
 
   const baseFallback = darkMode
     ? "bg-white/10 text-white"
     : "bg-indigo-100 text-indigo-900";
+
   const ringCls = ring
     ? darkMode
       ? "ring-2 ring-indigo-400/40"
@@ -149,7 +224,10 @@ function Avatar({
     return (
       <div
         className={`rounded-2xl flex items-center justify-center font-semibold shadow-sm ${baseFallback} ${ringCls} ${className}`}
-        style={{ width: size, height: size }}
+        style={{
+          width: size,
+          height: size,
+        }}
         aria-label="avatar-fallback"
       >
         {initials(name)}
@@ -163,7 +241,10 @@ function Avatar({
       alt={name || "avatar"}
       onError={() => setBroken(true)}
       className={`rounded-2xl object-cover shadow-sm ${ringCls} ${className}`}
-      style={{ width: size, height: size }}
+      style={{
+        width: size,
+        height: size,
+      }}
       loading="lazy"
       referrerPolicy="no-referrer"
     />
@@ -171,7 +252,10 @@ function Avatar({
 }
 
 export default function TrainerMessages() {
-  const theme = useTheme?.() ?? { darkMode: false };
+  const theme = useTheme?.() ?? {
+    darkMode: false,
+  };
+
   const darkMode = theme?.darkMode ?? false;
 
   const token = useMemo(() => {
@@ -214,6 +298,7 @@ export default function TrainerMessages() {
 
   const activeThreadRef = useRef(activeThread);
   const pageVisibleRef = useRef(isPageVisible);
+  const trainerIdRef = useRef(trainerId);
 
   useEffect(() => {
     activeThreadRef.current = activeThread;
@@ -223,9 +308,15 @@ export default function TrainerMessages() {
     pageVisibleRef.current = isPageVisible;
   }, [isPageVisible]);
 
+  useEffect(() => {
+    trainerIdRef.current = trainerId;
+  }, [trainerId]);
+
   const scrollBottom = useCallback(() => {
     const el = scrollerRef.current;
+
     if (!el) return;
+
     requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
     });
@@ -233,7 +324,9 @@ export default function TrainerMessages() {
 
   const autoGrow = useCallback(() => {
     const el = inputRef.current;
+
     if (!el) return;
+
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight, 140) + "px";
   }, []);
@@ -243,40 +336,67 @@ export default function TrainerMessages() {
   }, [input, autoGrow]);
 
   /* ---------------- Visibility ---------------- */
+
   useEffect(() => {
-    const onVis = () => setIsPageVisible(document.visibilityState === "visible");
+    const onVis = () => {
+      setIsPageVisible(document.visibilityState === "visible");
+    };
+
     onVis();
+
     document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, []);
 
   /* ---------------- Countdown tick ---------------- */
+
   useEffect(() => {
-    const t = setInterval(() => setNowTick(Date.now()), 30000);
-    return () => clearInterval(t);
+    const t = setInterval(() => {
+      setNowTick(Date.now());
+    }, 30000);
+
+    return () => {
+      clearInterval(t);
+    };
   }, []);
 
-  /* ---------------- file pick ---------------- */
+  /* ---------------- File pick ---------------- */
+
   const pickFiles = useCallback((e) => {
     const selected = Array.from(e.target.files || []);
+
     if (!selected.length) return;
-    const filtered = selected.filter(
-      (f) => isImageMime(f.type) || isVideoMime(f.type)
-    );
-    setFiles((prev) => [...prev, ...filtered].slice(0, 5));
+
+    const filtered = selected.filter((f) => {
+      return isImageMime(f.type) || isVideoMime(f.type);
+    });
+
+    setFiles((prev) => {
+      return [...prev, ...filtered].slice(0, 5);
+    });
+
     e.target.value = "";
   }, []);
 
   const removeFile = useCallback((idx) => {
-    setFiles((prev) => prev.filter((_, i) => i !== idx));
+    setFiles((prev) => {
+      return prev.filter((_, i) => i !== idx);
+    });
   }, []);
 
-  const clearFiles = useCallback(() => setFiles([]), []);
+  const clearFiles = useCallback(() => {
+    setFiles([]);
+  }, []);
 
-  /* ---------------- 1) trainerId ---------------- */
+  /* ---------------- 1) Trainer ID ---------------- */
+
   useEffect(() => {
-    (async () => {
+    const loadTrainerProfile = async () => {
       if (!token) return;
+
       try {
         const res = await fetch(`${API_BASE}/trainers/me`, {
           method: "GET",
@@ -285,23 +405,31 @@ export default function TrainerMessages() {
         });
 
         const data = await safeJson(res);
+
         if (!res.ok) {
           throw new Error(data?.message || "Failed to load trainer profile");
         }
 
         const id = data?._id || data?.id;
-        if (!id) throw new Error("Trainer _id missing from /trainers/me");
+
+        if (!id) {
+          throw new Error("Trainer _id missing from /trainers/me");
+        }
 
         setTrainerId(id);
       } catch (e) {
         setError(e?.message || "Failed to load trainer profile");
       }
-    })();
+    };
+
+    loadTrainerProfile();
   }, [token]);
 
-  /* ---------------- 2) threads ---------------- */
+  /* ---------------- 2) Threads ---------------- */
+
   const normalizeThread = useCallback((t) => {
-    const expires = t?.chatExpiresAt || t?.expiresAt || t?.accessExpiresAt || null;
+    const expires =
+      t?.chatExpiresAt || t?.expiresAt || t?.accessExpiresAt || null;
 
     return {
       memberId: t?.memberId || t?.member?._id || t?.member || t?.userId,
@@ -317,30 +445,47 @@ export default function TrainerMessages() {
 
   const loadThreads = useCallback(async () => {
     if (!token) return;
+
     setLoadingThreads(true);
     setError("");
 
     try {
       const res = await fetch(`${API_BASE}/messages/threads`, {
         method: "GET",
-        headers: authHeaders(token, { "Content-Type": "application/json" }),
+        headers: authHeaders(token, {
+          "Content-Type": "application/json",
+        }),
         credentials: "include",
         cache: "no-store",
       });
 
       const data = await safeJson(res);
-      if (!res.ok) throw new Error(data?.message || "Failed to load threads");
+
+      if (!res.ok) {
+        throw new Error(data?.message || "Failed to load threads");
+      }
 
       const list = Array.isArray(data)
         ? data.map(normalizeThread).filter((x) => x?.memberId)
         : [];
 
       setUnreadMap((prev) => {
-        const next = { ...prev };
-        const ids = new Set(list.map((x) => String(x.memberId)));
+        const next = {
+          ...prev,
+        };
+
+        const ids = new Set(
+          list.map((x) => {
+            return String(x.memberId);
+          })
+        );
+
         Object.keys(next).forEach((k) => {
-          if (!ids.has(String(k))) delete next[k];
+          if (!ids.has(String(k))) {
+            delete next[k];
+          }
         });
+
         return next;
       });
 
@@ -353,6 +498,7 @@ export default function TrainerMessages() {
         ) {
           return cur;
         }
+
         return list[0] || null;
       });
     } catch (e) {
@@ -366,7 +512,8 @@ export default function TrainerMessages() {
     loadThreads();
   }, [loadThreads]);
 
-  /* ---------------- 3) connect socket ---------------- */
+  /* ---------------- 3) Socket connection ---------------- */
+
   useEffect(() => {
     if (!token) return;
 
@@ -374,7 +521,9 @@ export default function TrainerMessages() {
 
     const socket = io(SOCKET_BASE, {
       transports: ["websocket", "polling"],
-      auth: { token },
+      auth: {
+        token,
+      },
       reconnection: true,
       reconnectionAttempts: 8,
       reconnectionDelay: 600,
@@ -384,24 +533,64 @@ export default function TrainerMessages() {
 
     socketRef.current = socket;
 
-    const onConnect = () => setSocketState("online");
-    const onDisconnect = () => setSocketState("offline");
+    const joinActiveRoom = () => {
+      const currentTrainerId = trainerIdRef.current;
+      const currentThread = activeThreadRef.current;
+
+      if (!currentTrainerId || !currentThread?.memberId) {
+        return;
+      }
+
+      socket.emit("chat:join", {
+        trainerId: currentTrainerId,
+        memberId: currentThread.memberId,
+      });
+
+      console.log(
+        "✅ TRAINER FRONTEND JOIN ROOM:",
+        `chat:${currentTrainerId}:${currentThread.memberId}`
+      );
+    };
+
+    const onConnect = () => {
+      setSocketState("online");
+
+      joinActiveRoom();
+    };
+
+    const onDisconnect = () => {
+      setSocketState("offline");
+    };
 
     const onConnectError = (err) => {
       setSocketState("offline");
       setError(err?.message || "Socket connection failed");
+
       console.log("socket connect_error:", err?.message, err);
+    };
+
+    const onChatJoined = (payload) => {
+      console.log("✅ TRAINER SOCKET JOINED:", payload?.room);
     };
 
     const onChatError = (payload) => {
       setError(payload?.message || "Chat error");
+
+      console.log("❌ TRAINER CHAT ERROR:", payload);
     };
 
     const onChatNew = (msg) => {
-      const memberId = String(msg?.member || "");
-      if (!memberId) return;
+      console.log("📩 TRAINER RECEIVED chat:new:", msg);
+
+      const memberId = getMessageMemberId(msg);
+
+      if (!memberId) {
+        console.log("❌ Incoming message missing member id:", msg);
+        return;
+      }
 
       const lastAt = msg?.createdAt || new Date().toISOString();
+
       const lastText =
         msg?.text ||
         (Array.isArray(msg?.attachments) && msg.attachments.length > 0
@@ -410,18 +599,32 @@ export default function TrainerMessages() {
 
       setThreads((prev) => {
         const next = [...prev];
-        const idx = next.findIndex((t) => String(t.memberId) === memberId);
+
+        const idx = next.findIndex((t) => {
+          return String(t.memberId) === String(memberId);
+        });
 
         if (idx >= 0) {
-          next[idx] = { ...next[idx], lastAt, lastText };
+          next[idx] = {
+            ...next[idx],
+            lastAt,
+            lastText,
+          };
+
           const [moved] = next.splice(idx, 1);
+
           next.unshift(moved);
+
           return next;
         }
 
         next.unshift({
           memberId,
-          name: msg?.sender?.fullName || msg?.sender?.name || "Member",
+          name:
+            msg?.sender?.fullName ||
+            msg?.sender?.fullname ||
+            msg?.sender?.name ||
+            "Member",
           email: msg?.sender?.email || "",
           lastText,
           lastAt,
@@ -434,60 +637,84 @@ export default function TrainerMessages() {
       });
 
       const active = activeThreadRef.current;
-      const isActive = String(active?.memberId) === memberId;
+
+      const isActive = String(active?.memberId) === String(memberId);
 
       if (isActive) {
         setMessages((prev) => {
           const id = msg?._id;
-          if (id && prev.some((p) => String(p?._id) === String(id))) return prev;
+
+          if (
+            id &&
+            prev.some((p) => {
+              return String(p?._id) === String(id);
+            })
+          ) {
+            return prev;
+          }
+
           return [...prev, msg];
         });
 
         if (pageVisibleRef.current) {
-          setUnreadMap((prev) => ({ ...prev, [memberId]: 0 }));
-          setLastSeenMap((prev) => ({
-            ...prev,
-            [memberId]: new Date().toISOString(),
-          }));
+          setUnreadMap((prev) => {
+            return {
+              ...prev,
+              [memberId]: 0,
+            };
+          });
+
+          setLastSeenMap((prev) => {
+            return {
+              ...prev,
+              [memberId]: new Date().toISOString(),
+            };
+          });
         } else {
-          setUnreadMap((prev) => ({
-            ...prev,
-            [memberId]: (prev?.[memberId] || 0) + 1,
-          }));
+          setUnreadMap((prev) => {
+            return {
+              ...prev,
+              [memberId]: (prev?.[memberId] || 0) + 1,
+            };
+          });
         }
 
         scrollBottom();
+
         return;
       }
 
-      setUnreadMap((prev) => ({
-        ...prev,
-        [memberId]: (prev?.[memberId] || 0) + 1,
-      }));
+      setUnreadMap((prev) => {
+        return {
+          ...prev,
+          [memberId]: (prev?.[memberId] || 0) + 1,
+        };
+      });
     };
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("connect_error", onConnectError);
+    socket.on("chat:joined", onChatJoined);
     socket.on("chat:error", onChatError);
     socket.on("chat:new", onChatNew);
 
     return () => {
-      try {
-        socket.off("connect", onConnect);
-        socket.off("disconnect", onDisconnect);
-        socket.off("connect_error", onConnectError);
-        socket.off("chat:error", onChatError);
-        socket.off("chat:new", onChatNew);
-        socket.disconnect();
-      } catch {
-        // ignore
-      }
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("connect_error", onConnectError);
+      socket.off("chat:joined", onChatJoined);
+      socket.off("chat:error", onChatError);
+      socket.off("chat:new", onChatNew);
+
+      socket.disconnect();
+
       socketRef.current = null;
     };
   }, [token, scrollBottom]);
 
-  /* ---------------- 4) load saved messages ---------------- */
+  /* ---------------- 4) Load saved messages ---------------- */
+
   const loadMessages = useCallback(
     async (memberId) => {
       if (!trainerId || !memberId) return;
@@ -500,16 +727,22 @@ export default function TrainerMessages() {
           `${API_BASE}/messages/${trainerId}?memberId=${memberId}`,
           {
             method: "GET",
-            headers: authHeaders(token, { "Content-Type": "application/json" }),
+            headers: authHeaders(token, {
+              "Content-Type": "application/json",
+            }),
             credentials: "include",
             cache: "no-store",
           }
         );
 
         const data = await safeJson(res);
-        if (!res.ok) throw new Error(data?.message || "Failed to load messages");
+
+        if (!res.ok) {
+          throw new Error(data?.message || "Failed to load messages");
+        }
 
         setMessages(Array.isArray(data) ? data : []);
+
         scrollBottom();
       } catch (e) {
         setError(e?.message || "Failed to load messages");
@@ -520,52 +753,88 @@ export default function TrainerMessages() {
     [token, trainerId, scrollBottom]
   );
 
-  /* ---------------- 5) switching thread ---------------- */
+  /* ---------------- 5) Switching thread ---------------- */
+
   const openThread = useCallback((t) => {
     if (!t?.memberId) return;
+
     setActiveThread(t);
     setMobileView("chat");
 
     const mid = String(t.memberId);
-    setUnreadMap((prev) => ({ ...prev, [mid]: 0 }));
-    setLastSeenMap((prev) => ({ ...prev, [mid]: new Date().toISOString() }));
+
+    setUnreadMap((prev) => {
+      return {
+        ...prev,
+        [mid]: 0,
+      };
+    });
+
+    setLastSeenMap((prev) => {
+      return {
+        ...prev,
+        [mid]: new Date().toISOString(),
+      };
+    });
   }, []);
 
   useEffect(() => {
     if (!trainerId || !activeThread?.memberId) return;
-    if (!socketRef.current) return;
 
-    socketRef.current.emit("chat:join", {
-      trainerId,
-      memberId: activeThread.memberId,
-    });
+    if (socketRef.current?.connected) {
+      socketRef.current.emit("chat:join", {
+        trainerId,
+        memberId: activeThread.memberId,
+      });
+
+      console.log(
+        "✅ TRAINER THREAD SWITCH JOIN:",
+        `chat:${trainerId}:${activeThread.memberId}`
+      );
+    }
 
     loadMessages(activeThread.memberId);
 
     const mid = String(activeThread.memberId);
-    setUnreadMap((prev) => ({ ...prev, [mid]: 0 }));
-    setLastSeenMap((prev) => ({ ...prev, [mid]: new Date().toISOString() }));
+
+    setUnreadMap((prev) => {
+      return {
+        ...prev,
+        [mid]: 0,
+      };
+    });
+
+    setLastSeenMap((prev) => {
+      return {
+        ...prev,
+        [mid]: new Date().toISOString(),
+      };
+    });
   }, [trainerId, activeThread?.memberId, loadMessages]);
 
-  /* ---------------- 6) expires ---------------- */
-  const activeExpiresAt = useMemo(
-    () => toDate(activeThread?.chatExpiresAt),
-    [activeThread?.chatExpiresAt]
-  );
+  /* ---------------- 6) Expires ---------------- */
+
+  const activeExpiresAt = useMemo(() => {
+    return toDate(activeThread?.chatExpiresAt);
+  }, [activeThread?.chatExpiresAt]);
 
   const chatExpired = useMemo(() => {
     if (!activeExpiresAt) return false;
+
     return Date.now() > activeExpiresAt.getTime();
   }, [activeExpiresAt, nowTick]);
 
   const timeLeftText = useMemo(() => {
     if (!activeExpiresAt) return null;
+
     return msToCountdown(activeExpiresAt.getTime() - Date.now());
   }, [activeExpiresAt, nowTick]);
 
-  /* ---------------- 7) send TEXT (socket) ---------------- */
+  /* ---------------- 7) Send text ---------------- */
+
   const sendText = useCallback(async () => {
     const clean = input.trim();
+
     if (!clean || !trainerId || !activeThread?.memberId) return;
 
     if (chatExpired) {
@@ -582,7 +851,9 @@ export default function TrainerMessages() {
         memberId: activeThread.memberId,
         text: clean,
       });
+
       setInput("");
+
       scrollBottom();
     } catch {
       setError("Send failed");
@@ -591,10 +862,13 @@ export default function TrainerMessages() {
     }
   }, [input, trainerId, activeThread?.memberId, chatExpired, scrollBottom]);
 
-  /* ---------------- 8) send MEDIA (fetch FormData) ---------------- */
+  /* ---------------- 8) Send media ---------------- */
+
   const sendMedia = useCallback(async () => {
     const clean = input.trim();
+
     if (!trainerId || !activeThread?.memberId) return;
+
     if (!clean && files.length === 0) return;
 
     if (chatExpired) {
@@ -607,9 +881,13 @@ export default function TrainerMessages() {
 
     try {
       const fd = new FormData();
+
       fd.append("memberId", activeThread.memberId);
       fd.append("text", clean);
-      files.forEach((f) => fd.append("files", f));
+
+      files.forEach((f) => {
+        fd.append("files", f);
+      });
 
       const res = await fetch(`${API_BASE}/messages/${trainerId}/media`, {
         method: "POST",
@@ -619,36 +897,61 @@ export default function TrainerMessages() {
       });
 
       const data = await safeJson(res);
-      if (!res.ok) throw new Error(data?.message || "Media upload failed");
+
+      if (!res.ok) {
+        throw new Error(data?.message || "Media upload failed");
+      }
 
       setMessages((prev) => {
         const id = data?._id;
-        if (id && prev.some((p) => String(p?._id) === String(id))) return prev;
+
+        if (
+          id &&
+          prev.some((p) => {
+            return String(p?._id) === String(id);
+          })
+        ) {
+          return prev;
+        }
+
         return [...prev, data];
       });
 
       setThreads((prev) => {
         const next = [...prev];
-        const idx = next.findIndex(
-          (t) => String(t.memberId) === String(activeThread.memberId)
-        );
+
+        const idx = next.findIndex((t) => {
+          return String(t.memberId) === String(activeThread.memberId);
+        });
+
         const lastAt = data?.createdAt || new Date().toISOString();
+
         const lastText =
           data?.text ||
           (Array.isArray(data?.attachments) && data.attachments.length
             ? "📎 Attachment"
             : "");
+
         if (idx >= 0) {
-          next[idx] = { ...next[idx], lastAt, lastText };
+          next[idx] = {
+            ...next[idx],
+            lastAt,
+            lastText,
+          };
+
           const [moved] = next.splice(idx, 1);
+
           next.unshift(moved);
+
           return next;
         }
+
         return next;
       });
 
       setInput("");
       clearFiles();
+
       scrollBottom();
     } catch (e) {
       setError(e?.message || "Media upload failed");
@@ -667,28 +970,39 @@ export default function TrainerMessages() {
   ]);
 
   const handleSend = useCallback(async () => {
-    if (files.length > 0) return sendMedia();
+    if (files.length > 0) {
+      return sendMedia();
+    }
+
     return sendText();
   }, [files.length, sendMedia, sendText]);
 
   /* ---------------- UI derived ---------------- */
+
   const filteredThreads = useMemo(() => {
     const q = search.trim().toLowerCase();
+
     if (!q) return threads;
-    return threads.filter((t) =>
-      (t?.name || "").toLowerCase().includes(q)
-    );
+
+    return threads.filter((t) => {
+      return (t?.name || "").toLowerCase().includes(q);
+    });
   }, [threads, search]);
 
   const messagesWithSeparators = useMemo(() => {
     if (!Array.isArray(messages)) return [];
+
     const out = [];
+
     for (let i = 0; i < messages.length; i++) {
       const cur = messages[i];
       const prev = messages[i - 1];
+
       const curAt = cur?.createdAt;
       const prevAt = prev?.createdAt;
+
       const shouldSep = curAt && (!prevAt || !isSameDay(prevAt, curAt));
+
       if (shouldSep) {
         out.push({
           _type: "sep",
@@ -696,12 +1010,18 @@ export default function TrainerMessages() {
           label: dayLabel(curAt),
         });
       }
-      out.push({ _type: "msg", ...cur });
+
+      out.push({
+        _type: "msg",
+        ...cur,
+      });
     }
+
     return out;
   }, [messages]);
 
   /* ---------------- Theme ---------------- */
+
   const pageBg = darkMode
     ? "bg-gradient-to-br from-[#08111f] via-[#0f172a] to-[#111827]"
     : "bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/60";
@@ -716,9 +1036,7 @@ export default function TrainerMessages() {
 
   const subtleBorder = darkMode ? "border-white/10" : "border-slate-200/70";
 
-  const hover = darkMode
-    ? "hover:bg-white/[0.06]"
-    : "hover:bg-slate-50";
+  const hover = darkMode ? "hover:bg-white/[0.06]" : "hover:bg-slate-50";
 
   const textMain = darkMode ? "text-white" : "text-slate-900";
   const textSoft = darkMode ? "text-slate-300" : "text-slate-600";
@@ -751,17 +1069,21 @@ export default function TrainerMessages() {
     );
 
   const canType = !!activeThread?.memberId && !chatExpired;
+
   const activeMemberAvatar = activeThread?.avatarUrl || "";
   const activeMemberAvatarUpdatedAt = activeThread?.avatarUpdatedAt || null;
 
   return (
-    <div className={`h-[100dvh] w-full ${pageBg} transition-colors duration-200`}>
+    <div
+      className={`h-[100dvh] w-full ${pageBg} transition-colors duration-200`}
+    >
       <div className="h-full w-full p-3 md:p-4">
         <div
           className={`h-full w-full overflow-hidden rounded-[2rem] border ${shellCard} transition-colors duration-200 backdrop-blur-2xl`}
         >
           <div className="h-full w-full flex">
             {/* ===================== Sidebar ===================== */}
+
             <aside
               className={`
                 w-full md:w-[360px] shrink-0 border-r ${subtleBorder}
@@ -770,24 +1092,29 @@ export default function TrainerMessages() {
                 flex-col backdrop-blur-xl transition-colors duration-200
               `}
             >
-              {/* Top */}
               <div
-                className={`p-5 border-b ${subtleBorder} sticky top-0 z-10 backdrop-blur-xl ${darkMode ? "bg-black/10" : "bg-white/60"
-                  }`}
+                className={`p-5 border-b ${subtleBorder} sticky top-0 z-10 backdrop-blur-xl ${
+                  darkMode ? "bg-black/10" : "bg-white/60"
+                }`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className={`font-semibold flex items-center gap-2 ${textMain}`}>
+                    <div
+                      className={`font-semibold flex items-center gap-2 ${textMain}`}
+                    >
                       <div
-                        className={`w-10 h-10 rounded-2xl flex items-center justify-center ${darkMode
+                        className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
+                          darkMode
                             ? "bg-indigo-500/15 text-indigo-200"
                             : "bg-indigo-50 text-indigo-700"
-                          }`}
+                        }`}
                       >
                         <MessagesSquare size={18} />
                       </div>
+
                       <div>
                         <div className="text-base">Messages</div>
+
                         <div className={`text-xs font-normal ${textFaint}`}>
                           Member inbox
                         </div>
@@ -800,6 +1127,7 @@ export default function TrainerMessages() {
                       className={`px-3 py-1.5 rounded-full border text-xs flex items-center gap-2 ${statusPill}`}
                     >
                       {statusIcon}
+
                       {socketState === "online"
                         ? "Online"
                         : socketState === "connecting"
@@ -817,13 +1145,14 @@ export default function TrainerMessages() {
                   </div>
                 </div>
 
-                {/* Search */}
                 <div className="mt-4 relative">
                   <Search
                     size={16}
-                    className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-white/40" : "text-slate-400"
-                      }`}
+                    className={`absolute left-3 top-1/2 -translate-y-1/2 ${
+                      darkMode ? "text-white/40" : "text-slate-400"
+                    }`}
                   />
+
                   <input
                     className={`w-full pl-10 pr-3 py-3 rounded-2xl border text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 transition-colors duration-200 ${inputCls}`}
                     placeholder="Search members"
@@ -834,17 +1163,17 @@ export default function TrainerMessages() {
 
                 {error && (
                   <div
-                    className={`mt-3 text-xs rounded-2xl px-3 py-2 border ${darkMode
+                    className={`mt-3 text-xs rounded-2xl px-3 py-2 border ${
+                      darkMode
                         ? "text-rose-200 bg-rose-400/10 border-rose-400/20"
                         : "text-rose-700 bg-rose-50 border-rose-200"
-                      }`}
+                    }`}
                   >
                     {error}
                   </div>
                 )}
               </div>
 
-              {/* Thread list */}
               <div className="flex-1 overflow-y-auto p-3 space-y-2">
                 {loadingThreads ? (
                   <div
@@ -862,9 +1191,11 @@ export default function TrainerMessages() {
                   filteredThreads.map((t) => {
                     const active =
                       String(activeThread?.memberId) === String(t.memberId);
+
                     const unread = unreadMap?.[String(t.memberId)] || 0;
 
                     const tExpires = toDate(t?.chatExpiresAt);
+
                     const expired = tExpires
                       ? Date.now() > tExpires.getTime()
                       : false;
@@ -874,13 +1205,16 @@ export default function TrainerMessages() {
                         layout
                         key={String(t.memberId)}
                         onClick={() => openThread(t)}
-                        whileTap={{ scale: 0.99 }}
-                        className={`w-full flex items-center justify-between px-3.5 py-3.5 rounded-[1.4rem] transition-colors duration-200 border ${active
+                        whileTap={{
+                          scale: 0.99,
+                        }}
+                        className={`w-full flex items-center justify-between px-3.5 py-3.5 rounded-[1.4rem] transition-colors duration-200 border ${
+                          active
                             ? darkMode
                               ? "bg-indigo-500/12 border-indigo-400/20 shadow-[0_0_0_1px_rgba(99,102,241,.18)]"
                               : "bg-indigo-50 border-indigo-200"
                             : `border-transparent ${hover}`
-                          }`}
+                        }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <Avatar
@@ -899,12 +1233,14 @@ export default function TrainerMessages() {
                               >
                                 {t?.name}
                               </p>
+
                               {expired && (
                                 <span
-                                  className={`text-[10px] px-2 py-0.5 rounded-full border ${darkMode
+                                  className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                                    darkMode
                                       ? "border-rose-400/25 bg-rose-400/10 text-rose-200"
                                       : "border-rose-200 bg-rose-50 text-rose-700"
-                                    }`}
+                                  }`}
                                 >
                                   Expired
                                 </span>
@@ -936,14 +1272,16 @@ export default function TrainerMessages() {
             </aside>
 
             {/* ===================== Chat Panel ===================== */}
+
             <section
-              className={`flex-1 flex flex-col h-full min-w-0 ${mobileView === "list" ? "hidden md:flex" : "flex"
-                }`}
+              className={`flex-1 flex flex-col h-full min-w-0 ${
+                mobileView === "list" ? "hidden md:flex" : "flex"
+              }`}
             >
-              {/* Header */}
               <div
-                className={`px-4 md:px-6 py-4 border-b ${subtleBorder} sticky top-0 z-10 backdrop-blur-xl ${darkMode ? "bg-black/10" : "bg-white/60"
-                  }`}
+                className={`px-4 md:px-6 py-4 border-b ${subtleBorder} sticky top-0 z-10 backdrop-blur-xl ${
+                  darkMode ? "bg-black/10" : "bg-white/60"
+                }`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <button
@@ -968,6 +1306,7 @@ export default function TrainerMessages() {
                       <div className={`font-semibold truncate ${textMain}`}>
                         {activeThread?.name || "Select a member"}
                       </div>
+
                       <div className={`text-xs truncate ${textFaint}`}>
                         {activeThread?.email ||
                           (activeThread?.memberId ? "Member" : "—")}
@@ -981,19 +1320,23 @@ export default function TrainerMessages() {
                         {activeExpiresAt ? (
                           <div className={`text-xs ${textSoft}`}>
                             <span>Chat expires in </span>
+
                             <span
-                              className={`font-semibold ${chatExpired
+                              className={`font-semibold ${
+                                chatExpired
                                   ? "text-rose-400"
                                   : darkMode
                                     ? "text-emerald-300"
                                     : "text-emerald-600"
-                                }`}
+                              }`}
                             >
                               {timeLeftText}
                             </span>
                           </div>
                         ) : (
-                          <div className={`text-xs ${textSoft}`}>Live chat</div>
+                          <div className={`text-xs ${textSoft}`}>
+                            Live chat
+                          </div>
                         )}
 
                         <div
@@ -1018,17 +1361,18 @@ export default function TrainerMessages() {
 
                 {activeThread?.memberId && chatExpired && (
                   <div
-                    className={`mt-3 text-sm px-4 py-3 rounded-2xl border ${darkMode
+                    className={`mt-3 text-sm px-4 py-3 rounded-2xl border ${
+                      darkMode
                         ? "border-rose-400/25 bg-rose-400/10 text-rose-200"
                         : "border-rose-200 bg-rose-50 text-rose-700"
-                      }`}
+                    }`}
                   >
-                    Chat expired. Member must book again to unlock chat for 30 days.
+                    Chat expired. Member must book again to unlock chat for 30
+                    days.
                   </div>
                 )}
               </div>
 
-              {/* Messages */}
               <div
                 ref={scrollerRef}
                 className="flex-1 overflow-y-auto px-4 md:px-6 py-6"
@@ -1037,35 +1381,43 @@ export default function TrainerMessages() {
                   {!activeThread?.memberId ? (
                     <div className="py-20 text-center">
                       <div
-                        className={`mx-auto mb-4 h-16 w-16 rounded-3xl flex items-center justify-center ${darkMode
+                        className={`mx-auto mb-4 h-16 w-16 rounded-3xl flex items-center justify-center ${
+                          darkMode
                             ? "bg-white/5 text-white/70"
                             : "bg-white text-slate-500 shadow-sm"
-                          }`}
+                        }`}
                       >
                         <MessagesSquare size={28} />
                       </div>
+
                       <p className={`text-base font-medium ${textMain}`}>
                         No conversation selected
                       </p>
+
                       <p className={`mt-2 text-sm ${textFaint}`}>
                         Choose a member from the left to start chatting.
                       </p>
                     </div>
                   ) : loadingMsgs ? (
-                    <div className={`text-sm ${textSoft}`}>Loading messages...</div>
+                    <div className={`text-sm ${textSoft}`}>
+                      Loading messages...
+                    </div>
                   ) : messages.length === 0 ? (
                     <div className="py-16 text-center">
                       <div
-                        className={`mx-auto mb-4 h-16 w-16 rounded-3xl flex items-center justify-center ${darkMode
+                        className={`mx-auto mb-4 h-16 w-16 rounded-3xl flex items-center justify-center ${
+                          darkMode
                             ? "bg-white/5 text-white/70"
                             : "bg-white text-slate-500 shadow-sm"
-                          }`}
+                        }`}
                       >
                         <Sparkles size={26} />
                       </div>
+
                       <p className={`text-base font-medium ${textMain}`}>
                         No messages yet
                       </p>
+
                       <p className={`mt-2 text-sm ${textFaint}`}>
                         Send the first message to begin the conversation.
                       </p>
@@ -1077,15 +1429,22 @@ export default function TrainerMessages() {
                           return (
                             <motion.div
                               key={item.id}
-                              initial={{ opacity: 0, y: 6 }}
-                              animate={{ opacity: 1, y: 0 }}
+                              initial={{
+                                opacity: 0,
+                                y: 6,
+                              }}
+                              animate={{
+                                opacity: 1,
+                                y: 0,
+                              }}
                               className="flex justify-center"
                             >
                               <div
-                                className={`text-[11px] px-3 py-1 rounded-full border ${subtleBorder} ${darkMode
+                                className={`text-[11px] px-3 py-1 rounded-full border ${subtleBorder} ${
+                                  darkMode
                                     ? "bg-white/5 text-white/70"
                                     : "bg-white text-slate-600"
-                                  }`}
+                                }`}
                               >
                                 {item.label}
                               </div>
@@ -1094,16 +1453,22 @@ export default function TrainerMessages() {
                         }
 
                         const m = item;
+
                         const senderRole =
                           m?.sender?.role ||
-                          (m?.senderModel === "Trainer" ? "trainer" : "member");
+                          (m?.senderModel === "Trainer"
+                            ? "trainer"
+                            : "member");
+
                         const isOwn = senderRole === "trainer";
+
                         const label = isOwn
                           ? "You"
                           : activeThread?.name || "Member";
 
                         const ownBubble =
                           "bg-gradient-to-br from-indigo-600 via-violet-600 to-blue-600 text-white shadow-[0_10px_30px_rgba(79,70,229,0.25)]";
+
                         const otherBubble = darkMode
                           ? "bg-white/[0.05] border border-white/10 text-white"
                           : "bg-white border border-slate-200 text-slate-900 shadow-sm";
@@ -1115,10 +1480,17 @@ export default function TrainerMessages() {
                         return (
                           <motion.div
                             key={m._id || `m-${idx}`}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className={`w-full flex gap-2 ${isOwn ? "justify-end" : "justify-start"
-                              }`}
+                            initial={{
+                              opacity: 0,
+                              y: 10,
+                            }}
+                            animate={{
+                              opacity: 1,
+                              y: 0,
+                            }}
+                            className={`w-full flex gap-2 ${
+                              isOwn ? "justify-end" : "justify-start"
+                            }`}
                           >
                             {!isOwn && (
                               <Avatar
@@ -1136,18 +1508,20 @@ export default function TrainerMessages() {
 
                             <div className="max-w-[80%]">
                               <div
-                                className={`text-[11px] mb-1 ${isOwn ? "text-right" : "text-left"
-                                  } ${textFaint}`}
+                                className={`text-[11px] mb-1 ${
+                                  isOwn ? "text-right" : "text-left"
+                                } ${textFaint}`}
                               >
                                 <span className="font-medium">{label}</span>
                                 <span> • {prettyTime(m.createdAt)}</span>
                               </div>
 
                               <div
-                                className={`px-4 py-3 rounded-[1.6rem] ${isOwn
+                                className={`px-4 py-3 rounded-[1.6rem] ${
+                                  isOwn
                                     ? `${ownBubble} rounded-br-md`
                                     : `${otherBubble} rounded-bl-md`
-                                  }`}
+                                }`}
                               >
                                 {m?.text ? (
                                   <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
@@ -1156,18 +1530,37 @@ export default function TrainerMessages() {
                                 ) : null}
 
                                 {atts.length > 0 && (
-                                  <div className={`${m?.text ? "mt-3" : ""} space-y-2`}>
+                                  <div
+                                    className={`${
+                                      m?.text ? "mt-3" : ""
+                                    } space-y-2.5`}
+                                  >
                                     {atts.map((a, i) => {
-                                      const key = a?.url || `${m._id || idx}-att-${i}`;
+                                      const key =
+                                        a?.url ||
+                                        `${m?._id || idx}-att-${i}`;
+
+                                      const url = normalizeChatUploadPath(
+                                        a?.url
+                                      );
 
                                       if (a?.type === "image") {
                                         return (
                                           <img
                                             key={key}
-                                            src={a.url}
-                                            alt={a.filename || "image"}
-                                            className="max-w-sm rounded-2xl border border-white/10"
+                                            src={url}
+                                            alt={a?.filename || "image"}
+                                            className="w-[220px] h-[220px] sm:w-[260px] sm:h-[260px] object-cover rounded-2xl border border-white/10"
                                             loading="lazy"
+                                            onError={(ev) => {
+                                              console.log(
+                                                "IMG LOAD FAILED:",
+                                                url
+                                              );
+
+                                              ev.currentTarget.style.display =
+                                                "none";
+                                            }}
                                           />
                                         );
                                       }
@@ -1176,9 +1569,15 @@ export default function TrainerMessages() {
                                         return (
                                           <video
                                             key={key}
-                                            src={a.url}
+                                            src={url}
                                             controls
-                                            className="max-w-full rounded-2xl border border-white/10"
+                                            className="w-[240px] h-[170px] sm:w-[280px] sm:h-[190px] object-cover rounded-2xl border border-white/10"
+                                            onError={() =>
+                                              console.log(
+                                                "VIDEO LOAD FAILED:",
+                                                url
+                                              )
+                                            }
                                           />
                                         );
                                       }
@@ -1186,12 +1585,12 @@ export default function TrainerMessages() {
                                       return (
                                         <a
                                           key={key}
-                                          href={a.url}
+                                          href={url}
                                           target="_blank"
                                           rel="noreferrer"
                                           className="text-xs underline"
                                         >
-                                          {a.filename || "Download file"}
+                                          {a?.filename || "Download file"}
                                         </a>
                                       );
                                     })}
@@ -1207,10 +1606,10 @@ export default function TrainerMessages() {
                 </div>
               </div>
 
-              {/* Input */}
               <div
-                className={`border-t ${subtleBorder} px-4 md:px-6 py-4 backdrop-blur-xl ${darkMode ? "bg-black/10" : "bg-white/60"
-                  }`}
+                className={`border-t ${subtleBorder} px-4 md:px-6 py-4 backdrop-blur-xl ${
+                  darkMode ? "bg-black/10" : "bg-white/60"
+                }`}
               >
                 <div className="max-w-4xl mx-auto flex flex-col gap-3">
                   <input
@@ -1225,10 +1624,11 @@ export default function TrainerMessages() {
                   <div className="flex items-end gap-3">
                     <label
                       htmlFor="trainer-chat-media"
-                      className={`inline-flex items-center justify-center rounded-2xl h-12 w-12 border cursor-pointer transition-colors duration-200 ${darkMode
+                      className={`inline-flex items-center justify-center rounded-2xl h-12 w-12 border cursor-pointer transition-colors duration-200 ${
+                        darkMode
                           ? "bg-white/5 hover:bg-white/10 text-white border-white/10"
                           : "bg-white hover:bg-slate-50 text-slate-800 border-slate-200"
-                        }`}
+                      }`}
                       title="Attach image/video"
                     >
                       <Paperclip size={18} />
@@ -1247,8 +1647,9 @@ export default function TrainerMessages() {
                               ? "Chat expired..."
                               : "Type a message…"
                         }
-                        className={`w-full resize-none rounded-[1.6rem] px-4 py-3.5 pr-4 text-sm outline-none border focus:ring-2 focus:ring-indigo-500/30 transition-colors duration-200 ${inputCls} ${!canType ? "opacity-70" : ""
-                          }`}
+                        className={`w-full resize-none rounded-[1.6rem] px-4 py-3.5 pr-4 text-sm outline-none border focus:ring-2 focus:ring-indigo-500/30 transition-colors duration-200 ${inputCls} ${
+                          !canType ? "opacity-70" : ""
+                        }`}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
@@ -1267,15 +1668,16 @@ export default function TrainerMessages() {
                         !activeThread?.memberId ||
                         chatExpired
                       }
-                      className={`rounded-[1.3rem] px-5 h-12 text-white shadow-md transition-colors duration-200 font-semibold flex items-center gap-2 ${sending ||
-                          (!input.trim() && files.length === 0) ||
-                          !activeThread?.memberId ||
-                          chatExpired
+                      className={`rounded-[1.3rem] px-5 h-12 text-white shadow-md transition-colors duration-200 font-semibold flex items-center gap-2 ${
+                        sending ||
+                        (!input.trim() && files.length === 0) ||
+                        !activeThread?.memberId ||
+                        chatExpired
                           ? darkMode
                             ? "bg-white/10 text-white/50 cursor-not-allowed"
                             : "bg-slate-200 text-slate-500 cursor-not-allowed"
                           : "bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 hover:from-indigo-500 hover:via-violet-500 hover:to-blue-500"
-                        }`}
+                      }`}
                       title={
                         !activeThread?.memberId
                           ? "Select a member first"
@@ -1294,8 +1696,11 @@ export default function TrainerMessages() {
                       {files.map((f, idx) => (
                         <div
                           key={`${f.name}-${idx}`}
-                          className={`text-xs px-3 py-2 rounded-2xl border ${subtleBorder} ${darkMode ? "bg-white/5 text-white" : "bg-white text-slate-700"
-                            } flex items-center gap-2`}
+                          className={`text-xs px-3 py-2 rounded-2xl border ${subtleBorder} ${
+                            darkMode
+                              ? "bg-white/5 text-white"
+                              : "bg-white text-slate-700"
+                          } flex items-center gap-2`}
                           title={f.type}
                         >
                           {isImageMime(f.type) ? (
@@ -1303,7 +1708,11 @@ export default function TrainerMessages() {
                           ) : (
                             <Video size={14} />
                           )}
-                          <span className="max-w-[220px] truncate">{f.name}</span>
+
+                          <span className="max-w-[220px] truncate">
+                            {f.name}
+                          </span>
+
                           <button
                             type="button"
                             onClick={() => removeFile(idx)}
@@ -1314,6 +1723,7 @@ export default function TrainerMessages() {
                           </button>
                         </div>
                       ))}
+
                       <button
                         type="button"
                         onClick={clearFiles}
@@ -1324,8 +1734,11 @@ export default function TrainerMessages() {
                     </div>
                   )}
 
-                  <div className={`text-[11px] flex items-center justify-between ${textFaint}`}>
+                  <div
+                    className={`text-[11px] flex items-center justify-between ${textFaint}`}
+                  >
                     <span>Enter = send • Shift + Enter = new line</span>
+
                     <span>
                       {socketState === "online"
                         ? "Secure session"

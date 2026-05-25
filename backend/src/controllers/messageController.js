@@ -305,35 +305,50 @@ export const sendMediaMessage = async (req, res) => {
     const role = req.role || user?.role;
     const { memberId } = req.body;
 
-    // ✅ files from multer
     const files = req.files || [];
+
     if (!files.length) {
-      return res.status(400).json({ message: "No files uploaded" });
+      return res.status(400).json({
+        message: "No files uploaded",
+      });
     }
 
-    // ✅ decide member + senderModel exactly like sendMessage()
     let memberFinal = null;
     let senderModel = null;
 
     if (role === "member") {
       memberFinal = user._id;
       senderModel = "User";
+
       await verifyChatAccess(trainerId, memberFinal);
     } else if (role === "trainer") {
       if (String(user._id) !== String(trainerId)) {
-        return res.status(403).json({ message: "TrainerId mismatch" });
+        return res.status(403).json({
+          message: "TrainerId mismatch",
+        });
       }
-      if (!memberId) return res.status(400).json({ message: "memberId is required" });
+
+      if (!memberId) {
+        return res.status(400).json({
+          message: "memberId is required",
+        });
+      }
+
       memberFinal = memberId;
       senderModel = "Trainer";
+
       await verifyChatAccess(trainerId, memberFinal);
     } else {
-      return res.status(403).json({ message: "Only member/trainer can upload" });
+      return res.status(403).json({
+        message: "Only member/trainer can upload",
+      });
     }
 
     const attachments = files.map((f) => {
       const url = `${req.protocol}://${req.get("host")}/uploads/chat/${f.filename}`;
+
       const mime = f.mimetype || "";
+
       const type = mime.startsWith("image/")
         ? "image"
         : mime.startsWith("video/")
@@ -349,24 +364,50 @@ export const sendMediaMessage = async (req, res) => {
       };
     });
 
-    // ✅ save as a Message row (text optional)
     const msg = await Message.create({
       trainer: trainerId,
       member: memberFinal,
       senderModel,
       sender: user._id,
       text: req.body.text ? String(req.body.text).trim() : "",
-      attachments, // ✅ new field (see schema update below)
+      attachments,
     });
 
     const populated = await Message.findById(msg._id)
-      .populate("sender", "fullname username name role avatar avatarUrl profileImage photoUrl image updatedAt")
+      .populate(
+        "sender",
+        "fullname username name role avatar avatarUrl profileImage photoUrl image updatedAt"
+      )
       .lean();
 
-    return res.status(201).json(populated);
+    const raw = pickAvatar(populated?.sender);
+    const senderAvatarUrl = buildPublicUrl(req, raw);
+
+    const payload = {
+      ...populated,
+      senderAvatarUrl,
+      senderAvatarUpdatedAt: populated?.sender?.updatedAt || null,
+    };
+
+    const io = req.app.get("io");
+
+    const room = `chat:${String(trainerId)}:${String(memberFinal)}`;
+
+    console.log("📡 MEDIA SOCKET EMIT ROOM:", room);
+
+    if (io) {
+      io.to(room).emit("chat:new", payload);
+    } else {
+      console.log("❌ Socket.IO instance not found in req.app");
+    }
+
+    return res.status(201).json(payload);
   } catch (err) {
     console.error("sendMediaMessage error:", err);
-    return res.status(500).json({ message: err.message || "Upload failed" });
+
+    return res.status(500).json({
+      message: err.message || "Upload failed",
+    });
   }
 };
 export default {

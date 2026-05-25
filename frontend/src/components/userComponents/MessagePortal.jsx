@@ -469,12 +469,12 @@ export default function MessagePortal() {
         ? "bg-emerald-400/15 text-emerald-200 border-emerald-400/25"
         : "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
       : socketState === "connecting"
-      ? darkMode
-        ? "bg-blue-400/15 text-blue-200 border-blue-400/25"
-        : "bg-blue-500/10 text-blue-700 border-blue-500/20"
-      : darkMode
-      ? "bg-rose-400/15 text-rose-200 border-rose-400/25"
-      : "bg-rose-500/10 text-rose-700 border-rose-500/20";
+        ? darkMode
+          ? "bg-blue-400/15 text-blue-200 border-blue-400/25"
+          : "bg-blue-500/10 text-blue-700 border-blue-500/20"
+        : darkMode
+          ? "bg-rose-400/15 text-rose-200 border-rose-400/25"
+          : "bg-rose-500/10 text-rose-700 border-rose-500/20";
 
   const statusIcon =
     socketState === "online" ? (
@@ -489,8 +489,8 @@ export default function MessagePortal() {
     socketState === "online"
       ? "Online"
       : socketState === "connecting"
-      ? "Connecting..."
-      : "Offline";
+        ? "Connecting..."
+        : "Offline";
 
   return (
     <div
@@ -506,11 +506,10 @@ export default function MessagePortal() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className={`inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-2xl border transition-colors duration-200 ${
-                darkMode
+              className={`inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-2xl border transition-colors duration-200 ${darkMode
                   ? "border-white/10 bg-white/5 hover:bg-white/10 text-white"
                   : "border-slate-200 bg-white hover:bg-slate-50 text-slate-800"
-              }`}
+                }`}
             >
               <ArrowLeft size={16} />
               Back
@@ -538,9 +537,8 @@ export default function MessagePortal() {
         >
           {/* Chat Header */}
           <div
-            className={`px-4 sm:px-6 py-4 border-b transition-colors duration-200 ${subtleBorder} ${
-              darkMode ? "bg-black/20" : "bg-white/50"
-            }`}
+            className={`px-4 sm:px-6 py-4 border-b transition-colors duration-200 ${subtleBorder} ${darkMode ? "bg-black/20" : "bg-white/50"
+              }`}
           >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white flex items-center justify-center font-bold shadow-lg shadow-blue-500/20">
@@ -553,11 +551,10 @@ export default function MessagePortal() {
                     {loadingTrainer ? "Loading..." : trainerInfo?.name || "Trainer"}
                   </h1>
                   <span
-                    className={`text-[11px] px-2.5 py-1 rounded-full ${
-                      darkMode
+                    className={`text-[11px] px-2.5 py-1 rounded-full ${darkMode
                         ? "bg-blue-400/15 text-blue-200"
                         : "bg-blue-500/10 text-blue-700"
-                    }`}
+                      }`}
                   >
                     Live chat
                   </span>
@@ -591,9 +588,8 @@ export default function MessagePortal() {
               <div className="h-full flex items-center justify-center">
                 <div className="max-w-sm text-center">
                   <div
-                    className={`w-16 h-16 mx-auto rounded-3xl flex items-center justify-center mb-4 ${
-                      darkMode ? "bg-white/10" : "bg-slate-900/5"
-                    }`}
+                    className={`w-16 h-16 mx-auto rounded-3xl flex items-center justify-center mb-4 ${darkMode ? "bg-white/10" : "bg-slate-900/5"
+                      }`}
                   >
                     <MessageCircle
                       size={28}
@@ -618,11 +614,10 @@ export default function MessagePortal() {
                         className="flex items-center justify-center py-1"
                       >
                         <div
-                          className={`px-3 py-1.5 rounded-full text-[11px] font-medium border ${
-                            darkMode
+                          className={`px-3 py-1.5 rounded-full text-[11px] font-medium border ${darkMode
                               ? "bg-white/5 border-white/10 text-white/70"
                               : "bg-white border-slate-200 text-slate-600"
-                          }`}
+                            }`}
                         >
                           {item.label}
                         </div>
@@ -658,9 +653,8 @@ export default function MessagePortal() {
                       <div className={`max-w-[88%] sm:max-w-[78%] ${isOwn ? "items-end" : "items-start"} flex flex-col`}>
                         {showMeta && (
                           <div
-                            className={`mb-1.5 text-[11px] ${softText} ${
-                              isOwn ? "text-right" : "text-left"
-                            }`}
+                            className={`mb-1.5 text-[11px] ${softText} ${isOwn ? "text-right" : "text-left"
+                              }`}
                           >
                             {isTrainer ? trainerInfo?.name || "Trainer" : "You"} •{" "}
                             {prettyTime(m?.createdAt)}
@@ -668,13 +662,12 @@ export default function MessagePortal() {
                         )}
 
                         <div
-                          className={`rounded-[24px] px-4 py-3 shadow-sm border transition-colors duration-200 ${
-                            isOwn
+                          className={`rounded-[24px] px-4 py-3 shadow-sm border transition-colors duration-200 ${isOwn
                               ? "bg-gradient-to-br from-blue-600 to-blue-500 text-white border-blue-500/50 rounded-br-md"
                               : darkMode
-                              ? "bg-white/8 text-white border-white/10 rounded-bl-md"
-                              : "bg-white text-slate-900 border-slate-200 rounded-bl-md"
-                          }`}
+                                ? "bg-white/8 text-white border-white/10 rounded-bl-md"
+                                : "bg-white text-slate-900 border-slate-200 rounded-bl-md"
+                            }`}
                         >
                           {m?.text ? (
                             <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
@@ -683,25 +676,19 @@ export default function MessagePortal() {
                           ) : null}
 
                           {atts.length > 0 && (
-                            <div className={`${m?.text ? "mt-3" : ""} space-y-2.5`}>
+                            <div className={`${m?.text ? "mt-3" : ""} space-y-2`}>
                               {atts.map((a, i) => {
-                                const key = a?.url || `${m?._id || idx}-att-${i}`;
-                                const url = normalizeChatUploadPath(a?.url);
+                                const key = a?.url || `${m._id || idx}-att-${i}`;
 
                                 if (a?.type === "image") {
                                   return (
-                                    <div key={key} className="overflow-hidden rounded-2xl border border-white/10">
-                                      <img
-                                        src={url}
-                                        alt={a?.filename || "image"}
-                                        className="max-h-80 w-full object-cover"
-                                        loading="lazy"
-                                        onError={(ev) => {
-                                          console.log("IMG LOAD FAILED:", url);
-                                          ev.currentTarget.style.display = "none";
-                                        }}
-                                      />
-                                    </div>
+                                    <img
+                                      key={key}
+                                      src={a.url}
+                                      alt={a.filename || "image"}
+                                      className="w-[220px] h-[220px] object-cover rounded-2xl border border-white/10"
+                                      loading="lazy"
+                                    />
                                   );
                                 }
 
@@ -709,10 +696,9 @@ export default function MessagePortal() {
                                   return (
                                     <video
                                       key={key}
-                                      src={url}
+                                      src={a.url}
                                       controls
-                                      className="max-w-full rounded-2xl border border-white/10"
-                                      onError={() => console.log("VIDEO LOAD FAILED:", url)}
+                                      className="w-[260px] h-[180px] object-cover rounded-2xl border border-white/10"
                                     />
                                   );
                                 }
@@ -720,12 +706,12 @@ export default function MessagePortal() {
                                 return (
                                   <a
                                     key={key}
-                                    href={url}
+                                    href={a.url}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="text-xs underline"
                                   >
-                                    {a?.filename || "Download file"}
+                                    {a.filename || "Download file"}
                                   </a>
                                 );
                               })}
@@ -742,11 +728,10 @@ export default function MessagePortal() {
             {typing && socketState === "online" && (
               <div className="flex justify-start">
                 <div
-                  className={`px-3 py-2 rounded-2xl border transition-colors duration-200 ${
-                    darkMode
+                  className={`px-3 py-2 rounded-2xl border transition-colors duration-200 ${darkMode
                       ? "bg-white/5 border-white/10"
                       : "bg-white border-slate-200"
-                  }`}
+                    }`}
                 >
                   <div className="flex gap-1">
                     <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" />
@@ -761,11 +746,10 @@ export default function MessagePortal() {
           {/* Error */}
           {error && (
             <div
-              className={`px-4 sm:px-6 py-2 text-xs border-t ${
-                darkMode
+              className={`px-4 sm:px-6 py-2 text-xs border-t ${darkMode
                   ? "text-rose-200 border-white/10 bg-rose-500/10"
                   : "text-rose-700 border-slate-200 bg-rose-50/70"
-              }`}
+                }`}
             >
               {error}
             </div>
@@ -774,11 +758,10 @@ export default function MessagePortal() {
           {/* Selected file previews */}
           {files.length > 0 && (
             <div
-              className={`px-4 sm:px-6 py-3 border-t transition-colors duration-200 ${
-                darkMode
+              className={`px-4 sm:px-6 py-3 border-t transition-colors duration-200 ${darkMode
                   ? "border-white/10 bg-black/10"
                   : "border-slate-200 bg-slate-50/60"
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between mb-2">
                 <p className={`text-xs font-medium ${softText}`}>
@@ -797,11 +780,10 @@ export default function MessagePortal() {
                 {files.map((item, idx) => (
                   <div
                     key={`${item.name}-${idx}`}
-                    className={`relative w-24 sm:w-28 rounded-2xl overflow-hidden border ${
-                      darkMode
+                    className={`relative w-24 sm:w-28 rounded-2xl overflow-hidden border ${darkMode
                         ? "bg-white/5 border-white/10"
                         : "bg-white border-slate-200"
-                    }`}
+                      }`}
                   >
                     {isImageMime(item.type) ? (
                       <img
@@ -849,11 +831,10 @@ export default function MessagePortal() {
             <div className="flex items-end gap-2 sm:gap-3">
               <label
                 htmlFor="member-chat-media"
-                className={`shrink-0 inline-flex items-center justify-center rounded-2xl w-11 h-11 border cursor-pointer transition-colors duration-200 ${
-                  darkMode
+                className={`shrink-0 inline-flex items-center justify-center rounded-2xl w-11 h-11 border cursor-pointer transition-colors duration-200 ${darkMode
                     ? "bg-white/5 hover:bg-white/10 text-white border-white/10"
                     : "bg-white hover:bg-slate-50 text-slate-800 border-slate-200"
-                }`}
+                  }`}
                 title="Attach image or video"
               >
                 <Paperclip size={18} />
@@ -908,15 +889,14 @@ export default function MessagePortal() {
                   socketState !== "online"
                 }
                 onClick={handleSend}
-                className={`shrink-0 inline-flex items-center justify-center gap-2 rounded-2xl px-4 sm:px-5 h-11 text-sm font-semibold transition-colors duration-200 ${
-                  sending ||
-                  (!text.trim() && files.length === 0) ||
-                  socketState !== "online"
+                className={`shrink-0 inline-flex items-center justify-center gap-2 rounded-2xl px-4 sm:px-5 h-11 text-sm font-semibold transition-colors duration-200 ${sending ||
+                    (!text.trim() && files.length === 0) ||
+                    socketState !== "online"
                     ? darkMode
                       ? "bg-white/10 text-white/50 cursor-not-allowed"
                       : "bg-slate-200 text-slate-500 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20"
-                }`}
+                  }`}
                 title={socketState !== "online" ? "Not connected" : "Send"}
               >
                 {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}

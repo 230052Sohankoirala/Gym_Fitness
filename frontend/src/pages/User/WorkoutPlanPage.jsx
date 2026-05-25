@@ -7,6 +7,8 @@ import {
     Target,
     ShieldAlert,
     Lock,
+    ListChecks,
+    Lightbulb,
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -48,8 +50,8 @@ const WorkoutPlanPage = () => {
         ? "rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.35)]"
         : "rounded-3xl border border-black/10 bg-white/70 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.08)]";
 
-    const inputClass = darkMode ?
-       "w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-black outline-none transition-colors duration-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
+    const inputClass = darkMode
+        ? "w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-black outline-none transition-colors duration-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
         : "w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-gray-900 outline-none transition-colors duration-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20";
 
     const labelClass = darkMode
@@ -61,9 +63,12 @@ const WorkoutPlanPage = () => {
 
     const progressPercent = useMemo(() => {
         if (statusData?.isMembershipUser) return 100;
+
         const limit = Number(statusData?.freeDailyLimit || 0);
         const used = Number(statusData?.usedToday || 0);
+
         if (!limit) return 0;
+
         return Math.min((used / limit) * 100, 100);
     }, [statusData]);
 
@@ -122,10 +127,12 @@ const WorkoutPlanPage = () => {
 
             if (response.status === 403) {
                 setShowUpgradeModal(true);
+
                 setStatusData((prev) => ({
                     ...prev,
                     remaining: 0,
                 }));
+
                 throw new Error(
                     data?.message || "Limit reached. Upgrade to membership."
                 );
@@ -169,6 +176,7 @@ const WorkoutPlanPage = () => {
                         <h1 className={`text-3xl font-bold tracking-tight ${titleText}`}>
                             Custom Workout Plan Generator
                         </h1>
+
                         <p className={`mt-2 max-w-2xl text-sm sm:text-base ${subtleText}`}>
                             Generate structured gym workout plans based on goal, body part,
                             level, duration, and equipment. Free users get limited daily use.
@@ -177,10 +185,11 @@ const WorkoutPlanPage = () => {
                     </div>
 
                     <div
-                        className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 font-semibold ${statusData?.isMembershipUser
-                                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-400/20"
-                                : "bg-amber-500/15 text-amber-400 border border-amber-400/20"
-                            }`}
+                        className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 font-semibold ${
+                            statusData?.isMembershipUser
+                                ? "border border-emerald-400/20 bg-emerald-500/15 text-emerald-400"
+                                : "border border-amber-400/20 bg-amber-500/15 text-amber-400"
+                        }`}
                     >
                         <Crown className="h-5 w-5" />
                         {statusData?.isMembershipUser ? "Membership Active" : "Free Access"}
@@ -189,10 +198,11 @@ const WorkoutPlanPage = () => {
 
                 {error ? (
                     <div
-                        className={`mb-6 rounded-2xl border px-4 py-3 ${darkMode
+                        className={`mb-6 rounded-2xl border px-4 py-3 ${
+                            darkMode
                                 ? "border-red-500/30 bg-red-500/10 text-red-300"
                                 : "border-red-200 bg-red-50 text-red-700"
-                            }`}
+                        }`}
                     >
                         {error}
                     </div>
@@ -205,6 +215,7 @@ const WorkoutPlanPage = () => {
                                 <div className="rounded-2xl bg-indigo-500/15 p-3 text-indigo-400">
                                     <Target className="h-5 w-5" />
                                 </div>
+
                                 <div>
                                     <h2 className={`text-lg font-semibold ${titleText}`}>
                                         Usage Status
@@ -221,6 +232,7 @@ const WorkoutPlanPage = () => {
                                 <>
                                     <div className="mb-4 flex items-center justify-between">
                                         <span className={subtleText}>Used Today</span>
+
                                         <span className="font-semibold">
                                             {statusData?.isMembershipUser
                                                 ? `${statusData?.usedToday} / Unlimited`
@@ -237,16 +249,18 @@ const WorkoutPlanPage = () => {
 
                                     <div className="mb-6 flex items-center justify-between text-sm">
                                         <span className={subtleText}>Remaining</span>
+
                                         <span className="font-medium">
                                             {String(statusData?.remaining)}
                                         </span>
                                     </div>
 
                                     <div
-                                        className={`rounded-2xl border p-4 ${darkMode
+                                        className={`rounded-2xl border p-4 ${
+                                            darkMode
                                                 ? "border-white/10 bg-white/5"
                                                 : "border-gray-200 bg-gray-50"
-                                            }`}
+                                        }`}
                                     >
                                         <div className="mb-2 flex items-center gap-2">
                                             {statusData?.isMembershipUser ? (
@@ -254,12 +268,14 @@ const WorkoutPlanPage = () => {
                                             ) : (
                                                 <Lock className="h-4 w-4 text-amber-400" />
                                             )}
+
                                             <p className="font-semibold">
                                                 {statusData?.isMembershipUser
                                                     ? "Unlimited Plan Access"
                                                     : "Free Tier Access"}
                                             </p>
                                         </div>
+
                                         <p className={`text-sm ${subtleText}`}>
                                             {statusData?.isMembershipUser
                                                 ? "Your membership is active. You can generate unlimited workout plans."
@@ -287,19 +303,25 @@ const WorkoutPlanPage = () => {
                                 <div className="rounded-2xl bg-pink-500/15 p-3 text-pink-400">
                                     <Dumbbell className="h-5 w-5" />
                                 </div>
+
                                 <div>
                                     <h2 className={`text-lg font-semibold ${titleText}`}>
                                         Generate Your Plan
                                     </h2>
+
                                     <p className={`text-sm ${subtleText}`}>
                                         Create a personalized gym workout in seconds
                                     </p>
                                 </div>
                             </div>
 
-                            <form onSubmit={handleGeneratePlan} className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <form
+                                onSubmit={handleGeneratePlan}
+                                className="grid grid-cols-1 gap-5 md:grid-cols-2"
+                            >
                                 <div>
                                     <label className={labelClass}>Goal</label>
+
                                     <select
                                         name="goal"
                                         value={formData.goal}
@@ -315,6 +337,7 @@ const WorkoutPlanPage = () => {
 
                                 <div>
                                     <label className={labelClass}>Body Part</label>
+
                                     <select
                                         name="bodyPart"
                                         value={formData.bodyPart}
@@ -333,6 +356,7 @@ const WorkoutPlanPage = () => {
 
                                 <div>
                                     <label className={labelClass}>Level</label>
+
                                     <select
                                         name="level"
                                         value={formData.level}
@@ -347,6 +371,7 @@ const WorkoutPlanPage = () => {
 
                                 <div>
                                     <label className={labelClass}>Duration (minutes)</label>
+
                                     <select
                                         name="duration"
                                         value={formData.duration}
@@ -362,6 +387,7 @@ const WorkoutPlanPage = () => {
 
                                 <div className="md:col-span-2">
                                     <label className={labelClass}>Equipment</label>
+
                                     <select
                                         name="equipment"
                                         value={formData.equipment}
@@ -376,7 +402,7 @@ const WorkoutPlanPage = () => {
                                     </select>
                                 </div>
 
-                                <div className="md:col-span-2 pt-2">
+                                <div className="pt-2 md:col-span-2">
                                     <button
                                         type="submit"
                                         disabled={generateLoading}
@@ -405,10 +431,16 @@ const WorkoutPlanPage = () => {
                                         <h3 className={`text-2xl font-bold ${titleText}`}>
                                             {plan.title}
                                         </h3>
+
                                         <p className={`mt-2 text-sm ${subtleText}`}>
-                                            Goal: <span className="font-medium">{plan.goal}</span> •
-                                            Level: <span className="font-medium">{plan.level}</span> •
-                                            Duration: <span className="font-medium">{plan.duration} mins</span>
+                                            Goal:{" "}
+                                            <span className="font-medium">{plan.goal}</span> •
+                                            Level:{" "}
+                                            <span className="font-medium">{plan.level}</span> •
+                                            Duration:{" "}
+                                            <span className="font-medium">
+                                                {plan.duration} mins
+                                            </span>
                                         </p>
                                     </div>
 
@@ -418,38 +450,130 @@ const WorkoutPlanPage = () => {
                                 </div>
 
                                 <div
-                                    className={`mb-5 rounded-2xl border p-4 ${darkMode
+                                    className={`mb-5 rounded-2xl border p-4 ${
+                                        darkMode
                                             ? "border-indigo-400/20 bg-indigo-500/10"
                                             : "border-indigo-200 bg-indigo-50"
-                                        }`}
+                                    }`}
                                 >
-                                    <p className="font-semibold text-indigo-400">Trainer Note</p>
-                                    <p className={`mt-1 text-sm ${subtleText}`}>{plan.note}</p>
+                                    <p className="font-semibold text-indigo-400">
+                                        Trainer Note
+                                    </p>
+
+                                    <p className={`mt-1 text-sm ${subtleText}`}>
+                                        {plan.note}
+                                    </p>
                                 </div>
 
-                                <div className="space-y-4">
+                                <div className="space-y-5">
                                     {plan.exercises?.map((exercise, index) => (
                                         <div
                                             key={`${exercise.name}-${index}`}
-                                            className={`rounded-2xl border p-4 ${darkMode
+                                            className={`rounded-2xl border p-5 ${
+                                                darkMode
                                                     ? "border-white/10 bg-white/5"
                                                     : "border-gray-200 bg-white"
-                                                }`}
+                                            }`}
                                         >
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                 <div>
-                                                    <h4 className={`font-semibold ${titleText}`}>
+                                                    <h4 className={`text-lg font-semibold ${titleText}`}>
                                                         {index + 1}. {exercise.name}
                                                     </h4>
+
                                                     <p className={`mt-1 text-sm ${subtleText}`}>
                                                         Sets: {exercise.sets} • Reps: {exercise.reps}
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-xl bg-pink-500/10 px-3 py-1.5 text-sm font-medium text-pink-400">
+                                                <div className="w-fit rounded-xl bg-pink-500/10 px-3 py-1.5 text-sm font-medium text-pink-400">
                                                     Rest: {exercise.rest}
                                                 </div>
                                             </div>
+
+                                            {exercise.steps && exercise.steps.length > 0 ? (
+                                                <div
+                                                    className={`mt-5 rounded-2xl border p-4 ${
+                                                        darkMode
+                                                            ? "border-indigo-400/20 bg-indigo-500/10"
+                                                            : "border-indigo-200 bg-indigo-50"
+                                                    }`}
+                                                >
+                                                    <div className="mb-3 flex items-center gap-2">
+                                                        <ListChecks className="h-4 w-4 text-indigo-400" />
+
+                                                        <h5 className="font-semibold text-indigo-400">
+                                                            How to perform this exercise
+                                                        </h5>
+                                                    </div>
+
+                                                    <ol
+                                                        className={`list-decimal space-y-2 pl-5 text-sm leading-relaxed ${
+                                                            darkMode
+                                                                ? "text-gray-300"
+                                                                : "text-gray-700"
+                                                        }`}
+                                                    >
+                                                        {exercise.steps.map((step, stepIndex) => (
+                                                            <li
+                                                                key={`${exercise.name}-step-${stepIndex}`}
+                                                            >
+                                                                {step}
+                                                            </li>
+                                                        ))}
+                                                    </ol>
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    className={`mt-5 rounded-2xl border p-4 ${
+                                                        darkMode
+                                                            ? "border-yellow-400/20 bg-yellow-500/10"
+                                                            : "border-yellow-200 bg-yellow-50"
+                                                    }`}
+                                                >
+                                                    <p
+                                                        className={`text-sm ${
+                                                            darkMode
+                                                                ? "text-yellow-200"
+                                                                : "text-yellow-700"
+                                                        }`}
+                                                    >
+                                                        No detailed steps were provided for this exercise.
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {exercise.tips && exercise.tips.length > 0 ? (
+                                                <div
+                                                    className={`mt-4 rounded-2xl border p-4 ${
+                                                        darkMode
+                                                            ? "border-emerald-400/20 bg-emerald-500/10"
+                                                            : "border-emerald-200 bg-emerald-50"
+                                                    }`}
+                                                >
+                                                    <div className="mb-3 flex items-center gap-2">
+                                                        <Lightbulb className="h-4 w-4 text-emerald-400" />
+
+                                                        <h5 className="font-semibold text-emerald-400">
+                                                            Form tips
+                                                        </h5>
+                                                    </div>
+
+                                                    <ul
+                                                        className={`list-disc space-y-2 pl-5 text-sm leading-relaxed ${
+                                                            darkMode
+                                                                ? "text-gray-300"
+                                                                : "text-gray-700"
+                                                        }`}
+                                                    >
+                                                        {exercise.tips.map((tip, tipIndex) => (
+                                                            <li key={`${exercise.name}-tip-${tipIndex}`}>
+                                                                {tip}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            ) : null}
                                         </div>
                                     ))}
                                 </div>
@@ -462,17 +586,20 @@ const WorkoutPlanPage = () => {
             {showUpgradeModal ? (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
                     <div
-                        className={`w-full max-w-md rounded-3xl border p-6 ${darkMode
+                        className={`w-full max-w-md rounded-3xl border p-6 ${
+                            darkMode
                                 ? "border-white/10 bg-gray-900 text-white"
                                 : "border-gray-200 bg-white text-gray-900"
-                            }`}
+                        }`}
                     >
                         <div className="mb-4 flex items-center gap-3">
                             <div className="rounded-2xl bg-amber-500/15 p-3 text-amber-400">
                                 <ShieldAlert className="h-6 w-6" />
                             </div>
+
                             <div>
                                 <h3 className="text-xl font-bold">Upgrade Required</h3>
+
                                 <p className={`text-sm ${subtleText}`}>
                                     Unlock unlimited workout plan generation
                                 </p>
@@ -480,10 +607,11 @@ const WorkoutPlanPage = () => {
                         </div>
 
                         <div
-                            className={`rounded-2xl border p-4 ${darkMode
+                            className={`rounded-2xl border p-4 ${
+                                darkMode
                                     ? "border-white/10 bg-white/5"
                                     : "border-gray-200 bg-gray-50"
-                                }`}
+                            }`}
                         >
                             <ul className={`space-y-2 text-sm ${subtleText}`}>
                                 <li>• Unlimited custom workout plans</li>
@@ -496,10 +624,11 @@ const WorkoutPlanPage = () => {
                             <button
                                 type="button"
                                 onClick={() => setShowUpgradeModal(false)}
-                                className={`flex-1 rounded-2xl border px-4 py-3 font-medium ${darkMode
+                                className={`flex-1 rounded-2xl border px-4 py-3 font-medium ${
+                                    darkMode
                                         ? "border-white/10 bg-white/5 text-white"
                                         : "border-gray-200 bg-white text-gray-900"
-                                    }`}
+                                }`}
                             >
                                 Maybe Later
                             </button>

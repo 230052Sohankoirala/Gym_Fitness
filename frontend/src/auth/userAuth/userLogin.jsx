@@ -75,9 +75,24 @@ const UserLogin = () => {
         }
       );
 
-      login(data.token, data.user, "member", formData.rememberMe);
+      /**
+       * Important:
+       * AuthContext login function accepts:
+       * login(token, userData, rememberMe)
+       *
+       * So do NOT pass "member" here.
+       */
+      login(data.token, data.user, formData.rememberMe);
 
-      navigate("/home");
+      const userRole = data.user?.role || "member";
+
+      if (userRole === "admin") {
+        navigate("/admin/dashboard");
+      } else if (userRole === "trainer") {
+        navigate("/trainer/dashboard");
+      } else {
+        navigate("/home");
+      }
     } catch (err) {
       const msg = err.response?.data?.message;
 
@@ -133,9 +148,22 @@ const UserLogin = () => {
         return;
       }
 
-      login(data.token, data.user, "member", true);
+      /**
+       * Google login does not have a remember me checkbox.
+       * Here it is set to true, meaning Google login will stay remembered.
+       * Change true to false if you want Google login to only use sessionStorage.
+       */
+      login(data.token, data.user, true);
 
-      navigate("/home");
+      const userRole = data.user?.role || "member";
+
+      if (userRole === "admin") {
+        navigate("/admin/dashboard");
+      } else if (userRole === "trainer") {
+        navigate("/trainer/dashboard");
+      } else {
+        navigate("/home");
+      }
     } catch (err) {
       const msg = err.response?.data?.message;
 
