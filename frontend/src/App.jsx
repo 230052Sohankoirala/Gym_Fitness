@@ -93,6 +93,7 @@ const Layout = () => {
 
   const noUserNavbarRoutes = [
     "/",
+    "/be-a-trainer",
     "/memberLogin",
     "/register",
     "/usergoal",
@@ -315,14 +316,7 @@ function App() {
                 }
               />
 
-              <Route
-                path="/be-a-trainer"
-                element={
-                  <ProtectedRoute role="member">
-                    <BeATrainerPage />
-                  </ProtectedRoute>
-                }
-              />
+          <Route path="/be-a-trainer" element={<BeATrainerPage />} />
 
               {/* Trainer Protected */}
               <Route

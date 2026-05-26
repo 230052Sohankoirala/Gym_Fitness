@@ -66,7 +66,6 @@ const ProfilePage = () => {
       items: [
         { name: "Edit Profile", url: "/editProfile", icon: <User size={16} /> },
         { name: "Notifications", url: "/notifications", icon: <Bell size={16} /> },
-        { name: "Be a Trainer", url: "/be-a-trainer", icon: <Briefcase size={16} /> },
       ],
     },
     {

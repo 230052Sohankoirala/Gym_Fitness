@@ -85,51 +85,66 @@ const TrainerApplicationsPage = () => {
     const getToken = () =>
         localStorage.getItem("token") || sessionStorage.getItem("token");
 
-    const fetchApplications = async () => {
-        try {
-            setLoading(true);
+const fetchApplications = async () => {
+    try {
+        setLoading(true);
 
-            const token = getToken();
-            if (!token) {
-                navigate("/adminLogin");
-                return;
-            }
+        const token = getToken();
 
-            const query = new URLSearchParams();
-            if (statusFilter && statusFilter !== "all") {
-                query.append("status", statusFilter);
-            }
-            if (search.trim()) {
-                query.append("search", search.trim());
-            }
-
-            const response = await fetch(
-                `${API_BASE}/api/trainer-applications/admin/all${query.toString() ? `?${query.toString()}` : ""
-                }`,
-                {
-                    method: "GET",
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data?.message || "Failed to fetch trainer applications.");
-            }
-
-            setApplications(Array.isArray(data) ? data : []);
-            setFilteredApplications(Array.isArray(data) ? data : []);
-        } catch (error) {
-            console.error("fetchApplications error:", error);
-            setApplications([]);
-            setFilteredApplications([]);
-        } finally {
-            setLoading(false);
+        if (!token) {
+            navigate("/adminLogin");
+            return;
         }
-    };
+
+        const query = new URLSearchParams();
+
+        if (statusFilter && statusFilter !== "all") {
+            query.append("status", statusFilter);
+        }
+
+        if (search.trim()) {
+            query.append("search", search.trim());
+        }
+
+        const response = await fetch(
+            `${API_BASE}/api/trainer-applications/admin/all${
+                query.toString() ? `?${query.toString()}` : ""
+            }`,
+            {
+                method: "GET",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
+
+        const data = await response.json();
+
+        console.log("Trainer applications API response:", data);
+
+        if (!response.ok) {
+            throw new Error(
+                data?.message || "Failed to fetch trainer applications."
+            );
+        }
+
+        const applicationList = Array.isArray(data?.applications)
+            ? data.applications
+            : Array.isArray(data)
+                ? data
+                : [];
+
+        setApplications(applicationList);
+        setFilteredApplications(applicationList);
+    } catch (error) {
+        console.error("fetchApplications error:", error);
+
+        setApplications([]);
+        setFilteredApplications([]);
+    } finally {
+        setLoading(false);
+    }
+};
 
     useEffect(() => {
         fetchApplications();

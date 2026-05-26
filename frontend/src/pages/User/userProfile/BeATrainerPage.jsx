@@ -1,6 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+
 import { motion } from "framer-motion";// eslint-disable-line no-unused-vars
+
 import {
     ArrowLeft,
     Briefcase,
@@ -15,6 +18,7 @@ import {
     Building2,
     Image as ImageIcon,
 } from "lucide-react";
+
 import { useTheme } from "../../../context/ThemeContext";
 
 const BeATrainerPage = () => {
@@ -39,6 +43,7 @@ const BeATrainerPage = () => {
     const [previewImage, setPreviewImage] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [message, setMessage] = useState("");
+    const [success, setSuccess] = useState(false);
 
     const pageBg = darkMode
         ? "bg-gray-900 text-white"
@@ -48,7 +53,10 @@ const BeATrainerPage = () => {
 
     const card = useMemo(
         () =>
-            `rounded-2xl border shadow-sm transition-colors duration-200 ${darkMode ? "bg-gray-800 border-white/10" : "bg-white border-gray-200"
+            `rounded-2xl border shadow-sm transition-colors duration-200 ${
+                darkMode
+                    ? "bg-gray-800 border-white/10"
+                    : "bg-white border-gray-200"
             }`,
         [darkMode]
     );
@@ -70,14 +78,35 @@ const BeATrainerPage = () => {
             ...prev,
             [name]: value,
         }));
+
+        setMessage("");
     };
 
     const handleCertificateChange = (e) => {
         const file = e.target.files[0];
-        if (!file) return;
+
+        if (!file) {
+            return;
+        }
+
+        const allowedTypes = [
+            "image/png",
+            "image/jpeg",
+            "image/jpg",
+            "image/webp",
+        ];
+
+        if (!allowedTypes.includes(file.type)) {
+            setMessage("Please upload a valid image file: PNG, JPG, JPEG, or WEBP.");
+            setSuccess(false);
+            setCertificateImage(null);
+            setPreviewImage("");
+            return;
+        }
 
         setCertificateImage(file);
         setPreviewImage(URL.createObjectURL(file));
+        setMessage("");
     };
 
     const resetForm = () => {
@@ -99,22 +128,43 @@ const BeATrainerPage = () => {
         setPreviewImage("");
     };
 
+    const validateForm = () => {
+        if (!formData.fullName.trim()) return "Full name is required.";
+        if (!formData.email.trim()) return "Email is required.";
+        if (!/\S+@\S+\.\S+/.test(formData.email)) return "Invalid email format.";
+        if (!formData.phone.trim()) return "Phone number is required.";
+        if (!formData.location.trim()) return "Location is required.";
+        if (!formData.experience.trim()) return "Experience is required.";
+        if (!formData.specialization.trim()) return "Specialization is required.";
+        if (!formData.workedPlace.trim()) return "Worked place is required.";
+        if (!formData.workedPlacePhone.trim()) return "Workplace phone number is required.";
+        if (!formData.certificationsText.trim()) return "Certification text is required.";
+        if (!certificateImage) return "Certificate proof image is required.";
+        if (!formData.bio.trim()) return "Professional bio is required.";
+        if (!formData.motivation.trim()) return "Motivation is required.";
+
+        return "";
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
         setSubmitting(true);
         setMessage("");
+        setSuccess(false);
 
         try {
-            const token =
-                localStorage.getItem("token") || sessionStorage.getItem("token");
+            const validationError = validateForm();
 
-            if (!token) {
-                setMessage("You must be logged in first.");
+            if (validationError) {
+                setMessage(validationError);
+                setSuccess(false);
                 setSubmitting(false);
                 return;
             }
 
             const payload = new FormData();
+
             payload.append("fullName", formData.fullName);
             payload.append("email", formData.email);
             payload.append("phone", formData.phone);
@@ -126,18 +176,25 @@ const BeATrainerPage = () => {
             payload.append("certificationsText", formData.certificationsText);
             payload.append("bio", formData.bio);
             payload.append("motivation", formData.motivation);
+            payload.append("certificateImage", certificateImage);
 
-            if (certificateImage) {
-                payload.append("certificateImage", certificateImage);
+            const token =
+                localStorage.getItem("token") || sessionStorage.getItem("token");
+
+            const headers = {};
+
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
             }
 
-            const response = await fetch("http://localhost:4000/api/trainer-applications", {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-                body: payload,
-            });
+            const response = await fetch(
+                "http://localhost:4000/api/trainer-applications",
+                {
+                    method: "POST",
+                    headers,
+                    body: payload,
+                }
+            );
 
             const data = await response.json();
 
@@ -145,21 +202,29 @@ const BeATrainerPage = () => {
                 throw new Error(data?.message || "Failed to submit application.");
             }
 
-            setMessage(data?.message || "Application submitted successfully.");
+            setSuccess(true);
+            setMessage(
+                data?.message ||
+                    "Trainer application submitted successfully. Admin will review your application."
+            );
+
             resetForm();
         } catch (error) {
             console.error("Trainer application failed:", error);
-            setMessage(error.message || "Failed to submit application. Please try again.");
+            setSuccess(false);
+            setMessage(
+                error.message || "Failed to submit application. Please try again."
+            );
         } finally {
             setSubmitting(false);
         }
     };
 
     const benefits = [
-        "Work with active fitness members",
-        "Build your trainer profile professionally",
+        "Apply directly from trainer login",
         "Upload real certificate proof",
         "Let admin review your background properly",
+        "Get approved before trainer access",
     ];
 
     return (
@@ -170,9 +235,10 @@ const BeATrainerPage = () => {
                 <div className="max-w-5xl mx-auto flex items-center gap-4">
                     <motion.button
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => navigate(-1)}
-                        className={`p-2 rounded-full transition-colors duration-200 ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-200"
-                            }`}
+                        onClick={() => navigate("/trainerLogin")}
+                        className={`p-2 rounded-full transition-colors duration-200 ${
+                            darkMode ? "hover:bg-gray-700" : "hover:bg-gray-200"
+                        }`}
                     >
                         <ArrowLeft size={20} />
                     </motion.button>
@@ -198,27 +264,38 @@ const BeATrainerPage = () => {
                     >
                         <div className="flex items-center gap-3 mb-4">
                             <div
-                                className={`w-12 h-12 rounded-2xl flex items-center justify-center ${darkMode ? "bg-gray-700" : "bg-indigo-50"
-                                    }`}
+                                className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                                    darkMode ? "bg-gray-700" : "bg-indigo-50"
+                                }`}
                             >
                                 <Briefcase size={22} className="text-indigo-500" />
                             </div>
+
                             <div>
-                                <h2 className="text-lg font-semibold">Trainer Recruitment</h2>
-                                <p className={`text-sm ${softText}`}>Apply professionally</p>
+                                <h2 className="text-lg font-semibold">
+                                    Trainer Recruitment
+                                </h2>
+                                <p className={`text-sm ${softText}`}>
+                                    Apply professionally
+                                </p>
                             </div>
                         </div>
 
                         <p className={`text-sm leading-6 ${subtle}`}>
-                            Submit your trainer application with your experience, workplace
-                            history, and certification proof for admin review.
+                            Submit your trainer application with your experience,
+                            workplace history, and certification proof for admin review.
                         </p>
 
                         <div className="mt-6 space-y-3">
                             {benefits.map((benefit, index) => (
                                 <div key={index} className="flex items-start gap-3">
-                                    <CheckCircle2 size={18} className="text-green-500 mt-0.5" />
-                                    <span className={`text-sm ${subtle}`}>{benefit}</span>
+                                    <CheckCircle2
+                                        size={18}
+                                        className="text-green-500 mt-0.5"
+                                    />
+                                    <span className={`text-sm ${subtle}`}>
+                                        {benefit}
+                                    </span>
                                 </div>
                             ))}
                         </div>
@@ -235,20 +312,22 @@ const BeATrainerPage = () => {
                                 Trainer Application Form
                             </h2>
                             <p className={`text-sm mt-1 ${softText}`}>
-                                Fill in the form carefully like a real recruitment application.
+                                Fill in the form carefully like a real recruitment
+                                application.
                             </p>
                         </div>
 
                         {message && (
                             <div
-                                className={`mb-5 rounded-xl px-4 py-3 text-sm ${message.toLowerCase().includes("success")
-                                    ? darkMode
-                                        ? "bg-green-900/30 text-green-300 border border-green-700"
-                                        : "bg-green-50 text-green-700 border border-green-200"
-                                    : darkMode
-                                        ? "bg-yellow-900/30 text-yellow-300 border border-yellow-700"
-                                        : "bg-yellow-50 text-yellow-700 border border-yellow-200"
-                                    }`}
+                                className={`mb-5 rounded-xl px-4 py-3 text-sm border ${
+                                    success
+                                        ? darkMode
+                                            ? "bg-green-900/30 text-green-300 border-green-700"
+                                            : "bg-green-50 text-green-700 border-green-200"
+                                        : darkMode
+                                            ? "bg-yellow-900/30 text-yellow-300 border-yellow-700"
+                                            : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                }`}
                             >
                                 {message}
                             </div>
@@ -260,8 +339,13 @@ const BeATrainerPage = () => {
                                     <label className={`text-sm font-medium mb-2 block ${subtle}`}>
                                         Full Name
                                     </label>
+
                                     <div className="relative">
-                                        <User size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                                        <User
+                                            size={18}
+                                            className="absolute left-3 top-3.5 text-gray-400"
+                                        />
+
                                         <input
                                             type="text"
                                             name="fullName"
@@ -278,8 +362,13 @@ const BeATrainerPage = () => {
                                     <label className={`text-sm font-medium mb-2 block ${subtle}`}>
                                         Email Address
                                     </label>
+
                                     <div className="relative">
-                                        <Mail size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                                        <Mail
+                                            size={18}
+                                            className="absolute left-3 top-3.5 text-gray-400"
+                                        />
+
                                         <input
                                             type="email"
                                             name="email"
@@ -296,8 +385,13 @@ const BeATrainerPage = () => {
                                     <label className={`text-sm font-medium mb-2 block ${subtle}`}>
                                         Phone Number
                                     </label>
+
                                     <div className="relative">
-                                        <Phone size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                                        <Phone
+                                            size={18}
+                                            className="absolute left-3 top-3.5 text-gray-400"
+                                        />
+
                                         <input
                                             type="text"
                                             name="phone"
@@ -314,8 +408,13 @@ const BeATrainerPage = () => {
                                     <label className={`text-sm font-medium mb-2 block ${subtle}`}>
                                         Location
                                     </label>
+
                                     <div className="relative">
-                                        <MapPin size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                                        <MapPin
+                                            size={18}
+                                            className="absolute left-3 top-3.5 text-gray-400"
+                                        />
+
                                         <input
                                             type="text"
                                             name="location"
@@ -332,8 +431,13 @@ const BeATrainerPage = () => {
                                     <label className={`text-sm font-medium mb-2 block ${subtle}`}>
                                         Years of Experience
                                     </label>
+
                                     <div className="relative">
-                                        <Briefcase size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                                        <Briefcase
+                                            size={18}
+                                            className="absolute left-3 top-3.5 text-gray-400"
+                                        />
+
                                         <input
                                             type="text"
                                             name="experience"
@@ -350,8 +454,13 @@ const BeATrainerPage = () => {
                                     <label className={`text-sm font-medium mb-2 block ${subtle}`}>
                                         Specialization
                                     </label>
+
                                     <div className="relative">
-                                        <Dumbbell size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                                        <Dumbbell
+                                            size={18}
+                                            className="absolute left-3 top-3.5 text-gray-400"
+                                        />
+
                                         <input
                                             type="text"
                                             name="specialization"
@@ -368,8 +477,13 @@ const BeATrainerPage = () => {
                                     <label className={`text-sm font-medium mb-2 block ${subtle}`}>
                                         Place You Worked At
                                     </label>
+
                                     <div className="relative">
-                                        <Building2 size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                                        <Building2
+                                            size={18}
+                                            className="absolute left-3 top-3.5 text-gray-400"
+                                        />
+
                                         <input
                                             type="text"
                                             name="workedPlace"
@@ -386,8 +500,13 @@ const BeATrainerPage = () => {
                                     <label className={`text-sm font-medium mb-2 block ${subtle}`}>
                                         Workplace Phone Number
                                     </label>
+
                                     <div className="relative">
-                                        <Phone size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                                        <Phone
+                                            size={18}
+                                            className="absolute left-3 top-3.5 text-gray-400"
+                                        />
+
                                         <input
                                             type="text"
                                             name="workedPlacePhone"
@@ -405,8 +524,13 @@ const BeATrainerPage = () => {
                                 <label className={`text-sm font-medium mb-2 block ${subtle}`}>
                                     Certifications
                                 </label>
+
                                 <div className="relative">
-                                    <Award size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                                    <Award
+                                        size={18}
+                                        className="absolute left-3 top-3.5 text-gray-400"
+                                    />
+
                                     <input
                                         type="text"
                                         name="certificationsText"
@@ -423,14 +547,20 @@ const BeATrainerPage = () => {
                                 <label className={`text-sm font-medium mb-2 block ${subtle}`}>
                                     Certificate Proof Image
                                 </label>
+
                                 <div
-                                    className={`rounded-2xl border p-4 transition-colors duration-200 ${darkMode
-                                        ? "bg-gray-900 border-gray-700"
-                                        : "bg-gray-50 border-gray-200"
-                                        }`}
+                                    className={`rounded-2xl border p-4 transition-colors duration-200 ${
+                                        darkMode
+                                            ? "bg-gray-900 border-gray-700"
+                                            : "bg-gray-50 border-gray-200"
+                                    }`}
                                 >
                                     <div className="relative">
-                                        <ImageIcon size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                                        <ImageIcon
+                                            size={18}
+                                            className="absolute left-3 top-3.5 text-gray-400"
+                                        />
+
                                         <input
                                             type="file"
                                             accept="image/png,image/jpeg,image/jpg,image/webp"
@@ -456,8 +586,13 @@ const BeATrainerPage = () => {
                                 <label className={`text-sm font-medium mb-2 block ${subtle}`}>
                                     Short Professional Bio
                                 </label>
+
                                 <div className="relative">
-                                    <FileText size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                                    <FileText
+                                        size={18}
+                                        className="absolute left-3 top-3.5 text-gray-400"
+                                    />
+
                                     <textarea
                                         name="bio"
                                         value={formData.bio}
@@ -474,6 +609,7 @@ const BeATrainerPage = () => {
                                 <label className={`text-sm font-medium mb-2 block ${subtle}`}>
                                     Why do you want to become a trainer here?
                                 </label>
+
                                 <textarea
                                     name="motivation"
                                     value={formData.motivation}
@@ -491,20 +627,21 @@ const BeATrainerPage = () => {
                                     whileHover={{ scale: 1.01 }}
                                     whileTap={{ scale: 0.98 }}
                                     disabled={submitting}
-                                    className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition duration-200"
+                                    className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
                                     {submitting ? "Submitting..." : "Submit Application"}
                                 </motion.button>
 
                                 <button
                                     type="button"
-                                    onClick={() => navigate("/profile")}
-                                    className={`px-6 py-3 rounded-xl font-medium transition duration-200 ${darkMode
-                                        ? "bg-gray-700 hover:bg-gray-600 text-white"
-                                        : "bg-gray-200 hover:bg-gray-300 text-gray-900"
-                                        }`}
+                                    onClick={() => navigate("/trainerLogin")}
+                                    className={`px-6 py-3 rounded-xl font-medium transition duration-200 ${
+                                        darkMode
+                                            ? "bg-gray-700 hover:bg-gray-600 text-white"
+                                            : "bg-gray-200 hover:bg-gray-300 text-gray-900"
+                                    }`}
                                 >
-                                    Back to Profile
+                                    Back to Trainer Login
                                 </button>
                             </div>
                         </form>

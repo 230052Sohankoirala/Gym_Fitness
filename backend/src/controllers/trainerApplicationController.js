@@ -1,7 +1,12 @@
 import TrainerApplication from "../models/TrainerApplication.js";
 
 /**
- * User submits a trainer application
+ * Public or logged-in user submits a trainer application.
+ * 
+ * This controller supports:
+ * 1. Public trainer application from Trainer Login page
+ * 2. Logged-in member application from profile page
+ * 3. Certificate image upload using multer
  */
 export const createTrainerApplication = async (req, res) => {
     try {
@@ -33,24 +38,55 @@ export const createTrainerApplication = async (req, res) => {
             !motivation
         ) {
             return res.status(400).json({
+                success: false,
                 message: "Please fill in all required fields.",
             });
         }
 
         if (!req.file) {
             return res.status(400).json({
+                success: false,
                 message: "Certificate proof image is required.",
             });
         }
 
+        const trimmedEmail = String(email).trim().toLowerCase();
+
+        const emailRegex = /^\S+@\S+\.\S+$/;
+
+        if (!emailRegex.test(trimmedEmail)) {
+            return res.status(400).json({
+                success: false,
+                message: "Please enter a valid email address.",
+            });
+        }
+
+        /**
+         * Since this page is now available from Trainer Login,
+         * the applicant may not have req.user.
+         * So duplicate checking should be done by email.
+         */
         const existingPending = await TrainerApplication.findOne({
-            user: req.user?._id || null,
+            email: trimmedEmail,
             status: "pending",
         });
 
         if (existingPending) {
             return res.status(400).json({
-                message: "You already have a pending trainer application.",
+                success: false,
+                message: "You already have a pending trainer application with this email.",
+            });
+        }
+
+        const existingApproved = await TrainerApplication.findOne({
+            email: trimmedEmail,
+            status: "approved",
+        });
+
+        if (existingApproved) {
+            return res.status(400).json({
+                success: false,
+                message: "This email already has an approved trainer application.",
             });
         }
 
@@ -58,35 +94,40 @@ export const createTrainerApplication = async (req, res) => {
 
         const application = await TrainerApplication.create({
             user: req.user?._id || null,
-            fullName,
-            email,
-            phone,
-            location,
-            experience,
-            specialization,
-            workedPlace,
-            workedPlacePhone,
-            certificationsText,
+
+            fullName: String(fullName).trim(),
+            email: trimmedEmail,
+            phone: String(phone).trim(),
+            location: String(location).trim(),
+            experience: String(experience).trim(),
+            specialization: String(specialization).trim(),
+            workedPlace: String(workedPlace).trim(),
+            workedPlacePhone: String(workedPlacePhone).trim(),
+            certificationsText: String(certificationsText).trim(),
             certificateImage: certificateImagePath,
-            bio,
-            motivation,
+            bio: String(bio).trim(),
+            motivation: String(motivation).trim(),
+
             status: "pending",
         });
 
         return res.status(201).json({
-            message: "Trainer application submitted successfully.",
+            success: true,
+            message: "Trainer application submitted successfully. Admin will review your application.",
             application,
         });
     } catch (error) {
         console.error("createTrainerApplication error:", error);
+
         return res.status(500).json({
+            success: false,
             message: "Server error while submitting trainer application.",
         });
     }
 };
 
 /**
- * Logged-in user sees their own applications
+ * Logged-in user sees their own trainer applications.
  */
 export const getMyTrainerApplications = async (req, res) => {
     try {
@@ -94,17 +135,22 @@ export const getMyTrainerApplications = async (req, res) => {
             user: req.user._id,
         }).sort({ createdAt: -1 });
 
-        return res.status(200).json(applications);
+        return res.status(200).json({
+            success: true,
+            applications,
+        });
     } catch (error) {
         console.error("getMyTrainerApplications error:", error);
+
         return res.status(500).json({
+            success: false,
             message: "Server error while fetching your applications.",
         });
     }
 };
 
 /**
- * Admin fetch all trainer applications
+ * Admin fetches all trainer applications.
  */
 export const getAllTrainerApplicationsForAdmin = async (req, res) => {
     try {
@@ -126,52 +172,64 @@ export const getAllTrainerApplicationsForAdmin = async (req, res) => {
         }
 
         const applications = await TrainerApplication.find(filter)
-            .populate("user", "fullname email role")
+            .populate("user", "fullname fullName name email role")
             .sort({ createdAt: -1 });
 
-        return res.status(200).json(applications);
+        return res.status(200).json({
+            success: true,
+            applications,
+        });
     } catch (error) {
         console.error("getAllTrainerApplicationsForAdmin error:", error);
+
         return res.status(500).json({
+            success: false,
             message: "Server error while fetching trainer applications.",
         });
     }
 };
 
 /**
- * Admin fetch single application detail
+ * Admin fetches single trainer application detail.
  */
 export const getSingleTrainerApplicationForAdmin = async (req, res) => {
     try {
-        const application = await TrainerApplication.findById(req.params.id).populate(
-            "user",
-            "fullname email role"
-        );
+        const application = await TrainerApplication.findById(req.params.id)
+            .populate("user", "fullname fullName name email role");
 
         if (!application) {
             return res.status(404).json({
+                success: false,
                 message: "Trainer application not found.",
             });
         }
 
-        return res.status(200).json(application);
+        return res.status(200).json({
+            success: true,
+            application,
+        });
     } catch (error) {
         console.error("getSingleTrainerApplicationForAdmin error:", error);
+
         return res.status(500).json({
+            success: false,
             message: "Server error while fetching application details.",
         });
     }
 };
 
 /**
- * Admin updates application status
+ * Admin updates trainer application status.
  */
 export const updateTrainerApplicationStatus = async (req, res) => {
     try {
         const { status, adminNote } = req.body;
 
-        if (!["pending", "reviewed", "approved", "rejected"].includes(status)) {
+        const allowedStatuses = ["pending", "reviewed", "approved", "rejected"];
+
+        if (!allowedStatuses.includes(status)) {
             return res.status(400).json({
+                success: false,
                 message: "Invalid application status.",
             });
         }
@@ -180,6 +238,7 @@ export const updateTrainerApplicationStatus = async (req, res) => {
 
         if (!application) {
             return res.status(404).json({
+                success: false,
                 message: "Trainer application not found.",
             });
         }
@@ -190,12 +249,15 @@ export const updateTrainerApplicationStatus = async (req, res) => {
         await application.save();
 
         return res.status(200).json({
+            success: true,
             message: "Trainer application updated successfully.",
             application,
         });
     } catch (error) {
         console.error("updateTrainerApplicationStatus error:", error);
+
         return res.status(500).json({
+            success: false,
             message: "Server error while updating application.",
         });
     }
