@@ -1,22 +1,38 @@
+/* eslint-disable no-unused-vars */
+// src/pages/auth/UserRegister.jsx
+
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line no-unused-vars
+import { motion } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, AlertCircle, ArrowLeft } from "lucide-react";
-import loginImg from "../../assets/Images/loginBG.d2986f65998a8b583e78.png";
+import registerImg from "../../assets/Images/Signup.jpg";
 import { Link, useNavigate } from "react-router-dom";
+import { Typewriter } from "react-simple-typewriter";
 import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
-import { useAuth } from "../../context/AuthContext";
 
+/**
+ * Deployment-safe backend URL.
+ *
+ * In Vercel Environment Variables:
+ * VITE_API_URL=https://your-render-backend-url.onrender.com
+ */
+const RAW_API_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://gym-fitness-backend-d13i.onrender.com";
 
-const API_BASE =  import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com";
+const API_BASE = RAW_API_URL.replace(/\/+$/, "");
 
-const UserLogin = () => {
+const UserRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
+    fullname: "",
+    username: "",
     email: "",
     password: "",
-    rememberMe: false,
+    confirmPassword: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -24,14 +40,27 @@ const UserLogin = () => {
   const [serverError, setServerError] = useState("");
 
   const navigate = useNavigate();
-  const { login } = useAuth();
+
+  const cachePendingEmail = (email) => {
+    const safeEmail = (email || "").trim();
+
+    if (!safeEmail) return;
+
+    sessionStorage.setItem("registerEmail", safeEmail);
+    localStorage.setItem("pendingEmail", safeEmail);
+  };
+
+  const clearPendingEmail = () => {
+    sessionStorage.removeItem("registerEmail");
+    localStorage.removeItem("pendingEmail");
+  };
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
 
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: value,
     }));
 
     if (errors[name]) {
@@ -40,12 +69,24 @@ const UserLogin = () => {
         [name]: "",
       }));
     }
+
+    if (serverError) {
+      setServerError("");
+    }
   };
 
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.email) {
+    if (!formData.fullname.trim()) {
+      newErrors.fullname = "Full name is required";
+    }
+
+    if (!formData.username.trim()) {
+      newErrors.username = "Username is required";
+    }
+
+    if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Invalid email format";
@@ -53,11 +94,63 @@ const UserLogin = () => {
 
     if (!formData.password) {
       newErrors.password = "Password is required";
+    } else if (formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = "Confirm password required";
+    } else if (formData.confirmPassword !== formData.password) {
+      newErrors.confirmPassword = "Passwords do not match";
     }
 
     setErrors(newErrors);
 
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleRegisterResponse = (data, fallbackEmail = "") => {
+    const safeEmail = (
+      data?.user?.email ||
+      data?.email ||
+      fallbackEmail ||
+      ""
+    ).trim();
+
+    const requiresVerification =
+      data?.requiresVerification === true ||
+      data?.isNewUser === true ||
+      data?.needsVerification === true ||
+      data?.verificationRequired === true ||
+      (typeof data?.message === "string" &&
+        /verify|verification|otp|code/i.test(data.message));
+
+    if (safeEmail) {
+      cachePendingEmail(safeEmail);
+    }
+
+    if (requiresVerification) {
+      navigate("/verify-email", {
+        state: {
+          email: safeEmail,
+        },
+      });
+
+      return;
+    }
+
+    if (data?.token && data?.user) {
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      clearPendingEmail();
+
+      navigate("/home");
+
+      return;
+    }
+
+    navigate("/memberLogin");
   };
 
   const handleSubmit = async (e) => {
@@ -69,389 +162,389 @@ const UserLogin = () => {
     setServerError("");
 
     try {
-      const { data } = await axios.post(`${API_BASE}/api/auth/login`, {
-        email: formData.email,
-        password: formData.password,
-        rememberMe: formData.rememberMe,
-      });
+      const safeEmail = formData.email.trim();
 
-      login(data.token, data.user, formData.rememberMe);
-
-      const userRole = data.user?.role || "member";
-
-      if (userRole === "admin") {
-        navigate("/admin/dashboard");
-      } else if (userRole === "trainer") {
-        navigate("/trainer/dashboard");
-      } else {
-        navigate("/home");
-      }
-    } catch (err) {
-      const msg = err.response?.data?.message;
-
-      if (msg?.toLowerCase().includes("verify")) {
-        navigate("/verify-email", {
-          state: {
-            email: formData.email,
+      const { data } = await axios.post(
+        `${API_BASE}/api/auth/register`,
+        {
+          fullname: formData.fullname.trim(),
+          username: formData.username.trim(),
+          email: safeEmail,
+          password: formData.password,
+        },
+        {
+          timeout: 60000,
+          headers: {
+            "Content-Type": "application/json",
           },
-        });
+        }
+      );
+
+      handleRegisterResponse(data, safeEmail);
+    } catch (err) {
+      console.error("Register error:", err);
+
+      if (err.code === "ECONNABORTED") {
+        setServerError("Registration took too long. Please try again.");
+        return;
+      }
+
+      const msg = err?.response?.data?.message;
+
+      if (msg === "User already exists") {
+        setServerError("This email is already registered. Please log in instead.");
       } else {
-        setServerError(msg || "Login failed. Try again!");
+        setServerError(msg || "Something went wrong. Try again!");
       }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleGoogleLoginSuccess = async (credentialResponse) => {
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (isGoogleSubmitting) return;
+
+    setIsGoogleSubmitting(true);
+    setServerError("");
+
     try {
-      setServerError("");
+      const googleCredential = credentialResponse?.credential;
 
-      const { data } = await axios.post(`${API_BASE}/api/auth/google`, {
-        token: credentialResponse.credential,
-      });
+      if (!googleCredential) {
+        setServerError("Google signup failed. No credential received.");
+        return;
+      }
 
-      if (data.isNewUser === true) {
+      console.log("Google signup started");
+      console.log("Current origin:", window.location.origin);
+
+      const { data } = await axios.post(
+        `${API_BASE}/api/auth/google`,
+        {
+          token: googleCredential,
+        },
+        {
+          timeout: 60000,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("Google signup response:", data);
+
+      const safeEmail = (
+        data?.user?.email ||
+        data?.email ||
+        ""
+      ).trim();
+
+      if (safeEmail) {
+        cachePendingEmail(safeEmail);
+      }
+
+      const requiresVerification =
+        data?.requiresVerification === true ||
+        data?.isNewUser === true ||
+        data?.needsVerification === true ||
+        data?.verificationRequired === true ||
+        (typeof data?.message === "string" &&
+          /verify|verification|otp|code/i.test(data.message));
+
+      if (requiresVerification) {
         navigate("/verify-email", {
           state: {
-            email: data.email,
+            email: safeEmail,
           },
         });
 
         return;
       }
 
-      login(data.token, data.user, true);
+      if (data?.token && data?.user) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
 
-      const userRole = data.user?.role || "member";
+        clearPendingEmail();
 
-      if (userRole === "admin") {
-        navigate("/admin/dashboard");
-      } else if (userRole === "trainer") {
-        navigate("/trainer/dashboard");
-      } else {
         navigate("/home");
-      }
-    } catch (err) {
-      const msg = err.response?.data?.message;
-
-      if (msg?.toLowerCase().includes("verify")) {
-        navigate("/verify-email", {
-          state: {
-            email: err.response?.data?.email,
-          },
-        });
 
         return;
       }
 
-      setServerError(msg || "Google login failed. Try again.");
+      setServerError("Google signup response was incomplete. Please try normal signup.");
+    } catch (err) {
+      console.error("Google signup error:", err);
+
+      if (err.code === "ECONNABORTED") {
+        setServerError("Google signup took too long. Please try again.");
+        return;
+      }
+
+      const msg = err?.response?.data?.message;
+
+      setServerError(msg || "Google signup failed. Try again.");
+    } finally {
+      setIsGoogleSubmitting(false);
     }
   };
 
-  const handleGoogleLoginError = () => {
-    setServerError("Google login failed");
-  };
-
-  const containerVariants = {
-    hidden: {
-      opacity: 0,
-    },
-    visible: {
-      opacity: 1,
-      transition: {
-        delayChildren: 0.3,
-        staggerChildren: 0.2,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: {
-      y: 20,
-      opacity: 0,
-    },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 120,
-        damping: 12,
-      },
-    },
+  const handleGoogleError = () => {
+    setServerError("Google signup failed. Please try again.");
   };
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-indigo-50 to-purple-50 p-4">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-gradient-to-br from-indigo-50 to-purple-50 p-4">
       <div className="absolute top-6 left-6 z-10">
         <Link to="/" className="text-gray-600 hover:text-gray-800">
           <ArrowLeft className="w-6 h-6" />
         </Link>
       </div>
 
-      <motion.button
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        onClick={() => navigate(-1)}
-        className="lg:hidden absolute top-6 left-6 p-2 rounded-full bg-white shadow-md hover:bg-gray-50 z-10"
-      >
-        <ArrowLeft className="w-5 h-5 text-gray-700" />
-      </motion.button>
-
       <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12">
-        <div className="relative w-full max-w-2xl">
-          <motion.img
-            src={loginImg}
-            alt="Login Visual"
-            initial={{
-              scale: 0.9,
-              opacity: 0,
-            }}
-            animate={{
-              scale: 1,
-              opacity: 1,
-            }}
-            transition={{
-              duration: 0.8,
-            }}
-            className="w-4/5 h-96 object-cover rounded-3xl shadow-2xl"
-          />
-
-          <motion.div
-            initial={{
-              y: 40,
-              opacity: 0,
-            }}
-            animate={{
-              y: 0,
-              opacity: 1,
-            }}
-            transition={{
-              delay: 0.5,
-              duration: 0.6,
-            }}
-            className="absolute -bottom-6 -left-6 bg-white p-6 rounded-2xl shadow-xl max-w-sm border border-gray-100"
-          >
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">
-              🔒 Secure Access
-            </h3>
-
-            <p className="text-gray-600">
-              Your data is protected with industry-standard encryption.
-            </p>
-          </motion.div>
-        </div>
+        <motion.img
+          src={registerImg}
+          alt="Register Visual"
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.8 }}
+          className="w-4/5 h-auto object-cover rounded-3xl shadow-2xl"
+        />
       </div>
 
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4">
         <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={containerVariants}
-          className="w-full max-w-md p-8 rounded-3xl shadow-xl bg-white border border-gray-100 relative overflow-hidden"
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="w-full max-w-md p-8 rounded-3xl shadow-xl bg-white border border-gray-100"
         >
-          <div className="text-center mb-8 relative z-10">
-            <motion.h2
-              variants={itemVariants}
-              className="text-3xl font-bold text-gray-800 mb-2"
-            >
-              Welcome Back
-            </motion.h2>
+          <div className="text-center mb-6">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">
+              Create Account
+            </h2>
 
-            <motion.p variants={itemVariants} className="text-gray-600">
-              Sign in to continue your fitness journey
-            </motion.p>
+            <p className="text-gray-600">
+              <Typewriter
+                words={[
+                  "Unlock the Power of Fitness",
+                  "Join Our Community Today",
+                  "Track Your Progress Easily",
+                ]}
+                loop
+                cursor
+                cursorStyle="|"
+                typeSpeed={70}
+                deleteSpeed={50}
+                delaySpeed={1000}
+              />
+            </p>
           </div>
 
-          <AnimatePresence>
-            {serverError && (
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  height: 0,
-                }}
-                animate={{
-                  opacity: 1,
-                  height: "auto",
-                }}
-                exit={{
-                  opacity: 0,
-                  height: 0,
-                }}
-                className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-center"
-              >
-                <AlertCircle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0" />
+          {serverError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-center"
+            >
+              <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
 
-                <p className="text-sm text-red-700">{serverError}</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              <p className="text-sm text-red-700">{serverError}</p>
+            </motion.div>
+          )}
 
-          <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
-            <motion.div variants={itemVariants}>
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Full Name
+              </label>
+
+              <input
+                type="text"
+                name="fullname"
+                value={formData.fullname}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
+              />
+
+              {errors.fullname && (
+                <p className="text-sm text-red-600 flex items-center mt-1">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.fullname}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Username
+              </label>
+
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
+              />
+
+              {errors.username && (
+                <p className="text-sm text-red-600 flex items-center mt-1">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.username}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
+
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Mail className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
 
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="Email"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 text-black"
+                  className="w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
                 />
               </div>
 
               {errors.email && (
-                <motion.p
-                  initial={{
-                    opacity: 0,
-                    y: -10,
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                  }}
-                  exit={{
-                    opacity: 0,
-                    y: -10,
-                  }}
-                  className="text-sm text-red-600 mt-1 flex items-center"
-                >
+                <p className="text-sm text-red-600 flex items-center mt-1">
                   <AlertCircle className="w-4 h-4 mr-1" />
                   {errors.email}
-                </motion.p>
+                </p>
               )}
-            </motion.div>
+            </div>
 
-            <motion.div variants={itemVariants}>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Lock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
 
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Password"
-                  className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 text-black"
+                  className="w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
                 />
 
                 <button
                   type="button"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-3.5"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
+                    <EyeOff className="h-5 w-5 text-gray-400" />
                   ) : (
-                    <Eye className="h-5 w-5" />
+                    <Eye className="h-5 w-5 text-gray-400" />
                   )}
                 </button>
               </div>
 
               {errors.password && (
-                <motion.p
-                  initial={{
-                    opacity: 0,
-                    y: -10,
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                  }}
-                  exit={{
-                    opacity: 0,
-                    y: -10,
-                  }}
-                  className="text-sm text-red-600 mt-1 flex items-center"
-                >
+                <p className="text-sm text-red-600 flex items-center mt-1">
                   <AlertCircle className="w-4 h-4 mr-1" />
                   {errors.password}
-                </motion.p>
+                </p>
               )}
-            </motion.div>
+            </div>
 
-            <motion.div
-              variants={itemVariants}
-              className="flex items-center justify-between text-sm"
-            >
-              <label className="flex items-center text-gray-700">
-                <input
-                  type="checkbox"
-                  name="rememberMe"
-                  checked={formData.rememberMe}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                />
-
-                <span className="ml-2">Remember me</span>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Confirm Password
               </label>
 
-              <Link
-                to="/forgot-password"
-                className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
-              >
-                Forgot password?
-              </Link>
-            </motion.div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
 
-            <motion.button
-              variants={itemVariants}
-              whileHover={{
-                scale: 1.02,
-              }}
-              whileTap={{
-                scale: 0.98,
-              }}
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="absolute right-3 top-3.5"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-gray-400" />
+                  )}
+                </button>
+              </div>
+
+              {errors.confirmPassword && (
+                <p className="text-sm text-red-600 flex items-center mt-1">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.confirmPassword}
+                </p>
+              )}
+            </div>
+
+            <button
               type="submit"
-              disabled={isSubmitting}
-              className="w-full py-3.5 mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-shadow relative overflow-hidden"
+              disabled={isSubmitting || isGoogleSubmitting}
+              className="w-full py-3.5 mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-60"
             >
-              {isSubmitting ? "Signing in..." : "Sign In"}
-            </motion.button>
+              {isSubmitting ? "Signing up..." : "Sign Up"}
+            </button>
           </form>
 
-          <div className="relative flex items-center my-6">
-            <div className="flex-grow border-t border-gray-200"></div>
+          <div className="flex items-center my-6">
+            <div className="flex-grow border-t border-gray-300"></div>
 
-            <span className="flex-shrink mx-4 text-gray-400 text-sm">
-              or continue with
-            </span>
+            <span className="mx-4 text-gray-500">or</span>
 
-            <div className="flex-grow border-t border-gray-200"></div>
+            <div className="flex-grow border-t border-gray-300"></div>
           </div>
 
           <div className="mt-4 flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleLoginSuccess}
-              onError={handleGoogleLoginError}
-              theme="filled_blue"
-              size="large"
-              shape="pill"
-              width="280"
-            />
+            {isGoogleSubmitting ? (
+              <div className="text-sm text-gray-600">
+                Processing Google signup...
+              </div>
+            ) : (
+              <GoogleLogin
+                theme="filled_blue"
+                size="large"
+                shape="pill"
+                width="280"
+                useOneTap={false}
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+              />
+            )}
           </div>
 
-          <motion.p
-            variants={itemVariants}
-            className="mt-6 text-center text-gray-600"
-          >
-            Don&apos;t have an account?{" "}
-
-            <Link
-              to="/register"
-              className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors"
-            >
-              Register
-            </Link>
-          </motion.p>
+          <div className="mt-6 text-center">
+            <p className="text-gray-600">
+              Already have an account?{" "}
+              <Link
+                to="/memberLogin"
+                className="font-semibold text-indigo-600 hover:text-indigo-500"
+              >
+                Login
+              </Link>
+            </p>
+          </div>
         </motion.div>
       </div>
     </div>
   );
 };
 
-export default UserLogin;
+export default UserRegister;

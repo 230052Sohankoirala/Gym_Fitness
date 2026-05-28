@@ -14,10 +14,7 @@ import axios from "axios";
  * Deployment-safe backend URL.
  *
  * In Vercel Environment Variables:
- * VITE_API_URL=https://your-new-render-backend-url.onrender.com
- *
- * Example:
- * VITE_API_URL=https://gym-fitness-backend-d13i.onrender.com
+ * VITE_API_URL=https://your-render-backend-url.onrender.com
  */
 const RAW_API_URL =
   import.meta.env.VITE_API_URL ||
@@ -125,7 +122,8 @@ const UserRegister = () => {
       data?.isNewUser === true ||
       data?.needsVerification === true ||
       data?.verificationRequired === true ||
-      (typeof data?.message === "string" && /verify|verification|otp|code/i.test(data.message));
+      (typeof data?.message === "string" &&
+        /verify|verification|otp|code/i.test(data.message));
 
     if (safeEmail) {
       cachePendingEmail(safeEmail);
@@ -166,15 +164,31 @@ const UserRegister = () => {
     try {
       const safeEmail = formData.email.trim();
 
-      const { data } = await axios.post(`${API_BASE}/api/auth/register`, {
-        fullname: formData.fullname.trim(),
-        username: formData.username.trim(),
-        email: safeEmail,
-        password: formData.password,
-      });
+      const { data } = await axios.post(
+        `${API_BASE}/api/auth/register`,
+        {
+          fullname: formData.fullname.trim(),
+          username: formData.username.trim(),
+          email: safeEmail,
+          password: formData.password,
+        },
+        {
+          timeout: 60000,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       handleRegisterResponse(data, safeEmail);
     } catch (err) {
+      console.error("Register error:", err);
+
+      if (err.code === "ECONNABORTED") {
+        setServerError("Registration took too long. Please try again.");
+        return;
+      }
+
       const msg = err?.response?.data?.message;
 
       if (msg === "User already exists") {
@@ -201,7 +215,7 @@ const UserRegister = () => {
         return;
       }
 
-      console.log("Google Client ID: ✅ Loaded");
+      console.log("Google signup started");
       console.log("Current origin:", window.location.origin);
 
       const { data } = await axios.post(
@@ -210,14 +224,14 @@ const UserRegister = () => {
           token: googleCredential,
         },
         {
-          timeout: 20000,
+          timeout: 60000,
           headers: {
             "Content-Type": "application/json",
           },
         }
       );
 
-      console.log("Google response:", data);
+      console.log("Google signup response:", data);
 
       const safeEmail = (
         data?.user?.email ||
@@ -226,8 +240,7 @@ const UserRegister = () => {
       ).trim();
 
       if (safeEmail) {
-        sessionStorage.setItem("registerEmail", safeEmail);
-        localStorage.setItem("pendingEmail", safeEmail);
+        cachePendingEmail(safeEmail);
       }
 
       const requiresVerification =
@@ -252,8 +265,7 @@ const UserRegister = () => {
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
 
-        sessionStorage.removeItem("registerEmail");
-        localStorage.removeItem("pendingEmail");
+        clearPendingEmail();
 
         navigate("/home");
 
@@ -502,7 +514,9 @@ const UserRegister = () => {
 
           <div className="mt-4 flex justify-center">
             {isGoogleSubmitting ? (
-              <div className="text-sm text-gray-600">Processing Google signup...</div>
+              <div className="text-sm text-gray-600">
+                Processing Google signup...
+              </div>
             ) : (
               <GoogleLogin
                 theme="filled_blue"
