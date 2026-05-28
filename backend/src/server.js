@@ -67,12 +67,19 @@ fs.mkdirSync(chatDir, { recursive: true });
 fs.mkdirSync(trainerCertificatesDir, { recursive: true });
 
 /* ---------------- CORS ---------------- */
-const allowedOrigins = ["http://localhost:3000", "http://localhost:5173"];
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL,
+].filter(Boolean);
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin) return callback(null, true);
+      if (!origin) {
+        return callback(null, true);
+      }
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
@@ -88,10 +95,12 @@ app.use(
   })
 );
 
+app.options("*", cors());
+
 app.use(
   helmet({
     crossOriginOpenerPolicy: isDev ? false : { policy: "same-origin" },
-    crossOriginResourcePolicy: isDev ? false : { policy: "same-origin" },
+    crossOriginResourcePolicy: false,
   })
 );
 
@@ -119,7 +128,6 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/nutrition", nutritionRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/admin", adminRoutes);
-
 app.use("/api/workout-plans", workoutPlanRoutes);
 app.use("/api/admin", adminPaymentRoutes);
 app.use("/api/trainers", trainerRoutes);
@@ -187,7 +195,19 @@ const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.log("❌ Socket blocked by CORS origin:", origin);
+
+      return callback(new Error("Not allowed by Socket.IO CORS"));
+    },
     credentials: true,
   },
   transports: ["websocket", "polling"],
