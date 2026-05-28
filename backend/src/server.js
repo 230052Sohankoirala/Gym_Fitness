@@ -67,9 +67,12 @@ fs.mkdirSync(chatDir, { recursive: true });
 fs.mkdirSync(trainerCertificatesDir, { recursive: true });
 
 /* ---------------- CORS ---------------- */
+/* ---------------- CORS ---------------- */
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:5173",
+  "https://gym-fitness-sage.vercel.app",
+  "https://gym-fitness-l9asranxt-230052sohankoiralas-projects.vercel.app",
   process.env.CLIENT_URL,
   process.env.FRONTEND_URL,
 ].filter(Boolean);
@@ -103,6 +106,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+app.options("/{*splat}", cors(corsOptions));
 
 app.use(
   helmet({
