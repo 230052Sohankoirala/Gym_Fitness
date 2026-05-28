@@ -54,7 +54,22 @@ const Navbar = ({ notifications = 0 }) => {
       return avatar.replace("https://localhost:4000", BACKEND_URL);
     }
 
-    if (avatar.startsWith("http://") || avatar.startsWith("https://")) {
+    if (avatar.startsWith("http://gym-fitness-hgq7.onrender.com")) {
+      return avatar.replace(
+        "http://gym-fitness-hgq7.onrender.com",
+        "https://gym-fitness-hgq7.onrender.com"
+      );
+    }
+
+    if (avatar.startsWith("https://gym-fitness-hgq7.onrender.com")) {
+      return avatar;
+    }
+
+    if (avatar.startsWith("http://")) {
+      return avatar.replace("http://", "https://");
+    }
+
+    if (avatar.startsWith("https://")) {
       return avatar;
     }
 
