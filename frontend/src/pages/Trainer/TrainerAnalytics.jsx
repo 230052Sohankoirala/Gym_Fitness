@@ -5,7 +5,7 @@ import { toPng } from "html-to-image";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE =  import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com";
 
 /* ---------- small helpers ---------- */
 const safeName = (u) => u?.fullname || u?.name || u?.email || "Client";

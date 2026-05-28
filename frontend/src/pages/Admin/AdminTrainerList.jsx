@@ -14,7 +14,7 @@ import { useTheme } from "../../context/ThemeContext";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com";
 const API_URL = `${API_BASE}/api`;
 
 const AdminTrainerList = () => {
@@ -242,9 +242,8 @@ const AdminTrainerList = () => {
             <h1 className="text-2xl font-bold">Admin – Trainer Management</h1>
 
             <p
-              className={`text-sm mt-1 ${
-                darkMode ? "text-gray-300" : "text-gray-600"
-              }`}
+              className={`text-sm mt-1 ${darkMode ? "text-gray-300" : "text-gray-600"
+                }`}
             >
               Create and manage trainers, including profile photo.
             </p>
@@ -253,11 +252,10 @@ const AdminTrainerList = () => {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => navigate("/admin/trainer-applications")}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors duration-200 ${
-                darkMode
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors duration-200 ${darkMode
                   ? "border-gray-700 bg-gray-800 hover:bg-gray-700"
                   : "border-gray-300 bg-white hover:bg-gray-50"
-              }`}
+                }`}
             >
               <DumbbellIcon className="w-4 h-4" />
               Trainer Applications
@@ -265,11 +263,10 @@ const AdminTrainerList = () => {
 
             <button
               onClick={fetchTrainers}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors duration-200 ${
-                darkMode
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors duration-200 ${darkMode
                   ? "border-gray-700 bg-gray-800 hover:bg-gray-700"
                   : "border-gray-300 bg-white hover:bg-gray-50"
-              }`}
+                }`}
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
               Refresh
@@ -279,11 +276,10 @@ const AdminTrainerList = () => {
 
         {errorMsg && (
           <div
-            className={`mb-6 p-4 rounded-xl border flex items-start gap-3 ${
-              darkMode
+            className={`mb-6 p-4 rounded-xl border flex items-start gap-3 ${darkMode
                 ? "bg-red-950/40 border-red-900 text-red-200"
                 : "bg-red-50 border-red-200 text-red-700"
-            }`}
+              }`}
           >
             <AlertTriangle className="w-5 h-5 mt-0.5" />
 
@@ -374,11 +370,10 @@ const AdminTrainerList = () => {
 
             <div className="md:col-span-2">
               <label
-                className={`flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition ${
-                  darkMode
+                className={`flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition ${darkMode
                     ? "border-gray-700 bg-slate-900/70 hover:bg-slate-800 text-white"
                     : "border-gray-300 bg-white hover:bg-gray-50 text-slate-900"
-                }`}
+                  }`}
               >
                 <ImagePlus className="w-5 h-5" />
                 {avatar ? "Change Trainer Photo" : "Upload Trainer Photo"}
@@ -407,11 +402,10 @@ const AdminTrainerList = () => {
             <button
               type="submit"
               disabled={submitting}
-              className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white font-semibold transition ${
-                submitting
+              className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white font-semibold transition ${submitting
                   ? "bg-blue-400 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700"
-              }`}
+                }`}
             >
               <Plus className="w-5 h-5" />
               {submitting ? "Adding..." : "Add Trainer"}
@@ -420,11 +414,10 @@ const AdminTrainerList = () => {
             <button
               type="button"
               onClick={resetForm}
-              className={`px-4 py-3 rounded-xl border font-semibold transition ${
-                darkMode
+              className={`px-4 py-3 rounded-xl border font-semibold transition ${darkMode
                   ? "border-gray-700 bg-gray-900 hover:bg-gray-800"
                   : "border-gray-300 bg-white hover:bg-gray-50"
-              }`}
+                }`}
             >
               Clear
             </button>
@@ -433,16 +426,14 @@ const AdminTrainerList = () => {
 
         <div className={`rounded-2xl border shadow-sm overflow-hidden ${cardBg}`}>
           <div
-            className={`p-4 border-b ${
-              darkMode ? "border-gray-700" : "border-gray-200"
-            }`}
+            className={`p-4 border-b ${darkMode ? "border-gray-700" : "border-gray-200"
+              }`}
           >
             <h2 className="text-lg font-semibold">Trainers</h2>
 
             <p
-              className={`text-sm mt-1 ${
-                darkMode ? "text-gray-300" : "text-gray-600"
-              }`}
+              className={`text-sm mt-1 ${darkMode ? "text-gray-300" : "text-gray-600"
+                }`}
             >
               {loading ? "Loading..." : `${trainers.length} trainer(s) found`}
             </p>
@@ -452,9 +443,8 @@ const AdminTrainerList = () => {
             <div className="p-6 text-sm opacity-80">Loading trainers...</div>
           ) : trainers.length > 0 ? (
             <div
-              className={`${
-                darkMode ? "divide-gray-700" : "divide-gray-200"
-              } divide-y`}
+              className={`${darkMode ? "divide-gray-700" : "divide-gray-200"
+                } divide-y`}
             >
               {trainers.map((trainer) => {
                 const id = trainer._id || trainer.id;
@@ -463,9 +453,8 @@ const AdminTrainerList = () => {
                 return (
                   <div
                     key={id}
-                    className={`flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-4 ${
-                      darkMode ? "hover:bg-gray-700/40" : "hover:bg-gray-50"
-                    }`}
+                    className={`flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-4 ${darkMode ? "hover:bg-gray-700/40" : "hover:bg-gray-50"
+                      }`}
                   >
                     <div className="flex items-start gap-3">
                       {avatarUrl ? (
@@ -476,14 +465,12 @@ const AdminTrainerList = () => {
                         />
                       ) : (
                         <div
-                          className={`w-14 h-14 rounded-full flex items-center justify-center ${
-                            darkMode ? "bg-gray-900" : "bg-gray-100"
-                          }`}
+                          className={`w-14 h-14 rounded-full flex items-center justify-center ${darkMode ? "bg-gray-900" : "bg-gray-100"
+                            }`}
                         >
                           <Dumbbell
-                            className={`w-6 h-6 ${
-                              darkMode ? "text-gray-200" : "text-gray-700"
-                            }`}
+                            className={`w-6 h-6 ${darkMode ? "text-gray-200" : "text-gray-700"
+                              }`}
                           />
                         </div>
                       )}
@@ -494,9 +481,8 @@ const AdminTrainerList = () => {
                         </p>
 
                         <p
-                          className={`text-sm ${
-                            darkMode ? "text-gray-300" : "text-gray-600"
-                          }`}
+                          className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"
+                            }`}
                         >
                           {trainer.email || "No email"} •{" "}
                           <span className="font-medium">
@@ -505,9 +491,8 @@ const AdminTrainerList = () => {
                         </p>
 
                         <p
-                          className={`text-xs mt-1 ${
-                            darkMode ? "text-gray-400" : "text-gray-500"
-                          }`}
+                          className={`text-xs mt-1 ${darkMode ? "text-gray-400" : "text-gray-500"
+                            }`}
                         >
                           {trainer.experience || "No experience set"} • ⭐{" "}
                           {trainer.rating ?? "N/A"}
@@ -515,9 +500,8 @@ const AdminTrainerList = () => {
 
                         {trainer.bio ? (
                           <p
-                            className={`text-xs mt-2 ${
-                              darkMode ? "text-gray-300" : "text-gray-700"
-                            } line-clamp-2`}
+                            className={`text-xs mt-2 ${darkMode ? "text-gray-300" : "text-gray-700"
+                              } line-clamp-2`}
                           >
                             {trainer.bio}
                           </p>
@@ -528,11 +512,10 @@ const AdminTrainerList = () => {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => handleRemove(id)}
-                        className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg transition ${
-                          darkMode
+                        className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg transition ${darkMode
                             ? "bg-red-950/40 hover:bg-red-950/70 border border-red-900 text-red-200"
                             : "bg-red-50 hover:bg-red-100 border border-red-200 text-red-700"
-                        }`}
+                          }`}
                         title="Delete trainer"
                       >
                         <Trash2 className="w-4 h-4" />

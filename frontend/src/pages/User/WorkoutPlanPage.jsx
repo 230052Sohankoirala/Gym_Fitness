@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com"
 
 const WorkoutPlanPage = () => {
     const { darkMode } = useTheme();

@@ -4,7 +4,7 @@ import { CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext";
 
-const API_ROOT = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_ROOT = import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com"
 const API_BASE = `${API_ROOT}/api`;
 
 const TrainerStripeReturn = () => {

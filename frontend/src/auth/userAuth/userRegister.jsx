@@ -204,15 +204,70 @@ const UserRegister = () => {
       console.log("Google Client ID: ✅ Loaded");
       console.log("Current origin:", window.location.origin);
 
-      const { data } = await axios.post(`${API_BASE}/api/auth/google`, {
-        token: googleCredential,
-      });
+      const { data } = await axios.post(
+        `${API_BASE}/api/auth/google`,
+        {
+          token: googleCredential,
+        },
+        {
+          timeout: 20000,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       console.log("Google response:", data);
 
-      handleRegisterResponse(data);
+      const safeEmail = (
+        data?.user?.email ||
+        data?.email ||
+        ""
+      ).trim();
+
+      if (safeEmail) {
+        sessionStorage.setItem("registerEmail", safeEmail);
+        localStorage.setItem("pendingEmail", safeEmail);
+      }
+
+      const requiresVerification =
+        data?.requiresVerification === true ||
+        data?.isNewUser === true ||
+        data?.needsVerification === true ||
+        data?.verificationRequired === true ||
+        (typeof data?.message === "string" &&
+          /verify|verification|otp|code/i.test(data.message));
+
+      if (requiresVerification) {
+        navigate("/verify-email", {
+          state: {
+            email: safeEmail,
+          },
+        });
+
+        return;
+      }
+
+      if (data?.token && data?.user) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        sessionStorage.removeItem("registerEmail");
+        localStorage.removeItem("pendingEmail");
+
+        navigate("/home");
+
+        return;
+      }
+
+      setServerError("Google signup response was incomplete. Please try normal signup.");
     } catch (err) {
       console.error("Google signup error:", err);
+
+      if (err.code === "ECONNABORTED") {
+        setServerError("Google signup took too long. Please try again.");
+        return;
+      }
 
       const msg = err?.response?.data?.message;
 

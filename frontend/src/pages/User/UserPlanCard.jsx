@@ -15,7 +15,7 @@ import { useTheme } from "../../context/ThemeContext";
 import workoutData from "../../data/workoutplans.json";
 import axios from "axios";
 
-const API_ROOT = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_ROOT = import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com"
 const API_BASE = `${API_ROOT}/api`;
 
 const UserPlanCard = () => {

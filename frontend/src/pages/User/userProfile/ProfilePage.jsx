@@ -24,7 +24,7 @@ import LegsWorkout from "../../../video/LegWorkout.mp4";
 import BackWorkout from "../../../video/BackWorkout.mp4";
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com"
 
 const ProfilePage = () => {
   const [logoutModal, setLogoutModal] = useState(false);

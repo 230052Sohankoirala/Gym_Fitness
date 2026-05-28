@@ -8,7 +8,7 @@ import { useTheme } from "../../../context/ThemeContext";
  * ✅ IMPORTANT:
  * Your backend runs on port 4000 (from your server.js)
  */
-const BASE_URL = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+const BASE_URL = import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com"
 
 
 

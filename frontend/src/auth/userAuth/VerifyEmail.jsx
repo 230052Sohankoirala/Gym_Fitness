@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { MailCheck, ShieldCheck, BadgeAlert } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com";
 /* ---------- helpers ---------- */
 const getSafeJSON = (raw) => {
   try {

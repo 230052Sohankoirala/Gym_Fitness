@@ -7,7 +7,7 @@ import { FaArrowLeft } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
-const API_ROOT = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_ROOT = import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com"
 const API_BASE = `${API_ROOT}/api`;
 
 const RecentActivity = () => {

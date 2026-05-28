@@ -4,7 +4,7 @@ import { motion } from "framer-motion";// eslint-disable-line no-unused-vars
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+const API_BASE = import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com"
 const UserInfo = () => {
   const [weight, setWeight] = useState(60);
   const [age, setAge] = useState(20);

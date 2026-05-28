@@ -18,7 +18,7 @@ import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { useTheme } from "../../context/ThemeContext";
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com"
 const UserWorkoutDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();

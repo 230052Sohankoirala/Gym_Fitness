@@ -16,16 +16,8 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import ThemeToggle from "../ThemeToggle";
 import { useTheme } from "../../context/ThemeContext";
 
-/* ================== Backend URL ================== */
-/**
- * Local:
- * VITE_API_BASE_URL=http://localhost:4000
- *
- * Render:
- * VITE_API_BASE_URL=https://your-backend-name.onrender.com
- */
 const BACKEND_URL =
-import.meta.env.VITE_API_URL || "http://localhost:4000";
+  import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com";
 
 const Navbar = ({ notifications = 0 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -47,22 +39,20 @@ const Navbar = ({ notifications = 0 }) => {
   const { darkMode } = useTheme();
   const location = useLocation();
 
-  /* ================== Avatar URL Fix ================== */
-  /**
-   * Converts backend relative avatar paths into full URLs.
-   *
-   * Example:
-   * /uploads/avatars/profile.png
-   *
-   * becomes:
-   * http://localhost:4000/uploads/avatars/profile.png
-   */
   const avatarSrc = useMemo(() => {
     if (!user?.avatar) return "";
 
     const avatar = String(user.avatar).trim();
 
     if (!avatar) return "";
+
+    if (avatar.startsWith("http://localhost:4000")) {
+      return avatar.replace("http://localhost:4000", BACKEND_URL);
+    }
+
+    if (avatar.startsWith("https://localhost:4000")) {
+      return avatar.replace("https://localhost:4000", BACKEND_URL);
+    }
 
     if (avatar.startsWith("http://") || avatar.startsWith("https://")) {
       return avatar;
@@ -233,8 +223,7 @@ const Navbar = ({ notifications = 0 }) => {
               key={link.name}
               to={link.to}
               className={({ isActive }) =>
-                `px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${baseText} ${hoverText} ${
-                  isActive ? (darkMode ? "bg-gray-700" : "bg-gray-100") : ""
+                `px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${baseText} ${hoverText} ${isActive ? (darkMode ? "bg-gray-700" : "bg-gray-100") : ""
                 }`
               }
             >
@@ -275,9 +264,8 @@ const Navbar = ({ notifications = 0 }) => {
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className={`focus:outline-none ml-2 ${
-              darkMode ? "text-gray-200" : "text-gray-800"
-            } transition-colors duration-200`}
+            className={`focus:outline-none ml-2 ${darkMode ? "text-gray-200" : "text-gray-800"
+              } transition-colors duration-200`}
             aria-label="Toggle menu"
             aria-expanded={isOpen}
           >
@@ -294,27 +282,23 @@ const Navbar = ({ notifications = 0 }) => {
             animate="visible"
             exit="hidden"
             variants={menuVariants}
-            className={`md:hidden border-t transition-colors ${
-              darkMode
+            className={`md:hidden border-t transition-colors ${darkMode
                 ? "bg-gray-900 border-gray-700"
                 : "bg-white border-gray-200"
-            }`}
+              }`}
           >
             {links.map((link) => (
               <motion.div
                 key={link.name}
                 variants={itemVariants}
-                className={`px-4 py-3 border-b transition-colors ${
-                  darkMode ? "border-gray-700" : "border-gray-200"
-                }`}
+                className={`px-4 py-3 border-b transition-colors ${darkMode ? "border-gray-700" : "border-gray-200"
+                  }`}
               >
                 <NavLink
                   to={link.to}
                   className={({ isActive }) =>
-                    `flex items-center gap-2 ${
-                      darkMode ? "text-gray-200" : "text-gray-800"
-                    } ${hoverText} ${
-                      isActive ? (darkMode ? "bg-gray-800" : "bg-gray-100") : ""
+                    `flex items-center gap-2 ${darkMode ? "text-gray-200" : "text-gray-800"
+                    } ${hoverText} ${isActive ? (darkMode ? "bg-gray-800" : "bg-gray-100") : ""
                     } px-2 py-2 rounded-lg`
                   }
                 >

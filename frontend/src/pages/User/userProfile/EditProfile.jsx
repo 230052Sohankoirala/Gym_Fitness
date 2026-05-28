@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";// eslint-disable-line no-unused-vars
+import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line no-unused-vars
 import {
     ArrowLeft,
     Save,
@@ -15,7 +15,8 @@ import {
 import { useTheme } from "../../../context/ThemeContext";
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE =
+    import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com";
 
 const EditProfile = () => {
     const navigate = useNavigate();
@@ -23,6 +24,7 @@ const EditProfile = () => {
 
     const [saving, setSaving] = useState(false);
     const [showSaved, setShowSaved] = useState(false);
+
     const [showPw, setShowPw] = useState({
         current: false,
         next: false,
@@ -43,9 +45,39 @@ const EditProfile = () => {
         passwordConfirm: "",
     });
 
+    const normalizeAvatarUrl = (avatar) => {
+        if (!avatar) return "";
+
+        const cleanAvatar = String(avatar).trim();
+
+        if (!cleanAvatar) return "";
+
+        if (cleanAvatar.startsWith("http://localhost:4000")) {
+            return cleanAvatar.replace("http://localhost:4000", API_BASE);
+        }
+
+        if (cleanAvatar.startsWith("https://localhost:4000")) {
+            return cleanAvatar.replace("https://localhost:4000", API_BASE);
+        }
+
+        if (cleanAvatar.startsWith("http://") || cleanAvatar.startsWith("https://")) {
+            return cleanAvatar;
+        }
+
+        if (cleanAvatar.startsWith("/")) {
+            return `${API_BASE}${cleanAvatar}`;
+        }
+
+        return `${API_BASE}/${cleanAvatar}`;
+    };
+
     const previewAvatar = useMemo(() => {
         if (!form.avatar) return "";
-        if (typeof form.avatar === "string") return form.avatar;
+
+        if (typeof form.avatar === "string") {
+            return normalizeAvatarUrl(form.avatar);
+        }
+
         return URL.createObjectURL(form.avatar);
     }, [form.avatar]);
 
@@ -64,12 +96,16 @@ const EditProfile = () => {
                     localStorage.getItem("token") || sessionStorage.getItem("token");
 
                 const { data } = await axios.get(`${API_BASE}/api/users/me`, {
-                    headers: { Authorization: `Bearer ${token}` },
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
                 });
+
+                const fixedAvatar = normalizeAvatarUrl(data.avatar || "");
 
                 setForm((prev) => ({
                     ...prev,
-                    avatar: data.avatar || null,
+                    avatar: fixedAvatar || null,
                     fullname: data.fullname || "",
                     username: data.username || "",
                     email: data.email || "",
@@ -80,17 +116,22 @@ const EditProfile = () => {
                 }));
 
                 const currentStored =
-                    JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "null") || {};
+                    JSON.parse(
+                        localStorage.getItem("user") ||
+                        sessionStorage.getItem("user") ||
+                        "null"
+                    ) || {};
 
                 const mergedUser = {
                     ...currentStored,
                     ...data,
-                    avatar: data.avatar || currentStored.avatar || null,
+                    avatar: fixedAvatar || currentStored.avatar || null,
                 };
 
                 if (localStorage.getItem("user")) {
                     localStorage.setItem("user", JSON.stringify(mergedUser));
                 }
+
                 if (sessionStorage.getItem("user")) {
                     sessionStorage.setItem("user", JSON.stringify(mergedUser));
                 }
@@ -112,6 +153,7 @@ const EditProfile = () => {
                 localStorage.getItem("token") || sessionStorage.getItem("token");
 
             const formData = new FormData();
+
             formData.append("fullname", form.fullname);
             formData.append("username", form.username);
             formData.append("email", form.email);
@@ -143,10 +185,11 @@ const EditProfile = () => {
             });
 
             const updatedUser = data?.user || {};
+            const fixedUpdatedAvatar = normalizeAvatarUrl(updatedUser.avatar || "");
 
             setForm((prev) => ({
                 ...prev,
-                avatar: updatedUser.avatar || prev.avatar,
+                avatar: fixedUpdatedAvatar || prev.avatar,
                 fullname: updatedUser.fullname || prev.fullname,
                 username: updatedUser.username || prev.username,
                 email: updatedUser.email || prev.email,
@@ -160,17 +203,22 @@ const EditProfile = () => {
             }));
 
             const currentStored =
-                JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "null") || {};
+                JSON.parse(
+                    localStorage.getItem("user") ||
+                    sessionStorage.getItem("user") ||
+                    "null"
+                ) || {};
 
             const mergedUser = {
                 ...currentStored,
                 ...updatedUser,
-                avatar: updatedUser.avatar || currentStored.avatar || null,
+                avatar: fixedUpdatedAvatar || currentStored.avatar || null,
             };
 
             if (localStorage.getItem("user")) {
                 localStorage.setItem("user", JSON.stringify(mergedUser));
             }
+
             if (sessionStorage.getItem("user")) {
                 sessionStorage.setItem("user", JSON.stringify(mergedUser));
             }
@@ -179,13 +227,17 @@ const EditProfile = () => {
 
             setSaving(false);
             setShowSaved(true);
-            setTimeout(() => setShowSaved(false), 1800);
+
+            setTimeout(() => {
+                setShowSaved(false);
+            }, 1800);
         } catch (err) {
             console.error(
                 "Update failed:",
                 err.response?.status,
                 err.response?.data || err.message
             );
+
             setSaving(false);
         }
     };
@@ -258,9 +310,18 @@ const EditProfile = () => {
                 <AnimatePresence>
                     {showSaved && (
                         <motion.div
-                            initial={{ y: -20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: -20, opacity: 0 }}
+                            initial={{
+                                y: -20,
+                                opacity: 0,
+                            }}
+                            animate={{
+                                y: 0,
+                                opacity: 1,
+                            }}
+                            exit={{
+                                y: -20,
+                                opacity: 0,
+                            }}
                             className={`mx-auto max-w-3xl rounded-xl px-4 py-3 shadow transition-colors duration-200 ${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-800"
                                 }`}
                         >
@@ -298,16 +359,24 @@ const EditProfile = () => {
                                     className="hidden"
                                     onChange={(e) => {
                                         const file = e.target.files?.[0];
-                                        if (file) setForm((f) => ({ ...f, avatar: file }));
+
+                                        if (file) {
+                                            setForm((f) => ({
+                                                ...f,
+                                                avatar: file,
+                                            }));
+                                        }
                                     }}
                                 />
+
                                 <span
                                     className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg transition-colors duration-200 ${darkMode
                                             ? "bg-gray-700 hover:bg-gray-600"
                                             : "bg-gray-100 hover:bg-gray-200"
                                         }`}
                                 >
-                                    <ImageIcon size={14} /> Change
+                                    <ImageIcon size={14} />
+                                    Change
                                 </span>
                             </label>
                         </div>
@@ -316,69 +385,119 @@ const EditProfile = () => {
                             <Input
                                 label="Full Name"
                                 value={form.fullname}
-                                onChange={(v) => setForm((f) => ({ ...f, fullname: v }))}
+                                onChange={(v) =>
+                                    setForm((f) => ({
+                                        ...f,
+                                        fullname: v,
+                                    }))
+                                }
                                 icon={<User size={16} />}
                                 inputBase={inputBase}
                                 inputTheme={inputTheme}
                                 labelTheme={labelTheme}
                             />
+
                             <Input
                                 label="Username"
                                 value={form.username}
-                                onChange={(v) => setForm((f) => ({ ...f, username: v }))}
+                                onChange={(v) =>
+                                    setForm((f) => ({
+                                        ...f,
+                                        username: v,
+                                    }))
+                                }
                                 icon={<User size={16} />}
                                 inputBase={inputBase}
                                 inputTheme={inputTheme}
                                 labelTheme={labelTheme}
                             />
+
                             <Input
                                 label="Email"
                                 value={form.email}
-                                onChange={(v) => setForm((f) => ({ ...f, email: v }))}
+                                onChange={(v) =>
+                                    setForm((f) => ({
+                                        ...f,
+                                        email: v,
+                                    }))
+                                }
                                 icon={<Mail size={16} />}
                                 type="email"
                                 inputBase={inputBase}
                                 inputTheme={inputTheme}
                                 labelTheme={labelTheme}
                             />
+
                             <Input
                                 label="Age"
                                 value={form.age}
-                                onChange={(v) => setForm((f) => ({ ...f, age: v }))}
+                                onChange={(v) =>
+                                    setForm((f) => ({
+                                        ...f,
+                                        age: v,
+                                    }))
+                                }
                                 icon={<Calendar size={16} />}
                                 type="number"
                                 inputBase={inputBase}
                                 inputTheme={inputTheme}
                                 labelTheme={labelTheme}
                             />
+
                             <Input
                                 label="Weight"
                                 value={form.weight}
-                                onChange={(v) => setForm((f) => ({ ...f, weight: v }))}
+                                onChange={(v) =>
+                                    setForm((f) => ({
+                                        ...f,
+                                        weight: v,
+                                    }))
+                                }
                                 icon={<User size={16} />}
                                 type="number"
                                 inputBase={inputBase}
                                 inputTheme={inputTheme}
                                 labelTheme={labelTheme}
                             />
+
                             <Input
                                 label="Height"
                                 value={form.height}
-                                onChange={(v) => setForm((f) => ({ ...f, height: v }))}
+                                onChange={(v) =>
+                                    setForm((f) => ({
+                                        ...f,
+                                        height: v,
+                                    }))
+                                }
                                 icon={<User size={16} />}
                                 type="number"
                                 inputBase={inputBase}
                                 inputTheme={inputTheme}
                                 labelTheme={labelTheme}
                             />
+
                             <Select
                                 label="Gender"
                                 value={form.gender}
-                                onChange={(v) => setForm((f) => ({ ...f, gender: v }))}
+                                onChange={(v) =>
+                                    setForm((f) => ({
+                                        ...f,
+                                        gender: v,
+                                    }))
+                                }
                                 options={[
-                                    { value: "Male", label: "Male" },
-                                    { value: "Female", label: "Female" },
-                                    { value: "Other", label: "Other" },
+                                    {
+                                        value: "Male",
+                                        label: "Male",
+                                    },
+                                    {
+                                        value: "Female",
+                                        label: "Female",
+                                    },
+                                    {
+                                        value: "Other",
+                                        label: "Other",
+                                    },
                                 ]}
                                 inputBase={inputBase}
                                 inputTheme={inputTheme}
@@ -395,36 +514,71 @@ const EditProfile = () => {
                         <PasswordInput
                             label="Current"
                             value={form.passwordCurrent}
-                            onChange={(v) => setForm((f) => ({ ...f, passwordCurrent: v }))}
+                            onChange={(v) =>
+                                setForm((f) => ({
+                                    ...f,
+                                    passwordCurrent: v,
+                                }))
+                            }
                             show={showPw.current}
-                            onToggle={() => setShowPw((s) => ({ ...s, current: !s.current }))}
+                            onToggle={() =>
+                                setShowPw((s) => ({
+                                    ...s,
+                                    current: !s.current,
+                                }))
+                            }
                             inputBase={inputBase}
                             inputTheme={inputTheme}
                             labelTheme={labelTheme}
                         />
+
                         <PasswordInput
                             label="New"
                             value={form.passwordNew}
-                            onChange={(v) => setForm((f) => ({ ...f, passwordNew: v }))}
+                            onChange={(v) =>
+                                setForm((f) => ({
+                                    ...f,
+                                    passwordNew: v,
+                                }))
+                            }
                             show={showPw.next}
-                            onToggle={() => setShowPw((s) => ({ ...s, next: !s.next }))}
+                            onToggle={() =>
+                                setShowPw((s) => ({
+                                    ...s,
+                                    next: !s.next,
+                                }))
+                            }
                             inputBase={inputBase}
                             inputTheme={inputTheme}
                             labelTheme={labelTheme}
                         />
+
                         <PasswordInput
                             label="Confirm"
                             value={form.passwordConfirm}
-                            onChange={(v) => setForm((f) => ({ ...f, passwordConfirm: v }))}
+                            onChange={(v) =>
+                                setForm((f) => ({
+                                    ...f,
+                                    passwordConfirm: v,
+                                }))
+                            }
                             show={showPw.confirm}
-                            onToggle={() => setShowPw((s) => ({ ...s, confirm: !s.confirm }))}
+                            onToggle={() =>
+                                setShowPw((s) => ({
+                                    ...s,
+                                    confirm: !s.confirm,
+                                }))
+                            }
                             inputBase={inputBase}
                             inputTheme={inputTheme}
                             labelTheme={labelTheme}
                         />
                     </div>
 
-                    <p className={`text-xs mt-2 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                    <p
+                        className={`text-xs mt-2 ${darkMode ? "text-gray-400" : "text-gray-500"
+                            }`}
+                    >
                         Use 8+ characters, with a mix of letters, numbers, and symbols.
                     </p>
                 </div>
@@ -446,12 +600,14 @@ const Input = ({
 }) => (
     <div>
         <label className={`block text-sm mb-1 ${labelTheme}`}>{label}</label>
+
         <div className="relative">
             {icon && (
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-70">
                     {icon}
                 </span>
             )}
+
             <input
                 type={type}
                 className={`${inputBase} ${inputTheme} ${icon ? "pl-9" : ""}`}
@@ -475,16 +631,19 @@ const PasswordInput = ({
 }) => (
     <div>
         <label className={`block text-sm mb-1 ${labelTheme}`}>{label}</label>
+
         <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-70">
                 <Lock size={16} />
             </span>
+
             <input
                 type={show ? "text" : "password"}
                 className={`${inputBase} ${inputTheme} pl-9 pr-9`}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
             />
+
             <button
                 type="button"
                 onClick={onToggle}
@@ -508,6 +667,7 @@ const Select = ({
 }) => (
     <div>
         <label className={`block text-sm mb-1 ${labelTheme}`}>{label}</label>
+
         <select
             className={`${inputBase} ${inputTheme}`}
             value={value}

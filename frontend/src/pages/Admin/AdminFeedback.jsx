@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
-const API_BASE = "http://localhost:4000";
+const API_BASE =  import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com";
 
 const pad2 = (n) => String(n).padStart(2, "0");
 const prettyDateTime = (iso) => {

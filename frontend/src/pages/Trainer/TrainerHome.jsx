@@ -20,7 +20,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import TrainerTaskBoard from "../../components/trainerComponents/TrainerTaskboard";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE =  import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com";
 
 /* -------------------------------------------------------------------------- */
 /* Animations                                                                 */

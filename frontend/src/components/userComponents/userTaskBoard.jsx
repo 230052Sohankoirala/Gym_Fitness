@@ -13,7 +13,7 @@ import { useTheme } from "../../context/ThemeContext";
  * VITE_API_BASE_URL=https://your-backend-name.onrender.com
  */
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:4000";
+  import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -192,16 +192,14 @@ const UserTaskBoard = () => {
         {columns.map((col) => (
           <div
             key={col.key}
-            className={`rounded-xl shadow-sm p-4 border transition-colors ${
-              darkMode
+            className={`rounded-xl shadow-sm p-4 border transition-colors ${darkMode
                 ? "bg-gray-800 border-gray-700"
                 : "bg-white border-gray-200"
-            }`}
+              }`}
           >
             <h3
-              className={`font-bold mb-4 ${
-                darkMode ? "text-gray-200" : "text-gray-800"
-              }`}
+              className={`font-bold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"
+                }`}
             >
               {col.label}
             </h3>
@@ -210,7 +208,7 @@ const UserTaskBoard = () => {
             <Reorder.Group
               axis="y"
               values={tasks.filter((t) => t.column === col.key)}
-              onReorder={() => {}}
+              onReorder={() => { }}
               className="space-y-3"
             >
               {tasks
@@ -219,9 +217,8 @@ const UserTaskBoard = () => {
                   <Reorder.Item
                     key={task._id}
                     value={task}
-                    className={`p-3 rounded-lg shadow-sm cursor-grab ${
-                      col.color
-                    } ${darkMode ? "text-gray-200" : "text-gray-800"}`}
+                    className={`p-3 rounded-lg shadow-sm cursor-grab ${col.color
+                      } ${darkMode ? "text-gray-200" : "text-gray-800"}`}
                     whileDrag={{
                       scale: 1.05,
                     }}
@@ -237,11 +234,10 @@ const UserTaskBoard = () => {
                               key={c.key}
                               type="button"
                               onClick={() => moveTask(task, c.key)}
-                              className={`text-xs px-2 py-1 rounded transition-colors ${
-                                darkMode
+                              className={`text-xs px-2 py-1 rounded transition-colors ${darkMode
                                   ? "bg-gray-700 hover:bg-gray-600 text-gray-200"
                                   : "bg-gray-200 hover:bg-gray-300 text-gray-800"
-                              }`}
+                                }`}
                             >
                               {c.label}
                             </button>
@@ -283,13 +279,12 @@ const UserTaskBoard = () => {
                       addTask(col.key);
                     }
                   }}
-                  className={`flex-1 p-2 rounded border transition-colors ${
-                    errors[col.key]
+                  className={`flex-1 p-2 rounded border transition-colors ${errors[col.key]
                       ? "border-red-500 placeholder-red-500 focus:ring-red-500"
                       : darkMode
-                      ? "bg-gray-700 border-gray-600 text-gray-200"
-                      : "bg-white border-gray-300 text-gray-800"
-                  }`}
+                        ? "bg-gray-700 border-gray-600 text-gray-200"
+                        : "bg-white border-gray-300 text-gray-800"
+                    }`}
                 />
 
                 <button

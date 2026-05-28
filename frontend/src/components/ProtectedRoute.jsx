@@ -13,7 +13,7 @@ import axios from "axios";
  * VITE_API_BASE_URL=https://your-backend-name.onrender.com
  */
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:4000";
+  import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com";
 
 const ProtectedRoute = ({ children, role }) => {
   const [authorized, setAuthorized] = useState(false);
@@ -35,8 +35,8 @@ const ProtectedRoute = ({ children, role }) => {
           role === "admin"
             ? `${API_BASE_URL}/api/admin/me`
             : role === "trainer"
-            ? `${API_BASE_URL}/api/trainers/me`
-            : `${API_BASE_URL}/api/users/me`;
+              ? `${API_BASE_URL}/api/trainers/me`
+              : `${API_BASE_URL}/api/users/me`;
 
         const { data } = await axios.get(endpoint, {
           headers: {

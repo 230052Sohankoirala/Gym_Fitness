@@ -1,5 +1,5 @@
 // src/utils/api.js
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com"
 
 export function getAuthHeaders() {
     const token =

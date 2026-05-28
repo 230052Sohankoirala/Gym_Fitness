@@ -30,7 +30,7 @@ import {
  * VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxx
  */
 const API_BASE_URL =
-    import.meta.env.VITE_API_URL || "http://localhost:4000";
+    import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com";
 
 const API_BASE = `${API_BASE_URL}/api`;
 
@@ -140,8 +140,8 @@ function InnerForm({ onPaid, onClose, darkMode, sessionId, token }) {
                 <div className="flex items-start gap-3">
                     <div
                         className={`p-3 rounded-2xl ${darkMode
-                                ? "bg-purple-900/30 text-purple-300"
-                                : "bg-purple-50 text-purple-700"
+                            ? "bg-purple-900/30 text-purple-300"
+                            : "bg-purple-50 text-purple-700"
                             }`}
                     >
                         <CreditCard size={20} />
@@ -197,12 +197,12 @@ function InnerForm({ onPaid, onClose, darkMode, sessionId, token }) {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 8 }}
                             className={`rounded-2xl px-4 py-3 text-sm flex items-start gap-3 ${msgType === "success"
-                                    ? darkMode
-                                        ? "bg-green-900/30 text-green-300 border border-green-800"
-                                        : "bg-green-50 text-green-700 border border-green-200"
-                                    : darkMode
-                                        ? "bg-red-900/30 text-red-300 border border-red-800"
-                                        : "bg-red-50 text-red-700 border border-red-200"
+                                ? darkMode
+                                    ? "bg-green-900/30 text-green-300 border border-green-800"
+                                    : "bg-green-50 text-green-700 border border-green-200"
+                                : darkMode
+                                    ? "bg-red-900/30 text-red-300 border border-red-800"
+                                    : "bg-red-50 text-red-700 border border-red-200"
                                 }`}
                         >
                             {msgType === "success" ? (
@@ -224,8 +224,8 @@ function InnerForm({ onPaid, onClose, darkMode, sessionId, token }) {
                             if (!loading) onClose?.();
                         }}
                         className={`flex-1 px-4 py-3 rounded-xl font-semibold transition-colors duration-200 ${darkMode
-                                ? "bg-gray-800 hover:bg-gray-700 text-white"
-                                : "bg-gray-100 hover:bg-gray-200 text-gray-900"
+                            ? "bg-gray-800 hover:bg-gray-700 text-white"
+                            : "bg-gray-100 hover:bg-gray-200 text-gray-900"
                             }`}
                         disabled={loading}
                     >
@@ -355,8 +355,8 @@ export default function StripePayModal({
                             <div className="flex items-start gap-3">
                                 <div
                                     className={`p-3 rounded-2xl ${darkMode
-                                            ? "bg-red-900/30 text-red-300"
-                                            : "bg-red-50 text-red-700"
+                                        ? "bg-red-900/30 text-red-300"
+                                        : "bg-red-50 text-red-700"
                                         }`}
                                 >
                                     <AlertCircle size={22} />
@@ -402,8 +402,8 @@ export default function StripePayModal({
                             <div className="flex items-start gap-3 mb-4">
                                 <div
                                     className={`p-3 rounded-2xl ${darkMode
-                                            ? "bg-red-900/30 text-red-300"
-                                            : "bg-red-50 text-red-700"
+                                        ? "bg-red-900/30 text-red-300"
+                                        : "bg-red-50 text-red-700"
                                         }`}
                                 >
                                     <AlertCircle size={22} />
@@ -427,8 +427,8 @@ export default function StripePayModal({
                                     type="button"
                                     onClick={onClose}
                                     className={`flex-1 px-4 py-3 rounded-xl font-semibold transition-colors duration-200 ${darkMode
-                                            ? "bg-gray-800 hover:bg-gray-700 text-white"
-                                            : "bg-gray-100 hover:bg-gray-200 text-gray-900"
+                                        ? "bg-gray-800 hover:bg-gray-700 text-white"
+                                        : "bg-gray-100 hover:bg-gray-200 text-gray-900"
                                         }`}
                                 >
                                     Close
