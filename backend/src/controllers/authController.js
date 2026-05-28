@@ -21,19 +21,20 @@ const generateToken = (id, role, rememberMe = false) => {
 
 const createMailTransporter = () => {
   return nodemailer.createTransport({
+    service: "gmail",
     host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
+    port: 587,
+    secure: false,
+    requireTLS: true,
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
   });
 };
-
 /* ---------------- Email Helper: Verification ---------------- */
 
 const sendVerificationEmail = async (email, code, fullname) => {
