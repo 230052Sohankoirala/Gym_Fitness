@@ -27,7 +27,7 @@ import axios from "axios";
 import StripePayModal from "../../components/StripePayModal";
 
 const PAID_SESSIONS_KEY = "paid_sessions_map_v1";
-
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const UserClasses = () => {
   const { darkMode } = useTheme();
   const navigate = useNavigate();
@@ -74,7 +74,7 @@ const UserClasses = () => {
 
   const api = useMemo(() => {
     return axios.create({
-      baseURL: "http://localhost:4000/api",
+      baseURL: API_BASE,
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       withCredentials: true,
     });
