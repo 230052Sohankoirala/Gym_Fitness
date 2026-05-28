@@ -4,8 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { MailCheck, ShieldCheck, BadgeAlert } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000/api";
-
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 /* ---------- helpers ---------- */
 const getSafeJSON = (raw) => {
   try {
@@ -93,7 +92,7 @@ const VerifyEmail = () => {
     const emailToVerify = (formData.email || prefilledEmail || "").trim();
 
     try {
-      const { data } = await axios.post(`${API_BASE}/auth/verify-email`, {
+      const { data } = await axios.post(`${API_BASE}/api/auth/verify-email`, {
         email: emailToVerify,
         code: formData.code.trim(),
       });
