@@ -106,11 +106,10 @@ app.use(cors(corsOptions));
 
 app.use(
   helmet({
-    crossOriginOpenerPolicy: isDev ? false : { policy: "same-origin" },
+    crossOriginOpenerPolicy: false,
     crossOriginResourcePolicy: false,
   })
 );
-
 app.use(morgan("dev"));
 app.use(cookieParser());
 
