@@ -576,8 +576,8 @@ const UserClasses = () => {
             <button
               onClick={refreshAll}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors duration-200 ${darkMode
-                  ? "bg-gray-900 border border-gray-700 hover:bg-gray-800"
-                  : "bg-white border border-gray-200 hover:bg-gray-50"
+                ? "bg-gray-900 border border-gray-700 hover:bg-gray-800"
+                : "bg-white border border-gray-200 hover:bg-gray-50"
                 }`}
             >
               <RefreshCw size={16} />
@@ -594,8 +594,8 @@ const UserClasses = () => {
               <div className="flex items-start gap-3">
                 <div
                   className={`p-3 rounded-2xl ${darkMode
-                      ? "bg-gray-800 text-blue-300"
-                      : "bg-blue-50 text-blue-700"
+                    ? "bg-gray-800 text-blue-300"
+                    : "bg-blue-50 text-blue-700"
                     }`}
                 >
                   <Wallet size={20} />
@@ -786,10 +786,10 @@ const UserClasses = () => {
                 type="button"
                 onClick={() => setAvailableOnly((prev) => !prev)}
                 className={`w-full px-4 py-3 rounded-xl text-left transition-colors duration-200 ${availableOnly
-                    ? "bg-blue-600 text-white"
-                    : darkMode
-                      ? "bg-gray-900 border border-gray-700 text-white"
-                      : "bg-white border border-gray-200 text-gray-900"
+                  ? "bg-blue-600 text-white"
+                  : darkMode
+                    ? "bg-gray-900 border border-gray-700 text-white"
+                    : "bg-white border border-gray-200 text-gray-900"
                   }`}
               >
                 {availableOnly ? "Showing Available Only" : "Show Available Only"}
@@ -815,8 +815,8 @@ const UserClasses = () => {
                   <div
                     key={item._id}
                     className={`rounded-xl p-4 ${darkMode
-                        ? "bg-gray-900 border border-gray-800"
-                        : "bg-gray-50 border border-gray-200"
+                      ? "bg-gray-900 border border-gray-800"
+                      : "bg-gray-50 border border-gray-200"
                       }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -835,16 +835,16 @@ const UserClasses = () => {
                       <div className="text-sm">
                         <span
                           className={`px-2.5 py-1 rounded-full text-xs font-semibold ${item?.status === "active"
+                            ? darkMode
+                              ? "bg-green-900/40 text-green-300"
+                              : "bg-green-50 text-green-700"
+                            : item?.status === "refunded"
                               ? darkMode
-                                ? "bg-green-900/40 text-green-300"
-                                : "bg-green-50 text-green-700"
-                              : item?.status === "refunded"
-                                ? darkMode
-                                  ? "bg-red-900/40 text-red-300"
-                                  : "bg-red-50 text-red-700"
-                                : darkMode
-                                  ? "bg-gray-800 text-gray-300"
-                                  : "bg-gray-100 text-gray-700"
+                                ? "bg-red-900/40 text-red-300"
+                                : "bg-red-50 text-red-700"
+                              : darkMode
+                                ? "bg-gray-800 text-gray-300"
+                                : "bg-gray-100 text-gray-700"
                             }`}
                         >
                           {item?.status || "unknown"}
@@ -926,8 +926,8 @@ const UserClasses = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.96 }}
             className={`fixed bottom-5 right-5 z-50 max-w-sm w-[92%] sm:w-auto px-4 py-3 rounded-2xl shadow-xl border transition-colors duration-200 ${toast.type === "success"
-                ? "bg-green-600 text-white border-green-500"
-                : "bg-red-600 text-white border-red-500"
+              ? "bg-green-600 text-white border-green-500"
+              : "bg-red-600 text-white border-red-500"
               }`}
           >
             <div className="flex items-start gap-3">
@@ -959,8 +959,8 @@ const UserClasses = () => {
               <div className="flex items-start gap-3 mb-4">
                 <div
                   className={`p-3 rounded-2xl ${darkMode
-                      ? "bg-red-900/30 text-red-300"
-                      : "bg-red-50 text-red-700"
+                    ? "bg-red-900/30 text-red-300"
+                    : "bg-red-50 text-red-700"
                     }`}
                 >
                   <ShieldAlert size={22} />
@@ -977,8 +977,8 @@ const UserClasses = () => {
 
               <div
                 className={`rounded-2xl p-4 mb-4 ${darkMode
-                    ? "bg-gray-900 border border-gray-800"
-                    : "bg-gray-50 border border-gray-200"
+                  ? "bg-gray-900 border border-gray-800"
+                  : "bg-gray-50 border border-gray-200"
                   }`}
               >
                 <p className="text-sm">
@@ -1033,8 +1033,8 @@ const UserClasses = () => {
                     setCancelReason("");
                   }}
                   className={`flex-1 px-4 py-3 rounded-xl font-medium transition-colors duration-200 ${darkMode
-                      ? "bg-gray-800 hover:bg-gray-700 text-white"
-                      : "bg-gray-100 hover:bg-gray-200 text-gray-900"
+                    ? "bg-gray-800 hover:bg-gray-700 text-white"
+                    : "bg-gray-100 hover:bg-gray-200 text-gray-900"
                     }`}
                   disabled={cancelling}
                 >
@@ -1045,8 +1045,8 @@ const UserClasses = () => {
                   onClick={handleCancelSubscription}
                   disabled={cancelling}
                   className={`flex-1 px-4 py-3 rounded-xl font-medium transition-colors duration-200 ${cancelling
-                      ? "bg-red-400 text-white cursor-not-allowed"
-                      : "bg-red-600 hover:bg-red-700 text-white"
+                    ? "bg-red-400 text-white cursor-not-allowed"
+                    : "bg-red-600 hover:bg-red-700 text-white"
                     }`}
                 >
                   {cancelling ? "Cancelling..." : "Confirm Cancel"}
@@ -1080,8 +1080,8 @@ const StatCard = ({ darkMode, title, value, icon }) => {
   return (
     <div
       className={`rounded-2xl p-4 transition-colors duration-200 ${darkMode
-          ? "bg-gray-900 border border-gray-800"
-          : "bg-white border border-gray-200"
+        ? "bg-gray-900 border border-gray-800"
+        : "bg-white border border-gray-200"
         }`}
     >
       <div className="flex items-center justify-between mb-3">
@@ -1091,8 +1091,8 @@ const StatCard = ({ darkMode, title, value, icon }) => {
 
         <div
           className={`p-2 rounded-xl ${darkMode
-              ? "bg-gray-800 text-gray-200"
-              : "bg-gray-100 text-gray-700"
+            ? "bg-gray-800 text-gray-200"
+            : "bg-gray-100 text-gray-700"
             }`}
         >
           {icon}
@@ -1124,8 +1124,8 @@ const TrainerCard = ({
       layout
       whileHover={{ y: -4 }}
       className={`rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 ${darkMode
-          ? "bg-gray-900 border border-gray-800"
-          : "bg-white border border-gray-200"
+        ? "bg-gray-900 border border-gray-800"
+        : "bg-white border border-gray-200"
         }`}
     >
       <div className="p-5 sm:p-6 border-b border-gray-200/10">
@@ -1150,8 +1150,8 @@ const TrainerCard = ({
 
           <div
             className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${darkMode
-                ? "bg-gray-800 text-yellow-300"
-                : "bg-yellow-50 text-yellow-700"
+              ? "bg-gray-800 text-yellow-300"
+              : "bg-yellow-50 text-yellow-700"
               }`}
           >
             {typeof trainer.rating === "number"
@@ -1263,8 +1263,8 @@ const SessionCard = ({
   return (
     <div
       className={`rounded-2xl p-4 transition-colors duration-200 ${darkMode
-          ? "bg-gray-900 border border-gray-800"
-          : "bg-gray-50 border border-gray-200"
+        ? "bg-gray-900 border border-gray-800"
+        : "bg-gray-50 border border-gray-200"
         }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
@@ -1283,12 +1283,12 @@ const SessionCard = ({
 
         <span
           className={`px-3 py-1 rounded-full text-xs font-semibold ${cents > 0
-              ? darkMode
-                ? "bg-purple-900/40 text-purple-300"
-                : "bg-purple-50 text-purple-700"
-              : darkMode
-                ? "bg-green-900/40 text-green-300"
-                : "bg-green-50 text-green-700"
+            ? darkMode
+              ? "bg-purple-900/40 text-purple-300"
+              : "bg-purple-50 text-purple-700"
+            : darkMode
+              ? "bg-green-900/40 text-green-300"
+              : "bg-green-50 text-green-700"
             }`}
         >
           {formatPrice(cents)}
@@ -1339,8 +1339,8 @@ const SessionCard = ({
         ) : (
           <button
             className={`w-full px-4 py-3 rounded-xl text-sm font-medium transition-colors duration-200 ${darkMode
-                ? "bg-gray-800 text-gray-300"
-                : "bg-gray-200 text-gray-600"
+              ? "bg-gray-800 text-gray-300"
+              : "bg-gray-200 text-gray-600"
               }`}
             disabled
             title="Pay first to unlock chat"
@@ -1363,8 +1363,8 @@ const SessionCard = ({
             disabled={full}
             onClick={() => bookNow(session)}
             className={`w-full px-4 py-3 rounded-xl text-sm font-medium transition-colors duration-200 ${full
-                ? "bg-gray-500 cursor-not-allowed text-white"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
+              ? "bg-gray-500 cursor-not-allowed text-white"
+              : "bg-blue-600 hover:bg-blue-700 text-white"
               }`}
           >
             {full ? "Class Full" : "Book Now"}
@@ -1376,10 +1376,10 @@ const SessionCard = ({
             disabled={full}
             onClick={() => handleSessionAccess(session)}
             className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-colors duration-200 ${full
-                ? "bg-gray-500 cursor-not-allowed text-white"
-                : cents > 0
-                  ? "bg-purple-600 hover:bg-purple-700 text-white"
-                  : "bg-emerald-600 hover:bg-emerald-700 text-white"
+              ? "bg-gray-500 cursor-not-allowed text-white"
+              : cents > 0
+                ? "bg-purple-600 hover:bg-purple-700 text-white"
+                : "bg-emerald-600 hover:bg-emerald-700 text-white"
               }`}
           >
             <CreditCard size={15} />
@@ -1403,8 +1403,8 @@ const Badge = ({ darkMode, text }) => (
 const InfoChip = ({ darkMode, icon, text }) => (
   <span
     className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs ${darkMode
-        ? "bg-gray-800 text-gray-200"
-        : "bg-white text-gray-700 border border-gray-200"
+      ? "bg-gray-800 text-gray-200"
+      : "bg-white text-gray-700 border border-gray-200"
       }`}
   >
     {icon}
@@ -1437,8 +1437,8 @@ const SkeletonTrainerCard = ({ darkMode }) => {
   return (
     <div
       className={`rounded-3xl p-6 animate-pulse transition-colors duration-200 ${darkMode
-          ? "bg-gray-900 border border-gray-800"
-          : "bg-white border border-gray-200"
+        ? "bg-gray-900 border border-gray-800"
+        : "bg-white border border-gray-200"
         }`}
     >
       <div className="flex items-center gap-4 mb-5">
@@ -1476,8 +1476,8 @@ const SkeletonTrainerCard = ({ darkMode }) => {
           <div
             key={idx}
             className={`rounded-2xl p-4 ${darkMode
-                ? "bg-gray-900 border border-gray-800"
-                : "bg-gray-50 border border-gray-200"
+              ? "bg-gray-900 border border-gray-800"
+              : "bg-gray-50 border border-gray-200"
               }`}
           >
             <div

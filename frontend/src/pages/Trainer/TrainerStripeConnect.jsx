@@ -13,13 +13,24 @@ import {
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
+const API_ROOT = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = `${API_ROOT}/api`;
+
 const TrainerStripeConnect = () => {
     const { darkMode } = useTheme();
-    const token = useMemo(() => localStorage.getItem("token"), []);
+
+    const token = useMemo(() => {
+        return (
+            localStorage.getItem("trainerToken") ||
+            sessionStorage.getItem("trainerToken") ||
+            localStorage.getItem("token") ||
+            sessionStorage.getItem("token")
+        );
+    }, []);
 
     const api = useMemo(() => {
         return axios.create({
-            baseURL: "http://localhost:4000/api",
+            baseURL: API_BASE,
             headers: token ? { Authorization: `Bearer ${token}` } : {},
             withCredentials: true,
         });
@@ -70,6 +81,7 @@ const TrainerStripeConnect = () => {
             }
         } catch (err) {
             console.error("Stripe status error:", err);
+
             setErrorMessage(
                 err?.response?.data?.message || "Failed to load Stripe status."
             );
@@ -84,7 +96,10 @@ const TrainerStripeConnect = () => {
 
             const { data } = await api.get("/trainers/stripe/countries");
 
-            const safeCountries = Array.isArray(data?.countries) ? data.countries : [];
+            const safeCountries = Array.isArray(data?.countries)
+                ? data.countries
+                : [];
+
             setCountries(safeCountries);
 
             if (safeCountries.length > 0) {
@@ -98,6 +113,7 @@ const TrainerStripeConnect = () => {
             }
         } catch (err) {
             console.error("Stripe countries error:", err);
+
             setErrorMessage(
                 err?.response?.data?.message || "Failed to load supported countries."
             );
@@ -132,6 +148,7 @@ const TrainerStripeConnect = () => {
             setSuccessMessage("Stripe onboarding link created.");
         } catch (err) {
             console.error("Stripe connect error:", err);
+
             setErrorMessage(
                 err?.response?.data?.message || "Failed to start Stripe onboarding."
             );
@@ -219,9 +236,10 @@ const TrainerStripeConnect = () => {
             <div className="flex items-start justify-between gap-4 flex-col lg:flex-row">
                 <div className="w-full">
                     <h2 className="text-2xl font-semibold mb-2">Stripe Payout Setup</h2>
+
                     <p className={`text-sm ${mutedText}`}>
-                        Connect your Stripe account so members can pay for your
-                        sessions and you can receive payouts securely.
+                        Connect your Stripe account so members can pay for your sessions and
+                        you can receive payouts securely.
                     </p>
                 </div>
 
@@ -267,8 +285,8 @@ const TrainerStripeConnect = () => {
 
                 <p className={`text-sm mb-4 ${mutedText}`}>
                     Select the country for this trainer’s Stripe onboarding before
-                    creating the account. After the Stripe account is created, the
-                    country stays locked.
+                    creating the account. After the Stripe account is created, the country
+                    stays locked.
                 </p>
 
                 {loadingCountries ? (
@@ -294,8 +312,8 @@ const TrainerStripeConnect = () => {
 
                         {status.connected ? (
                             <p className={`text-xs ${mutedText}`}>
-                                Country is locked because the Stripe connected account
-                                already exists.
+                                Country is locked because the Stripe connected account already
+                                exists.
                             </p>
                         ) : (
                             <p className={`text-xs ${mutedText}`}>
@@ -355,7 +373,9 @@ const TrainerStripeConnect = () => {
                             </span>
                         </div>
 
-                        <div className={`rounded-xl p-3 ${subCard} sm:col-span-2 break-all`}>
+                        <div
+                            className={`rounded-xl p-3 ${subCard} sm:col-span-2 break-all`}
+                        >
                             <span className={mutedText}>Stripe Account ID:</span>{" "}
                             <span className="font-medium">
                                 {status.stripeAccountId || "Not created yet"}
@@ -380,10 +400,7 @@ const TrainerStripeConnect = () => {
                     <button
                         onClick={handleConnect}
                         disabled={
-                            connecting ||
-                            loadingCountries ||
-                            !country ||
-                            countries.length === 0
+                            connecting || loadingCountries || !country || countries.length === 0
                         }
                         className={`inline-flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-colors ${connecting
                                 ? "bg-blue-400 text-white cursor-not-allowed"
@@ -413,9 +430,10 @@ const TrainerStripeConnect = () => {
                     <h3 className="text-xl font-semibold mb-2">
                         Step-by-step Stripe onboarding flow
                     </h3>
+
                     <p className={`text-sm mb-5 ${mutedText}`}>
-                        This section explains what the trainer will see after clicking
-                        the Connect Stripe button.
+                        This section explains what the trainer will see after clicking the
+                        Connect Stripe button.
                     </p>
 
                     <div className="space-y-4">
@@ -433,8 +451,10 @@ const TrainerStripeConnect = () => {
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className={mutedText}>{step.icon}</span>
+
                                         <h4 className="text-base font-semibold">{step.title}</h4>
                                     </div>
+
                                     <p className={`text-sm leading-6 ${mutedText}`}>
                                         {step.description}
                                     </p>
@@ -450,10 +470,10 @@ const TrainerStripeConnect = () => {
                             }`}
                     >
                         <p className="text-sm leading-6">
-                            After these Stripe steps are completed, the trainer is sent
-                            back to FitTrack. The application then checks the Stripe
-                            account again and updates whether onboarding, charges, and
-                            payouts are fully enabled.
+                            After these Stripe steps are completed, the trainer is sent back
+                            to FitTrack. The application then checks the Stripe account again
+                            and updates whether onboarding, charges, and payouts are fully
+                            enabled.
                         </p>
                     </div>
                 </div>

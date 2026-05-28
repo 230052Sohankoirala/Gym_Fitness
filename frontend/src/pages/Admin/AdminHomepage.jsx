@@ -24,7 +24,7 @@ import {
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
 
-const BASE_URL = "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 const AdminHomepage = () => {
   const navigate = useNavigate();
@@ -71,13 +71,13 @@ const AdminHomepage = () => {
         setErr("");
 
         const [statsRes, activityRes, revenueRes] = await Promise.all([
-          axios.get(`${BASE_URL}/api/admin/stats`, {
+          axios.get(`${API_BASE}/api/admin/stats`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get(`${BASE_URL}/api/admin/activity`, {
+          axios.get(`${API_BASE}/api/admin/activity`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get(`${BASE_URL}/api/admin/revenue`, {
+          axios.get(`${API_BASE}/api/admin/revenue`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -202,7 +202,7 @@ const AdminHomepage = () => {
       setTrainersErr("");
       setTrainersLoading(true);
 
-      const res = await axios.get(`${BASE_URL}/api/admin/trainers`, {
+      const res = await axios.get(`${API_BASE}/api/admin/trainers`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

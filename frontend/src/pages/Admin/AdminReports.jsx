@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
-const BASE_URL = "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 function getToken() {
     return localStorage.getItem("token");
@@ -31,6 +31,10 @@ function getToken() {
 function safe(v) {
     if (v === null || v === undefined) return "";
     return String(v).replace(/\s+/g, " ").trim();
+}
+
+function centsToDollars(value) {
+    return Number((Number(value || 0) / 100).toFixed(2));
 }
 
 function normalizeArray(responseData, possibleKeys = []) {
@@ -64,7 +68,11 @@ function normalizeObject(responseData, fallback = {}) {
         return fallback;
     }
 
-    if (responseData.data && typeof responseData.data === "object" && !Array.isArray(responseData.data)) {
+    if (
+        responseData.data &&
+        typeof responseData.data === "object" &&
+        !Array.isArray(responseData.data)
+    ) {
         return responseData.data;
     }
 
@@ -175,7 +183,7 @@ const AdminReports = () => {
 
     const api = useMemo(() => {
         return axios.create({
-            baseURL: BASE_URL,
+            baseURL: API_BASE,
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -192,13 +200,14 @@ const AdminReports = () => {
                 return;
             }
 
-            const [statsRes, revRes, actRes, trainersRes, usersRes] = await Promise.all([
-                api.get("/api/admin/stats"),
-                api.get("/api/admin/revenue"),
-                api.get("/api/admin/activity"),
-                api.get("/api/admin/trainers"),
-                api.get("/api/admin/users"),
-            ]);
+            const [statsRes, revRes, actRes, trainersRes, usersRes] =
+                await Promise.all([
+                    api.get("/api/admin/stats"),
+                    api.get("/api/admin/revenue"),
+                    api.get("/api/admin/activity"),
+                    api.get("/api/admin/trainers"),
+                    api.get("/api/admin/users"),
+                ]);
 
             console.log("Stats response:", statsRes.data);
             console.log("Revenue response:", revRes.data);
@@ -246,10 +255,13 @@ const AdminReports = () => {
             });
 
             setRevenue({
-                totalRevenue: normalizedRevenue.totalRevenue ?? 0,
-                adminRevenue: normalizedRevenue.adminRevenue ?? 0,
-                trainerRevenue: normalizedRevenue.trainerRevenue ?? 0,
-                transactions: normalizedRevenue.transactions ?? normalizedRevenue.totalTransactions ?? 0,
+                totalRevenue: centsToDollars(normalizedRevenue.totalRevenue ?? 0),
+                adminRevenue: centsToDollars(normalizedRevenue.adminRevenue ?? 0),
+                trainerRevenue: centsToDollars(normalizedRevenue.trainerRevenue ?? 0),
+                transactions:
+                    normalizedRevenue.transactions ??
+                    normalizedRevenue.totalTransactions ??
+                    0,
             });
 
             setActivity(normalizedActivity);
@@ -446,9 +458,7 @@ const AdminReports = () => {
                     {note ? <p className={`text-xs mt-2 ${mutedSoft}`}>{note}</p> : null}
                 </div>
 
-                <div className={`p-3 rounded-2xl ${accent || pillBg}`}>
-                    {icon}
-                </div>
+                <div className={`p-3 rounded-2xl ${accent || pillBg}`}>{icon}</div>
             </div>
         </div>
     );
@@ -557,7 +567,6 @@ const AdminReports = () => {
                         }`}
                     >
                         <AlertCircle size={20} />
-
                         <div className="flex-1">{error}</div>
 
                         <ActionButton onClick={fetchAll} icon={<RefreshCw size={16} />}>
@@ -572,7 +581,6 @@ const AdminReports = () => {
     return (
         <div className={`min-h-screen p-6 transition-all duration-200 ${pageBg}`}>
             <div className="max-w-7xl mx-auto">
-                {/* Header */}
                 <div className={`rounded-[2rem] p-6 sm:p-7 mb-6 relative overflow-hidden ${cardBg}`}>
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-violet-500/10 to-cyan-500/10 pointer-events-none" />
 
@@ -620,7 +628,6 @@ const AdminReports = () => {
                     </div>
                 </div>
 
-                {/* Summary */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
                     <StatCard
                         icon={<Users size={20} className="text-blue-500" />}
@@ -675,7 +682,6 @@ const AdminReports = () => {
                     />
                 </div>
 
-                {/* Users Section */}
                 <div className={`rounded-[2rem] p-5 sm:p-6 mb-6 ${cardBg}`}>
                     <SectionHeader
                         title="Users Report"
@@ -799,7 +805,6 @@ const AdminReports = () => {
                     )}
                 </div>
 
-                {/* Trainers Section */}
                 <div className={`rounded-[2rem] p-5 sm:p-6 mb-6 ${cardBg}`}>
                     <SectionHeader
                         title="Trainers Report"
@@ -876,7 +881,6 @@ const AdminReports = () => {
                     )}
                 </div>
 
-                {/* Activity Section */}
                 <div className={`rounded-[2rem] p-5 sm:p-6 ${cardBg}`}>
                     <SectionHeader
                         title="Recent Activity Report"

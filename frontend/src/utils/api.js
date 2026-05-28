@@ -1,8 +1,10 @@
 // src/utils/api.js
-const API_BASE = import.meta?.env?.VITE_API_BASE_URL || "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 export function getAuthHeaders() {
-    const token = localStorage.getItem("token");
+    const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
+
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -10,17 +12,19 @@ export function getAuthHeaders() {
  * apiFetch("/api/notifications?role=admin")
  * apiFetch("/api/notifications/read-all", { method: "PATCH" })
  */
-export async function apiFetch(path, { method = "GET", body } = {}) {
+export async function apiFetch(path, { method = "GET", body, headers = {} } = {}) {
     const res = await fetch(`${API_BASE}${path}`, {
         method,
         headers: {
             "Content-Type": "application/json",
             ...getAuthHeaders(),
+            ...headers,
         },
         body: body ? JSON.stringify(body) : undefined,
     });
 
     const text = await res.text();
+
     let data = null;
 
     try {
@@ -31,9 +35,11 @@ export async function apiFetch(path, { method = "GET", body } = {}) {
 
     if (!res.ok) {
         const msg =
-            (data && data.message) ||
+            data?.message ||
+            data?.error ||
             (typeof data === "string" && data) ||
             `Request failed: ${res.status}`;
+
         throw new Error(msg);
     }
 

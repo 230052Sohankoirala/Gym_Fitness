@@ -1,3 +1,4 @@
+// src/pages/trainer/TrainerSessions.jsx
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line no-unused-vars
@@ -15,6 +16,9 @@ import {
     X,
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+
+const API_ROOT = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = `${API_ROOT}/api`;
 
 const pageVariants = {
     initial: { opacity: 0, y: 8 },
@@ -46,12 +50,15 @@ const btnTap = { scale: 0.985, transition: { duration: 0.1 } };
 
 const fmt = (d) => {
     const dt = d ? new Date(d) : null;
+
     return dt && !Number.isNaN(dt.getTime()) ? dt.toLocaleString() : "";
 };
 
 const centsToDollars = (cents) => {
     const n = Number(cents || 0);
+
     if (!Number.isFinite(n) || n <= 0) return "0.00";
+
     return (n / 100).toFixed(2);
 };
 
@@ -76,25 +83,29 @@ export default function TrainerSessions() {
         priceDollars: "3.00",
     });
 
-    const token = useMemo(
-        () => localStorage.getItem("trainerToken") || localStorage.getItem("token"),
-        []
-    );
+    const token = useMemo(() => {
+        return (
+            localStorage.getItem("trainerToken") ||
+            sessionStorage.getItem("trainerToken") ||
+            localStorage.getItem("token") ||
+            sessionStorage.getItem("token")
+        );
+    }, []);
 
-    const api = useMemo(
-        () =>
-            axios.create({
-                baseURL: "http://localhost:4000/api",
-                headers: { Authorization: `Bearer ${token}` },
-            }),
-        [token]
-    );
+    const api = useMemo(() => {
+        return axios.create({
+            baseURL: API_BASE,
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+    }, [token]);
 
     const load = useCallback(async () => {
         try {
             setLoading(true);
             setErr("");
+
             const { data } = await api.get("/sessions/my");
+
             setSessions(data || []);
         } catch (e) {
             setErr(e?.response?.data?.message || "Failed to load sessions");
@@ -110,7 +121,9 @@ export default function TrainerSessions() {
     const start = async (id) => {
         try {
             setUpdatingSession(id);
+
             await api.post(`/sessions/${id}/start`);
+
             await load();
         } catch (e) {
             alert(e?.response?.data?.message || "Failed to start");
@@ -122,7 +135,9 @@ export default function TrainerSessions() {
     const complete = async (id) => {
         try {
             setUpdatingSession(id);
+
             await api.post(`/sessions/${id}/complete`);
+
             await load();
         } catch (e) {
             alert(e?.response?.data?.message || "Failed to complete");
@@ -134,6 +149,7 @@ export default function TrainerSessions() {
     const patchStatus = async (id, status) => {
         try {
             setUpdatingSession(id);
+
             if (status === "InProgress") {
                 await api.post(`/sessions/${id}/start`);
             } else if (status === "Completed") {
@@ -141,6 +157,7 @@ export default function TrainerSessions() {
             } else {
                 await api.put(`/sessions/${id}`, { status });
             }
+
             await load();
         } catch (e) {
             alert(e?.response?.data?.message || "Failed to update status");
@@ -151,9 +168,11 @@ export default function TrainerSessions() {
 
     const remove = async (id) => {
         if (!window.confirm("Delete this session? This cannot be undone.")) return;
+
         setDeletingId(id);
 
         const prev = sessions;
+
         setSessions((s) => s.filter((x) => x._id !== id));
 
         try {
@@ -169,6 +188,7 @@ export default function TrainerSessions() {
 
     const onCreate = async (e) => {
         e.preventDefault();
+
         setCreateErr("");
 
         if (!form.date || !form.time || !form.type || !form.maxClients) {
@@ -177,12 +197,14 @@ export default function TrainerSessions() {
         }
 
         const maxC = Number(form.maxClients);
+
         if (!Number.isFinite(maxC) || maxC < 1 || maxC > 10) {
             setCreateErr("Max clients must be between 1 and 10");
             return;
         }
 
         const dollars = Number(form.priceDollars);
+
         if (!Number.isFinite(dollars) || dollars < 0) {
             setCreateErr("Price must be 0 or more");
             return;
@@ -197,6 +219,7 @@ export default function TrainerSessions() {
 
         try {
             setCreating(true);
+
             await api.post("/sessions", {
                 date: String(form.date),
                 time: String(form.time),
@@ -206,6 +229,7 @@ export default function TrainerSessions() {
             });
 
             setShowCreate(false);
+
             setForm({
                 date: "",
                 time: "",
@@ -213,6 +237,7 @@ export default function TrainerSessions() {
                 maxClients: 1,
                 priceDollars: "0.00",
             });
+
             await load();
         } catch (e) {
             setCreateErr(e?.response?.data?.message || "Failed to create session");
@@ -229,17 +254,17 @@ export default function TrainerSessions() {
         ? "bg-white/[0.05] backdrop-blur-xl"
         : "bg-white/90 backdrop-blur-xl";
 
-    const cardBg = darkMode
-        ? "bg-white/[0.04]"
-        : "bg-white";
+    const cardBg = darkMode ? "bg-white/[0.04]" : "bg-white";
 
     const borderCls = darkMode ? "border-white/10" : "border-slate-200";
     const textMain = darkMode ? "text-white" : "text-slate-900";
     const textMuted = darkMode ? "text-slate-300" : "text-slate-600";
     const subtleText = darkMode ? "text-slate-400" : "text-slate-500";
+
     const hoverCard = darkMode
         ? "hover:bg-white/[0.07] hover:border-indigo-400/20"
         : "hover:bg-slate-50 hover:border-indigo-200";
+
     const shadowCls = darkMode
         ? "shadow-[0_12px_32px_rgba(0,0,0,0.35)]"
         : "shadow-[0_12px_32px_rgba(15,23,42,0.08)]";
@@ -281,7 +306,6 @@ export default function TrainerSessions() {
             animate="animate"
         >
             <div className="mx-auto max-w-7xl p-4 sm:p-6 space-y-6">
-                {/* Header */}
                 <div
                     className={`relative overflow-hidden rounded-3xl border ${borderCls} ${panelBg} ${shadowCls} p-6 sm:p-8 transition-colors duration-200`}
                 >
@@ -304,6 +328,7 @@ export default function TrainerSessions() {
                             <h1 className={`mt-3 text-2xl sm:text-3xl font-bold ${textMain}`}>
                                 My Sessions
                             </h1>
+
                             <p className={`mt-2 text-sm ${textMuted}`}>
                                 Create, manage, and update all your training sessions from one
                                 clean dashboard.
@@ -321,7 +346,6 @@ export default function TrainerSessions() {
                     </div>
                 </div>
 
-                {/* Loading */}
                 <AnimatePresence>
                     {loading && sessions.length === 0 && (
                         <motion.div
@@ -337,13 +361,13 @@ export default function TrainerSessions() {
                                     animate={{ rotate: 360 }}
                                     transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
                                 />
+
                                 <span className={textMuted}>Loading sessions...</span>
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
 
-                {/* Error */}
                 <AnimatePresence>
                     {!loading && err && (
                         <motion.div
@@ -364,7 +388,6 @@ export default function TrainerSessions() {
                     )}
                 </AnimatePresence>
 
-                {/* Empty */}
                 <AnimatePresence>
                     {!loading && !err && sessions.length === 0 && (
                         <motion.div
@@ -375,11 +398,16 @@ export default function TrainerSessions() {
                             exit={{ opacity: 0 }}
                         >
                             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-r from-indigo-500/15 via-violet-500/15 to-blue-500/15">
-                                <Dumbbell className={`h-7 w-7 ${darkMode ? "text-indigo-300" : "text-indigo-600"}`} />
+                                <Dumbbell
+                                    className={`h-7 w-7 ${darkMode ? "text-indigo-300" : "text-indigo-600"
+                                        }`}
+                                />
                             </div>
+
                             <p className={`text-lg font-semibold ${textMain}`}>
                                 No sessions scheduled yet
                             </p>
+
                             <p className={`mt-2 text-sm ${subtleText}`}>
                                 Create your first session and it will appear here.
                             </p>
@@ -387,7 +415,6 @@ export default function TrainerSessions() {
                     )}
                 </AnimatePresence>
 
-                {/* Sessions list */}
                 {!loading && !err && sessions.length > 0 && (
                     <motion.div
                         className="space-y-4"
@@ -403,7 +430,6 @@ export default function TrainerSessions() {
                                 className={`rounded-3xl border ${borderCls} ${cardBg} ${shadowCls} ${hoverCard} p-5 sm:p-6 transition-colors duration-200`}
                             >
                                 <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-                                    {/* Left content */}
                                     <div className="min-w-0 flex-1">
                                         <div className="flex flex-wrap items-center gap-3">
                                             <h3 className={`text-lg font-bold ${textMain}`}>
@@ -424,14 +450,15 @@ export default function TrainerSessions() {
                                                         : "bg-emerald-50 text-emerald-700 border-emerald-200"
                                                     }`}
                                             >
-                                                <BadgeDollarSign className="h-3.5 w-3.5" />
-                                                ${centsToDollars(s.priceInCents)}
+                                                <BadgeDollarSign className="h-3.5 w-3.5" />$
+                                                {centsToDollars(s.priceInCents)}
                                             </span>
                                         </div>
 
                                         <div className={`mt-4 flex flex-wrap gap-4 text-sm ${textMuted}`}>
                                             <div className="inline-flex items-center gap-2">
                                                 <Users className="h-4 w-4" />
+
                                                 <span>
                                                     Enrolled:{" "}
                                                     <span className={`font-semibold ${textMain}`}>
@@ -463,7 +490,6 @@ export default function TrainerSessions() {
                                         </div>
                                     </div>
 
-                                    {/* Right actions */}
                                     <div className="flex flex-wrap items-center gap-2">
                                         <motion.button
                                             whileTap={btnTap}
@@ -503,13 +529,17 @@ export default function TrainerSessions() {
                                             onChange={(e) => patchStatus(s._id, e.target.value)}
                                             disabled={updatingSession === s._id || deletingId === s._id}
                                         >
-                                            {["Pending", "Confirmed", "InProgress", "Completed", "Cancelled"].map(
-                                                (st) => (
-                                                    <option key={st} value={st}>
-                                                        {st}
-                                                    </option>
-                                                )
-                                            )}
+                                            {[
+                                                "Pending",
+                                                "Confirmed",
+                                                "InProgress",
+                                                "Completed",
+                                                "Cancelled",
+                                            ].map((st) => (
+                                                <option key={st} value={st}>
+                                                    {st}
+                                                </option>
+                                            ))}
                                         </select>
 
                                         <motion.button
@@ -529,7 +559,6 @@ export default function TrainerSessions() {
                     </motion.div>
                 )}
 
-                {/* Create Modal */}
                 <AnimatePresence>
                     {showCreate && (
                         <motion.div
@@ -544,12 +573,25 @@ export default function TrainerSessions() {
                                 onSubmit={onCreate}
                                 className={`w-full max-w-lg rounded-3xl border ${borderCls} ${panelBg} ${shadowCls} p-6 transition-colors duration-200`}
                                 initial={{ y: 20, opacity: 0, scale: 0.98 }}
-                                animate={{ y: 0, opacity: 1, scale: 1, transition: { duration: 0.22 } }}
-                                exit={{ y: 12, opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
+                                animate={{
+                                    y: 0,
+                                    opacity: 1,
+                                    scale: 1,
+                                    transition: { duration: 0.22 },
+                                }}
+                                exit={{
+                                    y: 12,
+                                    opacity: 0,
+                                    scale: 0.98,
+                                    transition: { duration: 0.15 },
+                                }}
                             >
                                 <div className="mb-5 flex items-center justify-between">
                                     <div>
-                                        <h2 className={`text-xl font-bold ${textMain}`}>Create Session</h2>
+                                        <h2 className={`text-xl font-bold ${textMain}`}>
+                                            Create Session
+                                        </h2>
+
                                         <p className={`mt-1 text-sm ${textMuted}`}>
                                             Set up a new training session for your clients.
                                         </p>
@@ -558,7 +600,9 @@ export default function TrainerSessions() {
                                     <button
                                         type="button"
                                         onClick={() => !creating && setShowCreate(false)}
-                                        className={`rounded-xl p-2 transition-colors duration-200 ${darkMode ? "hover:bg-white/10 text-white" : "hover:bg-slate-100 text-slate-700"
+                                        className={`rounded-xl p-2 transition-colors duration-200 ${darkMode
+                                                ? "hover:bg-white/10 text-white"
+                                                : "hover:bg-slate-100 text-slate-700"
                                             }`}
                                     >
                                         <X className="h-5 w-5" />
@@ -582,7 +626,9 @@ export default function TrainerSessions() {
                                         <input
                                             type="date"
                                             value={form.date}
-                                            onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                                            onChange={(e) =>
+                                                setForm((f) => ({ ...f, date: e.target.value }))
+                                            }
                                             className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors duration-200 ${darkMode
                                                     ? "border-white/10 bg-white/[0.05] text-white"
                                                     : "border-slate-300 bg-white text-slate-900"
@@ -596,7 +642,9 @@ export default function TrainerSessions() {
                                         <input
                                             type="time"
                                             value={form.time}
-                                            onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
+                                            onChange={(e) =>
+                                                setForm((f) => ({ ...f, time: e.target.value }))
+                                            }
                                             className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors duration-200 ${darkMode
                                                     ? "border-white/10 bg-white/[0.05] text-white"
                                                     : "border-slate-300 bg-white text-slate-900"
@@ -610,7 +658,9 @@ export default function TrainerSessions() {
                                         <input
                                             type="text"
                                             value={form.type}
-                                            onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                                            onChange={(e) =>
+                                                setForm((f) => ({ ...f, type: e.target.value }))
+                                            }
                                             placeholder="e.g., HIIT / Strength / Yoga"
                                             className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors duration-200 ${darkMode
                                                     ? "border-white/10 bg-white/[0.05] text-white placeholder:text-slate-500"
@@ -628,7 +678,10 @@ export default function TrainerSessions() {
                                             max={10}
                                             value={form.maxClients}
                                             onChange={(e) =>
-                                                setForm((f) => ({ ...f, maxClients: e.target.value }))
+                                                setForm((f) => ({
+                                                    ...f,
+                                                    maxClients: e.target.value,
+                                                }))
                                             }
                                             className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors duration-200 ${darkMode
                                                     ? "border-white/10 bg-white/[0.05] text-white"
@@ -647,7 +700,10 @@ export default function TrainerSessions() {
                                             step="0.01"
                                             value={form.priceDollars}
                                             onChange={(e) =>
-                                                setForm((f) => ({ ...f, priceDollars: e.target.value }))
+                                                setForm((f) => ({
+                                                    ...f,
+                                                    priceDollars: e.target.value,
+                                                }))
                                             }
                                             className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors duration-200 ${darkMode
                                                     ? "border-white/10 bg-white/[0.05] text-white"
@@ -659,7 +715,7 @@ export default function TrainerSessions() {
                                 </div>
 
                                 <p className={`mt-3 text-xs ${subtleText}`}>
-                                    Max allowed: $10.00 (development cap)
+                                    Max allowed: $10.00 development cap
                                 </p>
 
                                 <div className="mt-6 flex items-center justify-end gap-3">

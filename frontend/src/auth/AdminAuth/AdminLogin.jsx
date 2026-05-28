@@ -7,7 +7,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { Typewriter } from "react-simple-typewriter";
 import { FaArrowLeft } from "react-icons/fa";
 import axios from "axios";
-import { useAuth } from "../../context/AuthContext"; // ✅ import AuthContext
+import { useAuth } from "../../context/AuthContext";
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 const AdminLogin = () => {
     const [showPassword, setShowPassword] = useState(false);
@@ -21,14 +23,19 @@ const AdminLogin = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+
         setFormData((prev) => ({ ...prev, [name]: value }));
 
-        if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+        if (errors[name]) {
+            setErrors((prev) => ({ ...prev, [name]: "" }));
+        }
+
         setApiError("");
     };
 
     const validateForm = () => {
         const newErrors = {};
+
         if (!formData.email) {
             newErrors.email = "Email is required";
         } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -42,23 +49,26 @@ const AdminLogin = () => {
         }
 
         setErrors(newErrors);
+
         return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
         if (!validateForm()) return;
 
         setIsSubmitting(true);
         setApiError("");
 
         try {
-            const res = await axios.post("http://localhost:4000/api/admin/login", formData, {
-                headers: { "Content-Type": "application/json" },
+            const res = await axios.post(`${API_BASE}/api/admin/login`, formData, {
+                headers: {
+                    "Content-Type": "application/json",
+                },
                 withCredentials: true,
             });
 
-            // ✅ Always persist admins in localStorage
             login(res.data.token, res.data.admin, "admin", true);
 
             navigate("/adminHome");
@@ -70,14 +80,12 @@ const AdminLogin = () => {
 
     return (
         <div className="min-h-screen flex bg-gradient-to-br from-indigo-50 to-purple-50 p-4">
-            {/* Back Button */}
             <div className="absolute top-6 left-6 z-10">
                 <Link to="/" className="text-gray-600 hover:text-gray-800">
                     <FaArrowLeft className="w-6 h-6" />
                 </Link>
             </div>
 
-            {/* Left Side Illustration */}
             <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12">
                 <motion.img
                     src={img}
@@ -89,7 +97,6 @@ const AdminLogin = () => {
                 />
             </div>
 
-            {/* Right Side Form */}
             <div className="w-full lg:w-1/2 flex items-center justify-center p-6">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -102,6 +109,7 @@ const AdminLogin = () => {
                             <Settings size={22} className="text-indigo-600" />
                             Admin
                         </h2>
+
                         <p className="text-gray-600">
                             <Typewriter
                                 words={["BE BEST FOR YOUR CLIENTS", "BE FIT FOR YOURSELF"]}
@@ -116,13 +124,14 @@ const AdminLogin = () => {
                     </div>
 
                     <form className="space-y-3" onSubmit={handleSubmit}>
-                        {/* Email */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Email
                             </label>
+
                             <div className="relative">
                                 <Mail className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+
                                 <input
                                     type="email"
                                     name="email"
@@ -133,6 +142,7 @@ const AdminLogin = () => {
                                         }`}
                                 />
                             </div>
+
                             {errors.email && (
                                 <p className="mt-2 text-sm text-red-600 flex items-center">
                                     <AlertCircle className="w-4 h-4 mr-1" /> {errors.email}
@@ -140,13 +150,14 @@ const AdminLogin = () => {
                             )}
                         </div>
 
-                        {/* Password */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Password
                             </label>
+
                             <div className="relative">
                                 <Lock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     name="password"
@@ -156,6 +167,7 @@ const AdminLogin = () => {
                                     className={`text-black w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition ${errors.password ? "border-red-500" : "border-gray-300"
                                         }`}
                                 />
+
                                 <button
                                     type="button"
                                     className="absolute right-3 top-3.5"
@@ -168,6 +180,7 @@ const AdminLogin = () => {
                                     )}
                                 </button>
                             </div>
+
                             {errors.password && (
                                 <p className="mt-2 text-sm text-red-600 flex items-center">
                                     <AlertCircle className="w-4 h-4 mr-1" /> {errors.password}
@@ -175,14 +188,12 @@ const AdminLogin = () => {
                             )}
                         </div>
 
-                        {/* API error */}
                         {apiError && (
                             <p className="mt-3 text-sm text-red-600 flex items-center">
                                 <AlertCircle className="w-4 h-4 mr-1" /> {apiError}
                             </p>
                         )}
 
-                        {/* Submit */}
                         <button
                             type="submit"
                             disabled={isSubmitting}

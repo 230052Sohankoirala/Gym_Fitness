@@ -1,4 +1,5 @@
 // src/components/StripePayModal.jsx
+
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -18,16 +19,25 @@ import {
     X,
 } from "lucide-react";
 
+/* ================== ENV SETUP ================== */
+/**
+ * Frontend .env local:
+ * VITE_API_BASE_URL=http://localhost:4000
+ * VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxx
+ *
+ * Frontend .env Render:
+ * VITE_API_BASE_URL=https://your-backend-name.onrender.com
+ * VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxx
+ */
+const API_BASE_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:4000";
+
+const API_BASE = `${API_BASE_URL}/api`;
+
 const PK = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = PK ? loadStripe(PK) : null;
 
-function InnerForm({
-    onPaid,
-    onClose,
-    darkMode,
-    sessionId,
-    token,
-}) {
+function InnerForm({ onPaid, onClose, darkMode, sessionId, token }) {
     const stripe = useStripe();
     const elements = useElements();
 
@@ -38,10 +48,14 @@ function InnerForm({
     const confirmOnBackend = useCallback(
         async (paymentIntentId) => {
             const res = await axios.post(
-                "http://localhost:4000/api/payments/confirm-intent",
+                `${API_BASE}/payments/confirm-intent`,
                 { paymentIntentId },
                 {
-                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                    headers: token
+                        ? {
+                            Authorization: `Bearer ${token}`,
+                        }
+                        : {},
                     withCredentials: true,
                 }
             );
@@ -145,6 +159,7 @@ function InnerForm({
                 </div>
 
                 <button
+                    type="button"
                     onClick={() => {
                         if (!loading) onClose?.();
                     }}
@@ -204,6 +219,7 @@ function InnerForm({
             <div className="px-5 py-4 border-t border-white/10">
                 <div className="flex flex-col sm:flex-row gap-3">
                     <button
+                        type="button"
                         onClick={() => {
                             if (!loading) onClose?.();
                         }}
@@ -217,6 +233,7 @@ function InnerForm({
                     </button>
 
                     <button
+                        type="button"
                         onClick={pay}
                         className="flex-1 px-4 py-3 rounded-xl font-semibold bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-60 transition-colors duration-200 inline-flex items-center justify-center gap-2"
                         disabled={loading || !stripe || !elements}
@@ -253,8 +270,12 @@ export default function StripePayModal({
 
     const api = useMemo(() => {
         return axios.create({
-            baseURL: "http://localhost:4000/api",
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            baseURL: API_BASE,
+            headers: token
+                ? {
+                    Authorization: `Bearer ${token}`,
+                }
+                : {},
             withCredentials: true,
         });
     }, [token]);
@@ -270,7 +291,9 @@ export default function StripePayModal({
 
         (async () => {
             try {
-                const res = await api.post("/payments/create-intent", { sessionId });
+                const res = await api.post("/payments/create-intent", {
+                    sessionId,
+                });
 
                 if (cancelled) return;
 
@@ -338,14 +361,15 @@ export default function StripePayModal({
                                 >
                                     <AlertCircle size={22} />
                                 </div>
+
                                 <div>
                                     <h3 className="text-lg font-semibold">Payment unavailable</h3>
                                     <p
                                         className={`text-sm mt-1 ${darkMode ? "text-gray-300" : "text-gray-600"
                                             }`}
                                     >
-                                        Stripe publishable key is missing. Please check your environment
-                                        setup.
+                                        Stripe publishable key is missing. Please check your
+                                        environment setup.
                                     </p>
                                 </div>
                             </div>
@@ -384,8 +408,11 @@ export default function StripePayModal({
                                 >
                                     <AlertCircle size={22} />
                                 </div>
+
                                 <div>
-                                    <h3 className="text-lg font-semibold">Payment could not load</h3>
+                                    <h3 className="text-lg font-semibold">
+                                        Payment could not load
+                                    </h3>
                                     <p
                                         className={`text-sm mt-1 ${darkMode ? "text-gray-300" : "text-gray-600"
                                             }`}
@@ -397,6 +424,7 @@ export default function StripePayModal({
 
                             <div className="flex gap-3">
                                 <button
+                                    type="button"
                                     onClick={onClose}
                                     className={`flex-1 px-4 py-3 rounded-xl font-semibold transition-colors duration-200 ${darkMode
                                             ? "bg-gray-800 hover:bg-gray-700 text-white"

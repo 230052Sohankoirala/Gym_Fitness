@@ -4,10 +4,13 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { MailCheck, ShieldCheck, BadgeAlert } from "lucide-react";
 
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000/api";
+
 /* ---------- helpers ---------- */
 const getSafeJSON = (raw) => {
   try {
     const parsed = JSON.parse(raw);
+
     return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
     return {};
@@ -15,10 +18,7 @@ const getSafeJSON = (raw) => {
 };
 
 const getSafeUserEmail = () => {
-  const raw =
-    localStorage.getItem("user") ||
-    sessionStorage.getItem("user") ||
-    "";
+  const raw = localStorage.getItem("user") || sessionStorage.getItem("user") || "";
 
   const obj = getSafeJSON(raw);
 
@@ -30,6 +30,7 @@ const usePrefilledEmail = () => {
 
   const queryEmail = useMemo(() => {
     const params = new URLSearchParams(location.search || "");
+
     return (params.get("email") || "").trim();
   }, [location.search]);
 
@@ -92,13 +93,10 @@ const VerifyEmail = () => {
     const emailToVerify = (formData.email || prefilledEmail || "").trim();
 
     try {
-      const { data } = await axios.post(
-        "http://localhost:4000/api/auth/verify-email",
-        {
-          email: emailToVerify,
-          code: formData.code.trim(),
-        }
-      );
+      const { data } = await axios.post(`${API_BASE}/auth/verify-email`, {
+        email: emailToVerify,
+        code: formData.code.trim(),
+      });
 
       if (data?.message) {
         setMessage(data.message);
@@ -107,8 +105,7 @@ const VerifyEmail = () => {
       const verified =
         data?.success === true ||
         data?.verified === true ||
-        (typeof data?.message === "string" &&
-          /success|verified/i.test(data.message));
+        (typeof data?.message === "string" && /success|verified/i.test(data.message));
 
       if (verified) {
         setMessageType("success");
@@ -131,9 +128,7 @@ const VerifyEmail = () => {
         setMessageType("error");
       }
     } catch (error) {
-      setMessage(
-        error?.response?.data?.message || "Verification failed. Try again."
-      );
+      setMessage(error?.response?.data?.message || "Verification failed. Try again.");
       setMessageType("error");
     } finally {
       setLoading(false);
@@ -149,7 +144,6 @@ const VerifyEmail = () => {
         className="w-full max-w-md"
       >
         <div className="bg-white/95 backdrop-blur-md shadow-2xl rounded-3xl overflow-hidden border border-white/60">
-          {/* Top Header */}
           <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 px-8 py-8 text-white text-center">
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
@@ -163,15 +157,12 @@ const VerifyEmail = () => {
             <h2 className="text-3xl font-extrabold tracking-tight">
               Verify Email
             </h2>
-           
           </div>
 
-          {/* Body */}
           <div className="px-8 py-8">
             <div className="mb-6 text-center">
               <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full text-sm font-medium border border-indigo-100">
                 <ShieldCheck className="w-3 h-3" />
-               
               </div>
             </div>
 
@@ -182,13 +173,14 @@ const VerifyEmail = () => {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.25 }}
             >
-              {/* Email */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Email Address
                 </label>
+
                 <div className="relative">
                   <MailCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500 w-5 h-5" />
+
                   <input
                     type="email"
                     name="email"
@@ -197,16 +189,17 @@ const VerifyEmail = () => {
                     className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-gray-200 bg-gray-100 text-gray-700 cursor-not-allowed outline-none shadow-sm"
                   />
                 </div>
+
                 <p className="mt-2 text-xs text-gray-500">
                   This email cannot be edited on this screen.
                 </p>
               </div>
 
-              {/* Code */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Verification Code
                 </label>
+
                 <input
                   type="text"
                   name="code"
@@ -220,7 +213,6 @@ const VerifyEmail = () => {
                 />
               </div>
 
-              {/* Button */}
               <motion.button
                 type="submit"
                 disabled={loading}
@@ -232,31 +224,32 @@ const VerifyEmail = () => {
               </motion.button>
             </motion.form>
 
-            {/* Message */}
             {message && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25 }}
-                className={`mt-5 rounded-2xl px-4 py-3 flex items-start gap-3 border ${messageType === "success"
+                className={`mt-5 rounded-2xl px-4 py-3 flex items-start gap-3 border ${
+                  messageType === "success"
                     ? "bg-green-50 border-green-200 text-green-700"
                     : "bg-red-50 border-red-200 text-red-700"
-                  }`}
+                }`}
               >
                 {messageType === "success" ? (
                   <ShieldCheck className="w-5 h-5 mt-0.5 shrink-0" />
                 ) : (
                   <BadgeAlert className="w-5 h-5 mt-0.5 shrink-0" />
                 )}
+
                 <p className="text-sm font-medium">{message}</p>
               </motion.div>
             )}
 
-            {/* Footer text */}
             <div className="mt-6 text-center">
               <p className="text-xs text-gray-500 leading-relaxed">
                 Please check your inbox and spam folder for the verification code.
               </p>
+
               {displayEmail && (
                 <p className="mt-2 text-sm text-indigo-700 font-semibold break-all">
                   {displayEmail}

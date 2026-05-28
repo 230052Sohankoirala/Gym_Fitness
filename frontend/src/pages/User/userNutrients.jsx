@@ -9,6 +9,7 @@ import { FaArrowLeft } from 'react-icons/fa';
 import axios from 'axios';
 import NutritionCard from '../../components/userComponents/userNutrientsCard';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 // 🔹 Modal for adding new food
 const AddFoodModal = ({ isOpen, onClose, onAdd }) => {
     const { darkMode } = useTheme();
@@ -108,7 +109,7 @@ const UserNutrients = () => {
     useEffect(() => {
         const fetchFoods = async () => {
             try {
-                const { data } = await axios.get("http://localhost:4000/api/nutrition", {
+                const { data } = await axios.get(`${API_BASE}/api/nutrition`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 setFoods(data);
@@ -138,7 +139,8 @@ const UserNutrients = () => {
     // Add food (API call)
     const handleAddFood = async (newFood) => {
         try {
-            const { data } = await axios.post("http://localhost:4000/api/nutrition",
+            const { data } = await axios.post(
+                `${API_BASE}/api/nutrition`,
                 { ...newFood, meal: getMealType(new Date().getHours()) },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -151,7 +153,7 @@ const UserNutrients = () => {
     // Delete food (API call)
     const handleDeleteFood = async (id) => {
         try {
-            await axios.delete(`http://localhost:4000/api/nutrition/${id}`, {
+            await axios.delete(`${API_BASE}/api/nutrition/${id}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setFoods((prev) => prev.filter((f) => f._id !== id));

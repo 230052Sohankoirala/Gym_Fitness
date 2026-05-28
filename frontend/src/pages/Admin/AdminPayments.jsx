@@ -10,18 +10,24 @@ import {
 import axios from "axios";
 import { useTheme } from "../../context/ThemeContext";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
 const AdminPayments = () => {
   const { darkMode } = useTheme?.() ?? { darkMode: false };
 
-  const token = useMemo(() => localStorage.getItem("token"), []);
+  const token = useMemo(() => {
+    return localStorage.getItem("token") || sessionStorage.getItem("token");
+  }, []);
+
   const api = useMemo(() => {
     return axios.create({
-      baseURL: "http://localhost:4000/api",
+      baseURL: `${API_BASE}/api`,
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
   }, [token]);
 
   const [payments, setPayments] = useState([]);
+
   const [stats, setStats] = useState({
     totalRevenue: 0,
     totalAdminShare: 0,
@@ -43,8 +49,11 @@ const AdminPayments = () => {
 
   const formatDate = (dateValue) => {
     if (!dateValue) return "N/A";
+
     const d = new Date(dateValue);
+
     if (Number.isNaN(d.getTime())) return "N/A";
+
     return d.toLocaleDateString();
   };
 
@@ -61,6 +70,7 @@ const AdminPayments = () => {
       });
 
       setPayments(Array.isArray(res?.data?.payments) ? res.data.payments : []);
+
       setStats(
         res?.data?.stats || {
           totalRevenue: 0,
@@ -73,7 +83,11 @@ const AdminPayments = () => {
         }
       );
     } catch (err) {
-      console.error("Failed to fetch admin payments:", err?.response?.data || err?.message);
+      console.error(
+        "Failed to fetch admin payments:",
+        err?.response?.data || err?.message
+      );
+
       setErrorMsg(err?.response?.data?.message || "Failed to fetch payments");
     } finally {
       setLoading(false);
@@ -133,6 +147,7 @@ const AdminPayments = () => {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold">Admin – Payments</h1>
+
             <p className={`mt-1 text-sm ${subText}`}>
               View all payment records, platform share, trainer share, and refunds.
             </p>
@@ -140,10 +155,11 @@ const AdminPayments = () => {
 
           <button
             onClick={fetchPayments}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 ${darkMode
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 ${
+              darkMode
                 ? "bg-white/5 border border-white/10 hover:bg-white/10"
                 : "bg-white border border-gray-300 hover:bg-gray-100"
-              }`}
+            }`}
           >
             <RefreshCcw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
@@ -153,12 +169,14 @@ const AdminPayments = () => {
         {/* Error */}
         {errorMsg && (
           <div
-            className={`mb-6 p-4 rounded-2xl border flex items-start gap-3 ${darkMode
+            className={`mb-6 p-4 rounded-2xl border flex items-start gap-3 ${
+              darkMode
                 ? "bg-red-500/10 border-red-500/20 text-red-300"
                 : "bg-red-50 border-red-200 text-red-700"
-              }`}
+            }`}
           >
             <AlertTriangle className="w-5 h-5 mt-0.5" />
+
             <div className="text-sm font-medium">{errorMsg}</div>
           </div>
         )}
@@ -167,7 +185,10 @@ const AdminPayments = () => {
         <div className={`rounded-2xl p-4 mb-6 ${cardBg}`}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
-              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${subText}`} />
+              <Search
+                className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${subText}`}
+              />
+
               <input
                 type="text"
                 value={search}
@@ -208,14 +229,18 @@ const AdminPayments = () => {
             >
               <div className="flex items-center justify-between">
                 <div className="text-sm opacity-80">{item.label}</div>
+
                 <div
-                  className={`p-2 rounded-xl ${darkMode ? "bg-white/10" : "bg-gray-100"
-                    }`}
+                  className={`p-2 rounded-xl ${
+                    darkMode ? "bg-white/10" : "bg-gray-100"
+                  }`}
                 >
                   {item.icon}
                 </div>
               </div>
+
               <div className="mt-3 text-2xl font-semibold">{item.value}</div>
+
               <div className={`mt-1 text-xs ${subText}`}>{item.sub}</div>
             </div>
           ))}
@@ -226,6 +251,7 @@ const AdminPayments = () => {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold text-lg">Payment Transactions</h3>
+
               <p className={`text-sm mt-1 ${subText}`}>
                 {loading ? "Loading payments..." : `${payments.length} payment(s) found`}
               </p>
@@ -252,31 +278,35 @@ const AdminPayments = () => {
                 {payments.length > 0 ? (
                   payments.map((payment, index) => {
                     const memberName =
-                      payment?.member?.fullname ||   // 🔥 THIS is your actual field
+                      payment?.member?.fullname ||
                       payment?.member?.fullName ||
                       payment?.member?.name ||
                       "Unknown Member";
 
                     const trainerName =
-                      payment?.trainer?.name || "Unknown Trainer";
+                      payment?.trainer?.name ||
+                      payment?.trainer?.fullName ||
+                      payment?.trainer?.fullname ||
+                      "Unknown Trainer";
 
-                    const sessionType =
-                      payment?.session?.type || "N/A";
+                    const sessionType = payment?.session?.type || "N/A";
 
                     return (
                       <tr
                         key={payment._id}
-                        className={`transition-all duration-300 ${index % 2 === 0
+                        className={`transition-all duration-300 ${
+                          index % 2 === 0
                             ? darkMode
                               ? "bg-white/[0.03]"
                               : "bg-white"
                             : darkMode
-                              ? "bg-white/[0.01]"
-                              : "bg-gray-50"
-                          } ${darkMode ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                            ? "bg-white/[0.01]"
+                            : "bg-gray-50"
+                        } ${darkMode ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
                       >
                         <Td>
                           <div className="font-medium">{memberName}</div>
+
                           <div className={`text-xs ${subText}`}>
                             {payment?.member?.email || "No email"}
                           </div>
@@ -284,6 +314,7 @@ const AdminPayments = () => {
 
                         <Td>
                           <div className="font-medium">{trainerName}</div>
+
                           <div className={`text-xs ${subText}`}>
                             {payment?.trainer?.email || "No email"}
                           </div>
@@ -291,6 +322,7 @@ const AdminPayments = () => {
 
                         <Td>
                           <div className="font-medium">{sessionType}</div>
+
                           <div className={`text-xs ${subText}`}>
                             {payment?.session?.status || "N/A"}
                           </div>
@@ -300,9 +332,11 @@ const AdminPayments = () => {
                         <Td>{formatCurrency(payment.adminShare)}</Td>
                         <Td>{formatCurrency(payment.trainerShare)}</Td>
                         <Td>{payment.method || "card"}</Td>
+
                         <Td>
                           <StatusBadge status={payment.status} />
                         </Td>
+
                         <Td>{formatDate(payment.createdAt)}</Td>
                       </tr>
                     );
@@ -332,11 +366,7 @@ const Th = ({ children }) => {
 };
 
 const Td = ({ children }) => {
-  return (
-    <td className="px-4 py-3 whitespace-nowrap align-top">
-      {children}
-    </td>
-  );
+  return <td className="px-4 py-3 whitespace-nowrap align-top">{children}</td>;
 };
 
 const StatusBadge = ({ status }) => {

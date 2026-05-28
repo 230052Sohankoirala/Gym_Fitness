@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
-const API_BASE = "http://localhost:4000/api";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 const WorkoutPlanPage = () => {
     const { darkMode } = useTheme();
@@ -77,7 +77,7 @@ const WorkoutPlanPage = () => {
             setStatusLoading(true);
             setError("");
 
-            const response = await fetch(`${API_BASE}/workout-plans/status`, {
+            const response = await fetch(`${API_BASE}/api/workout-plans/status`, {
                 method: "GET",
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -114,7 +114,7 @@ const WorkoutPlanPage = () => {
             setGenerateLoading(true);
             setError("");
 
-            const response = await fetch(`${API_BASE}/workout-plans/generate`, {
+            const response = await fetch(`${API_BASE}/api/workout-plans/generate`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

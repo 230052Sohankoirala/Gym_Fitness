@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";// eslint-disable-line no-unused-vars
+import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react";
 import img from "../../assets/Images/loginBG.d2986f65998a8b583e78.png";
 import { Link, useNavigate } from "react-router-dom";
@@ -7,6 +7,9 @@ import { Typewriter } from "react-simple-typewriter";
 import { FaArrowLeft } from "react-icons/fa";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
+
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 const TrainerLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -72,16 +75,12 @@ const TrainerLogin = () => {
     setApiError("");
 
     try {
-      const res = await axios.post(
-        "http://localhost:4000/api/trainers/login",
-        formData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
-        }
-      );
+      const res = await axios.post(`${API_BASE}/api/trainers/login`, formData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      });
 
       login(res.data.token, res.data.trainer, "trainer", true);
 
@@ -136,14 +135,12 @@ const TrainerLogin = () => {
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-indigo-50 to-purple-50 p-4">
-      {/* Back Button */}
       <div className="absolute top-6 left-6 z-10">
         <Link to="/" className="text-gray-600 hover:text-gray-800">
           <FaArrowLeft className="w-6 h-6" />
         </Link>
       </div>
 
-      {/* Left Side Image Section */}
       <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12">
         <div className="relative w-full max-w-2xl">
           <motion.img
@@ -189,7 +186,6 @@ const TrainerLogin = () => {
         </div>
       </div>
 
-      {/* Right Side Login Form Section */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6">
         <motion.div
           initial="hidden"
@@ -197,7 +193,6 @@ const TrainerLogin = () => {
           variants={containerVariants}
           className="w-full max-w-md p-8 rounded-3xl shadow-xl bg-white border border-gray-100"
         >
-          {/* Header */}
           <div className="text-center mb-8">
             <motion.div
               variants={itemVariants}
@@ -226,9 +221,7 @@ const TrainerLogin = () => {
             </motion.p>
           </div>
 
-          {/* Form */}
           <form className="space-y-3" onSubmit={handleSubmit}>
-            {/* Email Field */}
             <motion.div variants={itemVariants}>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Email
@@ -245,9 +238,8 @@ const TrainerLogin = () => {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="Enter your email"
-                  className={`text-black w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition ${
-                    errors.email ? "border-red-500" : "border-gray-300"
-                  }`}
+                  className={`text-black w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition ${errors.email ? "border-red-500" : "border-gray-300"
+                    }`}
                 />
               </div>
 
@@ -259,7 +251,6 @@ const TrainerLogin = () => {
               )}
             </motion.div>
 
-            {/* Password Field */}
             <motion.div variants={itemVariants}>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
@@ -276,9 +267,8 @@ const TrainerLogin = () => {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Enter your password"
-                  className={`text-black w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition ${
-                    errors.password ? "border-red-500" : "border-gray-300"
-                  }`}
+                  className={`text-black w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition ${errors.password ? "border-red-500" : "border-gray-300"
+                    }`}
                 />
 
                 <button
@@ -302,7 +292,6 @@ const TrainerLogin = () => {
               )}
             </motion.div>
 
-            {/* API Error */}
             {apiError && (
               <p className="mt-3 text-sm text-red-600 flex items-center">
                 <AlertCircle className="w-4 h-4 mr-1" />
@@ -310,7 +299,6 @@ const TrainerLogin = () => {
               </p>
             )}
 
-            {/* Submit Button */}
             <motion.button
               variants={itemVariants}
               whileHover={{
@@ -321,9 +309,8 @@ const TrainerLogin = () => {
               }}
               type="submit"
               disabled={isSubmitting}
-              className={`w-full py-3.5 mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all ${
-                isSubmitting ? "opacity-75 cursor-not-allowed" : ""
-              }`}
+              className={`w-full py-3.5 mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all ${isSubmitting ? "opacity-75 cursor-not-allowed" : ""
+                }`}
             >
               {isSubmitting ? (
                 <div className="flex items-center justify-center">
@@ -356,7 +343,6 @@ const TrainerLogin = () => {
               )}
             </motion.button>
 
-            {/* Be A Trainer Link */}
             <motion.div variants={itemVariants} className="text-center pt-4">
               <p className="text-sm text-gray-600">Not a trainer yet?</p>
 
@@ -368,7 +354,6 @@ const TrainerLogin = () => {
               </Link>
             </motion.div>
 
-            {/* Optional Member Login Link */}
             <motion.div variants={itemVariants} className="text-center pt-2">
               <p className="text-sm text-gray-500">
                 Are you a member?{" "}

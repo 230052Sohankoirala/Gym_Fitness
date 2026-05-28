@@ -5,6 +5,7 @@ import { motion } from "framer-motion";// eslint-disable-line no-unused-vars
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 const UserGoal = () => {
   const navigate = useNavigate();
   const [selectedGoals, setSelectedGoals] = useState([]);
@@ -33,7 +34,7 @@ const UserGoal = () => {
         localStorage.getItem("token") || sessionStorage.getItem("token");
 
       await axios.put(
-        "http://localhost:4000/api/users/me",
+        `${API_BASE}/api/users/me`,
         { goals: selectedGoals },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -78,11 +79,10 @@ const UserGoal = () => {
                 key={goal.id}
                 whileHover={{ scale: 1.02 }}
                 onClick={() => toggleGoal(goal.id)}
-                className={`text-black p-4 rounded-xl border-2 cursor-pointer flex justify-between items-center ${
-                  selectedGoals.includes(goal.id)
+                className={`text-black p-4 rounded-xl border-2 cursor-pointer flex justify-between items-center ${selectedGoals.includes(goal.id)
                     ? "bg-gradient-to-r from-purple-600 to-blue-600 text-blue-500 border-blue-600"
                     : "bg-gray-50 border-gray-200"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white rounded-lg">{goal.icon}</div>
@@ -101,11 +101,10 @@ const UserGoal = () => {
             whileTap={{ scale: selectedGoals.length > 0 ? 0.98 : 1 }}
             onClick={handleContinue}
             disabled={selectedGoals.length === 0}
-            className={`w-full py-3 rounded-xl font-semibold text-lg ${
-              selectedGoals.length > 0
+            className={`w-full py-3 rounded-xl font-semibold text-lg ${selectedGoals.length > 0
                 ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
-            }`}
+              }`}
           >
             Save & Continue →
           </motion.button>

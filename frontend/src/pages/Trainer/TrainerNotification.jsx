@@ -16,22 +16,33 @@ import {
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
-const BASE_URL = "http://localhost:4000";
-// ✅ change if needed
+const API_ROOT = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const BASE_URL = API_ROOT;
 
 function getToken() {
-    return localStorage.getItem("token");
+    return (
+        localStorage.getItem("trainerToken") ||
+        localStorage.getItem("token") ||
+        sessionStorage.getItem("trainerToken") ||
+        sessionStorage.getItem("token")
+    );
 }
 
 function timeAgo(dateString) {
     if (!dateString) return "";
+
     const diffMs = Date.now() - new Date(dateString).getTime();
     const mins = Math.floor(diffMs / (1000 * 60));
+
     if (mins < 1) return "just now";
     if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`;
+
     const hrs = Math.floor(mins / 60);
+
     if (hrs < 24) return `${hrs} hour${hrs === 1 ? "" : "s"} ago`;
+
     const days = Math.floor(hrs / 24);
+
     return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
@@ -40,13 +51,14 @@ const TrainerNotification = () => {
     const navigate = useNavigate();
 
     const [notifications, setNotifications] = useState([]);
-    const [filter, setFilter] = useState("all"); // all | unread | important
+    const [filter, setFilter] = useState("all");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
     const baseBg = darkMode
         ? "bg-gradient-to-br from-[#0b1020] via-[#111827] to-[#0f172a]"
         : "bg-gradient-to-br from-slate-50 via-indigo-50/40 to-blue-50/60";
+
     const cardBg = darkMode ? "bg-gray-800" : "bg-white";
     const baseText = darkMode ? "text-gray-100" : "text-gray-900";
     const mutedText = darkMode ? "text-gray-400" : "text-gray-600";
@@ -75,6 +87,7 @@ const TrainerNotification = () => {
 
     const fetchNotifications = useCallback(async () => {
         const token = getToken();
+
         if (!token) return navigate("/login");
 
         setLoading(true);
@@ -86,12 +99,13 @@ const TrainerNotification = () => {
             });
 
             const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(data?.message || "Failed to load notifications");
 
-            // backend returns array
+            if (!res.ok) {
+                throw new Error(data?.message || "Failed to load notifications");
+            }
+
             const list = Array.isArray(data) ? data : [];
 
-            // normalize for UI
             const normalised = list.map((n) => {
                 const createdAt = n.createdAt || null;
 
@@ -123,9 +137,12 @@ const TrainerNotification = () => {
 
     const markAsRead = async (id) => {
         const token = getToken();
+
         if (!token) return;
 
-        setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+        setNotifications((prev) =>
+            prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+        );
 
         try {
             await fetch(`${BASE_URL}/api/notifications/${id}/read`, {
@@ -139,6 +156,7 @@ const TrainerNotification = () => {
 
     const markAllAsRead = async () => {
         const token = getToken();
+
         if (!token) return;
 
         setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
@@ -155,9 +173,11 @@ const TrainerNotification = () => {
 
     const deleteNotification = async (id) => {
         const token = getToken();
+
         if (!token) return;
 
         const old = notifications;
+
         setNotifications((prev) => prev.filter((n) => n.id !== id));
 
         try {
@@ -172,9 +192,11 @@ const TrainerNotification = () => {
 
     const clearAll = async () => {
         const token = getToken();
+
         if (!token) return;
 
         const old = notifications;
+
         setNotifications([]);
 
         try {
@@ -187,8 +209,15 @@ const TrainerNotification = () => {
         }
     };
 
-    const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
-    const importantCount = useMemo(() => notifications.filter((n) => n.important).length, [notifications]);
+    const unreadCount = useMemo(
+        () => notifications.filter((n) => !n.read).length,
+        [notifications]
+    );
+
+    const importantCount = useMemo(
+        () => notifications.filter((n) => n.important).length,
+        [notifications]
+    );
 
     const filteredNotifications = useMemo(() => {
         return notifications.filter((n) => {
@@ -201,7 +230,6 @@ const TrainerNotification = () => {
     return (
         <div className={`min-h-screen ${baseBg} ${baseText} transition-colors duration-200`}>
             <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                {/* Header */}
                 <div className="mb-8">
                     <Link
                         to="/trainerHome"
@@ -216,8 +244,10 @@ const TrainerNotification = () => {
                             <div className={`p-2 rounded-lg ${cardBg} border ${borderColor}`}>
                                 <Bell size={24} className="text-indigo-500" />
                             </div>
+
                             <div>
                                 <h1 className="text-2xl font-bold">Notifications</h1>
+
                                 <p className={mutedText}>
                                     {unreadCount} unread {unreadCount === 1 ? "message" : "messages"}
                                 </p>
@@ -227,7 +257,9 @@ const TrainerNotification = () => {
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={fetchNotifications}
-                                className={`px-4 py-2 rounded-lg font-medium transition-colors ${darkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-200 hover:bg-gray-300"
+                                className={`px-4 py-2 rounded-lg font-medium transition-colors ${darkMode
+                                        ? "bg-gray-700 hover:bg-gray-600"
+                                        : "bg-gray-200 hover:bg-gray-300"
                                     }`}
                             >
                                 Refresh
@@ -238,7 +270,10 @@ const TrainerNotification = () => {
                                 disabled={unreadCount === 0}
                                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${unreadCount === 0
                                         ? `${mutedText} cursor-not-allowed opacity-50`
-                                        : `${darkMode ? "bg-green-600 hover:bg-green-700" : "bg-green-500 hover:bg-green-600"} text-white`
+                                        : `${darkMode
+                                            ? "bg-green-600 hover:bg-green-700"
+                                            : "bg-green-500 hover:bg-green-600"
+                                        } text-white`
                                     }`}
                             >
                                 Mark all as read
@@ -249,7 +284,10 @@ const TrainerNotification = () => {
                                 disabled={notifications.length === 0}
                                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${notifications.length === 0
                                         ? `${mutedText} cursor-not-allowed opacity-50`
-                                        : `${darkMode ? "bg-red-600 hover:bg-red-700" : "bg-red-500 hover:bg-red-600"} text-white`
+                                        : `${darkMode
+                                            ? "bg-red-600 hover:bg-red-700"
+                                            : "bg-red-500 hover:bg-red-600"
+                                        } text-white`
                                     }`}
                             >
                                 Clear all
@@ -258,7 +296,6 @@ const TrainerNotification = () => {
                     </div>
                 </div>
 
-                {/* Filter Tabs */}
                 <div className={`mb-6 p-1 rounded-lg ${cardBg} border ${borderColor} inline-flex`}>
                     {[
                         { key: "all", label: "All", count: notifications.length },
@@ -278,7 +315,6 @@ const TrainerNotification = () => {
                     ))}
                 </div>
 
-                {/* Loading / Error */}
                 {loading && (
                     <div className={`${cardBg} border ${borderColor} rounded-xl p-4`}>
                         <p className={mutedText}>Loading notifications...</p>
@@ -288,9 +324,12 @@ const TrainerNotification = () => {
                 {error && !loading && (
                     <div className={`${cardBg} border ${borderColor} rounded-xl p-4`}>
                         <p className="text-red-500 font-medium">Error: {error}</p>
+
                         <button
                             onClick={fetchNotifications}
-                            className={`mt-3 px-4 py-2 rounded-lg font-medium transition-colors ${darkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-200 hover:bg-gray-300"
+                            className={`mt-3 px-4 py-2 rounded-lg font-medium transition-colors ${darkMode
+                                    ? "bg-gray-700 hover:bg-gray-600"
+                                    : "bg-gray-200 hover:bg-gray-300"
                                 }`}
                         >
                             Try again
@@ -298,7 +337,6 @@ const TrainerNotification = () => {
                     </div>
                 )}
 
-                {/* Notifications List */}
                 {!loading && !error && (
                     <div className="space-y-4">
                         {filteredNotifications.length === 0 ? (
@@ -308,12 +346,15 @@ const TrainerNotification = () => {
                                 className={`text-center py-12 ${cardBg} rounded-xl border ${borderColor}`}
                             >
                                 <Bell size={48} className={`mx-auto mb-4 ${mutedText}`} />
+
                                 <h3 className="text-lg font-semibold mb-2">No notifications</h3>
+
                                 <p className={mutedText}>You're all caught up!</p>
                             </motion.div>
                         ) : (
                             filteredNotifications.map((n, index) => {
-                                const actorName = n.data?.memberId?.fullName || n.actor?.name || "A user";
+                                const actorName =
+                                    n.data?.memberId?.fullName || n.actor?.name || "A user";
 
                                 return (
                                     <motion.div
@@ -321,7 +362,9 @@ const TrainerNotification = () => {
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.05 }}
-                                        className={`${cardBg} rounded-xl border ${borderColor} p-4 transition-all duration-200 ${!n.read ? `${darkMode ? "bg-blue-900/20" : "bg-blue-50"} border-blue-200` : ""
+                                        className={`${cardBg} rounded-xl border ${borderColor} p-4 transition-all duration-200 ${!n.read
+                                                ? `${darkMode ? "bg-blue-900/20" : "bg-blue-50"} border-blue-200`
+                                                : ""
                                             }`}
                                     >
                                         <div className="flex items-start gap-4">
@@ -332,13 +375,12 @@ const TrainerNotification = () => {
                                                     <h3 className={`font-semibold ${!n.read ? "text-blue-500" : baseText}`}>
                                                         {n.title}
                                                     </h3>
+
                                                     <span className={`text-xs ${mutedText}`}>{n.time}</span>
                                                 </div>
 
-                                                {/* Default message */}
                                                 <p className={`text-sm ${mutedText} mb-3`}>{n.message}</p>
 
-                                                {/* ✅ Payment detail */}
                                                 {n.type === "payment" && (
                                                     <div className={`text-xs ${mutedText} mb-3`}>
                                                         <span className="mr-3">
@@ -356,7 +398,10 @@ const TrainerNotification = () => {
 
                                                         {n.data?.className && (
                                                             <span className="mr-3">
-                                                                Class: <span className="font-medium">{n.data.className}</span>
+                                                                Class:{" "}
+                                                                <span className="font-medium">
+                                                                    {n.data.className}
+                                                                </span>
                                                             </span>
                                                         )}
                                                     </div>
@@ -366,7 +411,9 @@ const TrainerNotification = () => {
                                                     {!n.read && (
                                                         <button
                                                             onClick={() => markAsRead(n.id)}
-                                                            className={`text-xs px-2 py-1 rounded transition-colors ${darkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-200 hover:bg-gray-300"
+                                                            className={`text-xs px-2 py-1 rounded transition-colors ${darkMode
+                                                                    ? "bg-gray-700 hover:bg-gray-600"
+                                                                    : "bg-gray-200 hover:bg-gray-300"
                                                                 }`}
                                                         >
                                                             <Check size={12} className="inline mr-1" />
@@ -403,7 +450,6 @@ const TrainerNotification = () => {
                     </div>
                 )}
 
-                {/* Empty state when none at all */}
                 {!loading && !error && notifications.length === 0 && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
@@ -413,11 +459,14 @@ const TrainerNotification = () => {
                         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                             <Bell size={24} className={mutedText} />
                         </div>
+
                         <h3 className="text-xl font-semibold mb-2">No notifications yet</h3>
+
                         <p className={`max-w-md mx-auto ${mutedText} mb-6`}>
-                            When you get notifications, they'll appear here. You'll see updates about messages, sessions,
-                            and payments for your classes.
+                            When you get notifications, they'll appear here. You'll see updates
+                            about messages, sessions, and payments for your classes.
                         </p>
+
                         <Link
                             to="/trainerHome"
                             className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${darkMode

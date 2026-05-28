@@ -7,8 +7,12 @@ import { FaArrowLeft } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
+const API_ROOT = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = `${API_ROOT}/api`;
+
 const RecentActivity = () => {
   const { darkMode } = useTheme();
+
   const [activeTab, setActiveTab] = useState("today");
   const [activities, setActivities] = useState([]);
 
@@ -17,27 +21,36 @@ const RecentActivity = () => {
       try {
         const token =
           localStorage.getItem("token") || sessionStorage.getItem("token");
+
         const { data } = await axios.get(
-          `http://localhost:4000/api/workouts/logs?period=${activeTab}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          `${API_BASE}/workouts/logs?period=${activeTab}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
         );
-        setActivities(data);
+
+        setActivities(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("❌ Failed to fetch activities", err);
       }
     };
+
     fetchActivities();
   }, [activeTab]);
 
   return (
     <div className="flex justify-center p-6">
       <div
-        className={`w-full max-w-4xl rounded-2xl shadow-xl p-8 transition-colors duration-200 mt-8 ${
-          darkMode ? "bg-gray-800 text-gray-200" : "bg-white text-gray-800"
-        }`}
+        className={`w-full max-w-4xl rounded-2xl shadow-xl p-8 transition-colors duration-200 mt-8 ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white text-gray-800"
+          }`}
       >
         {/* Back button */}
-        <motion.button whileHover={{ scale: 1.1 }} className="absolute top-4 left-4">
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          className="absolute top-4 left-4"
+        >
           <Link to="/home">
             <FaArrowLeft size={26} className="text-blue-500" />
           </Link>
@@ -55,20 +68,18 @@ const RecentActivity = () => {
 
         {/* Tabs */}
         <div
-          className={`flex justify-center space-x-6 mb-6 border-b ${
-            darkMode ? "border-gray-700" : "border-gray-200"
-          }`}
+          className={`flex justify-center space-x-6 mb-6 border-b ${darkMode ? "border-gray-700" : "border-gray-200"
+            }`}
         >
           {["today", "week"].map((tab) => (
             <button
               key={tab}
-              className={`pb-2 px-3 font-medium text-sm capitalize ${
-                activeTab === tab
+              className={`pb-2 px-3 font-medium text-sm capitalize ${activeTab === tab
                   ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
                   : darkMode
-                  ? "text-gray-400 hover:text-gray-200"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
+                    ? "text-gray-400 hover:text-gray-200"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
               onClick={() => setActiveTab(tab)}
             >
               {tab === "today" ? "Today" : "This Week"}
@@ -83,33 +94,36 @@ const RecentActivity = () => {
           ) : (
             activities.map((activity, i) => (
               <motion.div
-                key={i}
+                key={activity?._id || i}
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: i * 0.1 }}
-                className={`flex items-center justify-between p-5 rounded-xl shadow-md transition-all cursor-pointer hover:scale-[1.01] ${
-                  darkMode
+                className={`flex items-center justify-between p-5 rounded-xl shadow-md transition-all cursor-pointer hover:scale-[1.01] ${darkMode
                     ? "bg-gray-700 hover:bg-gray-600"
                     : "bg-gray-50 hover:bg-gray-100"
-                }`}
+                  }`}
               >
                 {/* Left */}
                 <div className="flex items-center gap-4">
                   <div
-                    className={`p-3 rounded-lg ${
-                      darkMode ? "bg-gray-600" : "bg-gray-200"
-                    }`}
+                    className={`p-3 rounded-lg ${darkMode ? "bg-gray-600" : "bg-gray-200"
+                      }`}
                   >
                     <Dumbbell size={20} className="text-blue-500" />
                   </div>
+
                   <div>
-                    <h2 className="text-md font-semibold">{activity.workoutName}</h2>
+                    <h2 className="text-md font-semibold">
+                      {activity.workoutName || "Workout"}
+                    </h2>
+
                     <p
-                      className={`text-sm ${
-                        darkMode ? "text-gray-400" : "text-gray-500"
-                      }`}
+                      className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"
+                        }`}
                     >
-                      {new Date(activity.completedAt).toLocaleString()}
+                      {activity.completedAt
+                        ? new Date(activity.completedAt).toLocaleString()
+                        : "No date"}
                     </p>
                   </div>
                 </div>
@@ -117,12 +131,12 @@ const RecentActivity = () => {
                 {/* Right */}
                 <div className="text-right">
                   <p className="text-md font-bold text-pink-400">
-                    {activity.duration}
+                    {activity.duration || 0}
                   </p>
+
                   <p
-                    className={`text-sm ${
-                      darkMode ? "text-gray-400" : "text-gray-500"
-                    }`}
+                    className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"
+                      }`}
                   >
                     mins
                   </p>

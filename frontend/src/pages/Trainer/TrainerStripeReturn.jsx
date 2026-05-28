@@ -4,14 +4,25 @@ import { CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext";
 
+const API_ROOT = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = `${API_ROOT}/api`;
+
 const TrainerStripeReturn = () => {
     const { darkMode } = useTheme();
     const navigate = useNavigate();
-    const token = useMemo(() => localStorage.getItem("token"), []);
+
+    const token = useMemo(() => {
+        return (
+            localStorage.getItem("trainerToken") ||
+            sessionStorage.getItem("trainerToken") ||
+            localStorage.getItem("token") ||
+            sessionStorage.getItem("token")
+        );
+    }, []);
 
     const api = useMemo(() => {
         return axios.create({
-            baseURL: "http://localhost:4000/api",
+            baseURL: API_BASE,
             headers: token ? { Authorization: `Bearer ${token}` } : {},
             withCredentials: true,
         });
@@ -25,12 +36,18 @@ const TrainerStripeReturn = () => {
         const verify = async () => {
             try {
                 setLoading(true);
+
                 const { data } = await api.get("/trainers/stripe/return");
+
                 setResult(data);
                 setMessage(data?.message || "");
             } catch (err) {
                 console.error("Stripe return verification failed:", err);
-                setMessage(err?.response?.data?.message || "Failed to verify Stripe onboarding.");
+
+                setMessage(
+                    err?.response?.data?.message ||
+                    "Failed to verify Stripe onboarding."
+                );
             } finally {
                 setLoading(false);
             }
@@ -53,7 +70,11 @@ const TrainerStripeReturn = () => {
                 {loading ? (
                     <div className="text-center">
                         <RefreshCw size={28} className="mx-auto mb-4 animate-spin" />
-                        <h1 className="text-2xl font-semibold mb-2">Checking Stripe status...</h1>
+
+                        <h1 className="text-2xl font-semibold mb-2">
+                            Checking Stripe status...
+                        </h1>
+
                         <p className={darkMode ? "text-gray-300" : "text-gray-600"}>
                             Please wait while we verify your account setup.
                         </p>
@@ -61,7 +82,9 @@ const TrainerStripeReturn = () => {
                 ) : result?.onboarded ? (
                     <div className="text-center">
                         <CheckCircle2 size={36} className="mx-auto mb-4 text-green-500" />
+
                         <h1 className="text-2xl font-semibold mb-2">Stripe connected</h1>
+
                         <p className={darkMode ? "text-gray-300" : "text-gray-600"}>
                             {message || "Your Stripe onboarding is complete."}
                         </p>
@@ -76,7 +99,9 @@ const TrainerStripeReturn = () => {
                 ) : (
                     <div className="text-center">
                         <AlertCircle size={36} className="mx-auto mb-4 text-red-500" />
+
                         <h1 className="text-2xl font-semibold mb-2">Setup incomplete</h1>
+
                         <p className={darkMode ? "text-gray-300" : "text-gray-600"}>
                             {message || "Stripe onboarding is not complete yet."}
                         </p>

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";// eslint-disable-line no-unused-vars
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 const UserInfo = () => {
   const [weight, setWeight] = useState(60);
   const [age, setAge] = useState(20);
@@ -20,7 +21,7 @@ const UserInfo = () => {
         localStorage.getItem("token") || sessionStorage.getItem("token");
 
       await axios.put(
-        "http://localhost:4000/api/users/me",
+        `${API_BASE}/api/users/me`,
         { weight, age, height, gender },
         { headers: { Authorization: `Bearer ${token}` } }
       );

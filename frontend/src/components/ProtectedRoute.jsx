@@ -1,7 +1,19 @@
 // src/components/ProtectedRoute.jsx
+
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import axios from "axios";
+
+/* ================== API Base URL ================== */
+/**
+ * Local:
+ * VITE_API_BASE_URL=http://localhost:4000
+ *
+ * Render:
+ * VITE_API_BASE_URL=https://your-backend-name.onrender.com
+ */
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 const ProtectedRoute = ({ children, role }) => {
   const [authorized, setAuthorized] = useState(false);
@@ -10,22 +22,28 @@ const ProtectedRoute = ({ children, role }) => {
   useEffect(() => {
     const verifyUser = async () => {
       try {
-        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-        if (!token) return setAuthorized(false);
+        const token =
+          localStorage.getItem("token") || sessionStorage.getItem("token");
 
-        // 💡 Pick endpoint dynamically
+        if (!token) {
+          setAuthorized(false);
+          setLoading(false);
+          return;
+        }
+
         const endpoint =
           role === "admin"
-            ? "http://localhost:4000/api/admin/me"
+            ? `${API_BASE_URL}/api/admin/me`
             : role === "trainer"
-            ? "http://localhost:4000/api/trainers/me"
-            : "http://localhost:4000/api/users/me";
+            ? `${API_BASE_URL}/api/trainers/me`
+            : `${API_BASE_URL}/api/users/me`;
 
         const { data } = await axios.get(endpoint, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
-        // ✅ Role check
         if (role && data.role !== role) {
           console.warn(`Role mismatch: expected ${role}, got ${data.role}`);
           setAuthorized(false);
@@ -51,7 +69,11 @@ const ProtectedRoute = ({ children, role }) => {
     );
   }
 
-  return authorized ? children : <Navigate to={`/${role || "member"}Login`} replace />;
+  return authorized ? (
+    children
+  ) : (
+    <Navigate to={`/${role || "member"}Login`} replace />
+  );
 };
 
 export default ProtectedRoute;

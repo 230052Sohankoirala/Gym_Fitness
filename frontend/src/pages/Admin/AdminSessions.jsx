@@ -1,4 +1,3 @@
-// src/pages/admin/AdminSessions.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useTheme } from "../../context/ThemeContext";
@@ -18,6 +17,8 @@ import {
     Activity,
     ChevronRight,
 } from "lucide-react";
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 const AdminSessions = () => {
     const { darkMode } = useTheme();
@@ -42,7 +43,6 @@ const AdminSessions = () => {
         ? "bg-slate-900/70 border border-white/10"
         : "bg-white/70 border border-slate-200";
 
- 
     const mutedText = darkMode ? "text-slate-300" : "text-slate-600";
     const mutedTextSoft = darkMode ? "text-slate-400" : "text-slate-500";
 
@@ -62,7 +62,7 @@ const AdminSessions = () => {
                 setLoading(true);
                 setError("");
 
-                const { data } = await axios.get("http://localhost:4000/api/sessions", {
+                const { data } = await axios.get(`${API_BASE}/api/sessions`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
@@ -105,21 +105,25 @@ const AdminSessions = () => {
     }, [sessions]);
 
     const deleteSession = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this session? This action cannot be undone.")) {
+        if (
+            !window.confirm(
+                "Are you sure you want to delete this session? This action cannot be undone."
+            )
+        ) {
             return;
         }
 
         try {
             setDeleteLoading(id);
 
-            await axios.delete(`http://localhost:4000/api/sessions/${id}`, {
+            await axios.delete(`${API_BASE}/api/sessions/${id}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
             setSessions((prev) => prev.filter((s) => s._id !== id));
         } catch (err) {
             console.error("Error deleting session:", err);
-            alert("Failed to delete session");
+            alert(err.response?.data?.message || "Failed to delete session");
         } finally {
             setDeleteLoading(null);
         }
@@ -127,6 +131,7 @@ const AdminSessions = () => {
 
     const formatDate = (dateString) => {
         if (!dateString) return "No date";
+
         return new Date(dateString).toLocaleDateString("en-US", {
             weekday: "short",
             year: "numeric",
@@ -137,23 +142,30 @@ const AdminSessions = () => {
 
     const getCapacityColor = (enrolled, max) => {
         const percentage = max > 0 ? (enrolled / max) * 100 : 0;
+
         if (percentage >= 90) return "text-red-400";
         if (percentage >= 70) return "text-orange-400";
+
         return "text-emerald-400";
     };
 
     const getCapacityBarColor = (enrolled, max) => {
         const percentage = max > 0 ? enrolled / max : 0;
+
         if (percentage >= 0.9) return "bg-red-500";
         if (percentage >= 0.7) return "bg-orange-500";
+
         return "bg-emerald-500";
     };
 
     if (loading) {
         return (
-            <div className={`min-h-screen flex items-center justify-center transition-all duration-200 ${pageBg}`}>
+            <div
+                className={`min-h-screen flex items-center justify-center transition-all duration-200 ${pageBg}`}
+            >
                 <div className={`rounded-[2rem] border px-8 py-7 text-center ${glassCard}`}>
                     <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-indigo-500" />
+
                     <p className={mutedText}>Loading sessions...</p>
                 </div>
             </div>
@@ -164,7 +176,9 @@ const AdminSessions = () => {
         <div className={`min-h-screen transition-all duration-200 ${pageBg}`}>
             <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
                 {/* Header */}
-                <div className={`relative overflow-hidden rounded-[2rem] border p-6 sm:p-7 mb-6 ${glassCard}`}>
+                <div
+                    className={`relative overflow-hidden rounded-[2rem] border p-6 sm:p-7 mb-6 ${glassCard}`}
+                >
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-violet-500/10 to-blue-500/10 pointer-events-none" />
                     <div className="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-indigo-500/10 blur-3xl" />
                     <div className="absolute -bottom-10 -left-10 h-36 w-36 rounded-full bg-blue-500/10 blur-3xl" />
@@ -186,7 +200,8 @@ const AdminSessions = () => {
                             </h1>
 
                             <p className={`mt-2 text-sm sm:text-base max-w-2xl ${mutedText}`}>
-                                Manage all training sessions, monitor enrollment, and keep trainer schedules organized in one place.
+                                Manage all training sessions, monitor enrollment, and keep trainer
+                                schedules organized in one place.
                             </p>
                         </div>
 
@@ -210,8 +225,11 @@ const AdminSessions = () => {
                                 <p className={`text-sm ${mutedText}`}>All Sessions</p>
                                 <p className="text-3xl font-bold tracking-tight mt-2">{sessions.length}</p>
                             </div>
+
                             <div
-                                className={`p-2.5 rounded-2xl ${darkMode ? "bg-indigo-500/10 text-indigo-300" : "bg-indigo-50 text-indigo-700"
+                                className={`p-2.5 rounded-2xl ${darkMode
+                                        ? "bg-indigo-500/10 text-indigo-300"
+                                        : "bg-indigo-50 text-indigo-700"
                                     }`}
                             >
                                 <Calendar className="w-5 h-5" />
@@ -223,10 +241,15 @@ const AdminSessions = () => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className={`text-sm ${mutedText}`}>Filtered Results</p>
-                                <p className="text-3xl font-bold tracking-tight mt-2">{filteredSessions.length}</p>
+                                <p className="text-3xl font-bold tracking-tight mt-2">
+                                    {filteredSessions.length}
+                                </p>
                             </div>
+
                             <div
-                                className={`p-2.5 rounded-2xl ${darkMode ? "bg-violet-500/10 text-violet-300" : "bg-violet-50 text-violet-700"
+                                className={`p-2.5 rounded-2xl ${darkMode
+                                        ? "bg-violet-500/10 text-violet-300"
+                                        : "bg-violet-50 text-violet-700"
                                     }`}
                             >
                                 <Filter className="w-5 h-5" />
@@ -240,8 +263,11 @@ const AdminSessions = () => {
                                 <p className={`text-sm ${mutedText}`}>Total Enrolled</p>
                                 <p className="text-3xl font-bold tracking-tight mt-2">{totalEnrolled}</p>
                             </div>
+
                             <div
-                                className={`p-2.5 rounded-2xl ${darkMode ? "bg-emerald-500/10 text-emerald-300" : "bg-emerald-50 text-emerald-700"
+                                className={`p-2.5 rounded-2xl ${darkMode
+                                        ? "bg-emerald-500/10 text-emerald-300"
+                                        : "bg-emerald-50 text-emerald-700"
                                     }`}
                             >
                                 <Activity className="w-5 h-5" />
@@ -254,7 +280,10 @@ const AdminSessions = () => {
                 <div className={`rounded-[2rem] border p-5 mb-6 ${glassCard}`}>
                     <div className="flex flex-col sm:flex-row gap-4">
                         <div className="flex-1 relative">
-                            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${mutedTextSoft}`} />
+                            <Search
+                                className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${mutedTextSoft}`}
+                            />
+
                             <input
                                 type="text"
                                 placeholder="Search by trainer, email, or session type..."
@@ -285,6 +314,7 @@ const AdminSessions = () => {
                             }`}
                     >
                         <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+
                         <div>
                             <p className="font-medium">Unable to load sessions</p>
                             <p className="text-sm opacity-90">{error}</p>
@@ -298,17 +328,24 @@ const AdminSessions = () => {
                         {filteredSessions.length === 0 ? (
                             <div className={`text-center py-14 rounded-[2rem] border ${glassCard}`}>
                                 <Users className={`w-12 h-12 mx-auto mb-4 ${mutedTextSoft}`} />
+
                                 <h3 className="text-lg font-semibold mb-2">No sessions found</h3>
+
                                 <p className={mutedText}>
-                                    {searchTerm ? "Try adjusting your search terms" : "No sessions have been created yet"}
+                                    {searchTerm
+                                        ? "Try adjusting your search terms"
+                                        : "No sessions have been created yet"}
                                 </p>
                             </div>
                         ) : (
                             filteredSessions.map((session) => {
                                 const enrolled = session.clientsEnrolled?.length || 0;
                                 const maxClients = session.maxClients || 0;
+
                                 const fillWidth =
-                                    maxClients > 0 ? Math.min(100, (enrolled / maxClients) * 100) : 0;
+                                    maxClients > 0
+                                        ? Math.min(100, (enrolled / maxClients) * 100)
+                                        : 0;
 
                                 return (
                                     <div
@@ -320,7 +357,9 @@ const AdminSessions = () => {
                                             <div className="flex-1 space-y-5">
                                                 <div className="flex items-start justify-between gap-4 flex-wrap">
                                                     <div>
-                                                        <h3 className="text-xl font-semibold">{session.type || "Session"}</h3>
+                                                        <h3 className="text-xl font-semibold">
+                                                            {session.type || "Session"}
+                                                        </h3>
 
                                                         <div className="flex flex-wrap items-center gap-3 mt-3 text-sm">
                                                             <span
@@ -357,7 +396,9 @@ const AdminSessions = () => {
                                                 </div>
 
                                                 {/* Trainer */}
-                                                <div className={`rounded-[1.5rem] p-4 transition-all duration-200 ${softCard}`}>
+                                                <div
+                                                    className={`rounded-[1.5rem] p-4 transition-all duration-200 ${softCard}`}
+                                                >
                                                     <div className="flex items-center gap-3">
                                                         <div
                                                             className={`p-2.5 rounded-2xl ${darkMode ? "bg-white/[0.05]" : "bg-slate-100"
@@ -367,7 +408,10 @@ const AdminSessions = () => {
                                                         </div>
 
                                                         <div>
-                                                            <p className="font-semibold">{session.trainer?.name || "N/A"}</p>
+                                                            <p className="font-semibold">
+                                                                {session.trainer?.name || "N/A"}
+                                                            </p>
+
                                                             <p className={`text-sm flex items-center gap-1.5 mt-1 ${mutedText}`}>
                                                                 <Mail className="w-3.5 h-3.5" />
                                                                 {session.trainer?.email || "No email"}
@@ -377,7 +421,9 @@ const AdminSessions = () => {
                                                 </div>
 
                                                 {/* Capacity */}
-                                                <div className={`rounded-[1.5rem] p-4 transition-all duration-200 ${softCard}`}>
+                                                <div
+                                                    className={`rounded-[1.5rem] p-4 transition-all duration-200 ${softCard}`}
+                                                >
                                                     <div className="flex items-center gap-3">
                                                         <div
                                                             className={`p-2.5 rounded-2xl ${darkMode ? "bg-white/[0.05]" : "bg-slate-100"
@@ -424,6 +470,7 @@ const AdminSessions = () => {
                                                     ) : (
                                                         <Trash2 className="w-4 h-4" />
                                                     )}
+
                                                     {deleteLoading === session._id ? "Deleting..." : "Delete"}
                                                 </button>
                                             </div>

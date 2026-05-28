@@ -16,7 +16,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-const BASE_URL = "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 const AdminUserList = () => {
   const { darkMode } = useTheme?.() ?? { darkMode: false };
@@ -65,7 +65,7 @@ const AdminUserList = () => {
         return;
       }
 
-      const res = await axios.get(`${BASE_URL}/api/admin/users`, {
+      const res = await axios.get(`${API_BASE}/api/admin/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -110,7 +110,7 @@ const AdminUserList = () => {
     try {
       setBusyId(userId);
 
-      await axios.delete(`${BASE_URL}/api/admin/users/${userId}`, {
+      await axios.delete(`${API_BASE}/api/admin/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

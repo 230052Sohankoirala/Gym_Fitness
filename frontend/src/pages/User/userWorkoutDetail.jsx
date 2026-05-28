@@ -18,6 +18,7 @@ import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { useTheme } from "../../context/ThemeContext";
 import axios from "axios";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const UserWorkoutDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -146,7 +147,7 @@ const UserWorkoutDetail = () => {
                 localStorage.getItem("token") || sessionStorage.getItem("token");
 
             await axios.post(
-                "http://localhost:4000/api/workouts/complete",
+                `${API_BASE}/api/workouts/complete`,
                 {
                     workoutId: selectedWorkout.id,
                     workoutName: selectedWorkout.name,

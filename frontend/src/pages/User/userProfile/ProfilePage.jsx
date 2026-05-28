@@ -24,6 +24,8 @@ import LegsWorkout from "../../../video/LegWorkout.mp4";
 import BackWorkout from "../../../video/BackWorkout.mp4";
 import axios from "axios";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
 const ProfilePage = () => {
   const [logoutModal, setLogoutModal] = useState(false);
   const [activeSections, setActiveSections] = useState({});
@@ -45,7 +47,7 @@ const ProfilePage = () => {
           return;
         }
 
-        const { data } = await axios.get("http://localhost:4000/api/users/me", {
+        const { data } = await axios.get(`${API_BASE}/api/users/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -113,7 +115,7 @@ const ProfilePage = () => {
 
   const handleLogout = async () => {
     try {
-      await axios.post("http://localhost:4000/api/auth/logout");
+      await axios.post(`${API_BASE}/api/auth/logout`);
     } catch (err) {
       console.error("Logout request failed", err);
     } finally {

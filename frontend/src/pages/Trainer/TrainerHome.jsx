@@ -20,6 +20,8 @@ import { useTheme } from "../../context/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import TrainerTaskBoard from "../../components/trainerComponents/TrainerTaskboard";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
 /* -------------------------------------------------------------------------- */
 /* Animations                                                                 */
 /* -------------------------------------------------------------------------- */
@@ -49,29 +51,38 @@ const startOfWeek = (d = new Date()) => {
   const date = new Date(d);
   const day = date.getDay();
   const diff = WEEK_STARTS_ON_MONDAY ? (day === 0 ? -6 : 1 - day) : -day;
+
   date.setDate(date.getDate() + diff);
   date.setHours(0, 0, 0, 0);
+
   return date;
 };
 
 const endOfWeek = (d = new Date()) => {
   const s = startOfWeek(d);
   const e = new Date(s);
+
   e.setDate(s.getDate() + 7);
   e.setHours(0, 0, 0, 0);
+
   return e;
 };
 
 const parseYmd = (s) => {
   if (!s || typeof s !== "string") return null;
+
   const [y, m, d] = s.split("-").map(Number);
+
   if (!y || !m || !d) return null;
+
   const dt = new Date(y, m - 1, d, 0, 0, 0, 0);
+
   return isNaN(dt.getTime()) ? null : dt;
 };
 
 const sameLocalDate = (a, b = new Date()) => {
   const A = a instanceof Date ? a : parseYmd(a);
+
   const B =
     b instanceof Date
       ? b
@@ -93,7 +104,9 @@ const sameLocalDate = (a, b = new Date()) => {
 
 const inThisWeek = (v) => {
   const dt = v instanceof Date ? v : parseYmd(v);
+
   if (!dt) return false;
+
   return dt >= startOfWeek() && dt < endOfWeek();
 };
 
@@ -115,6 +128,7 @@ const deriveKpi = (sessions = [], messages = []) => {
   );
 
   const weeklyClientIds = new Set();
+
   weeklySessions.forEach((s) =>
     (s?.clientsEnrolled || []).forEach((u) =>
       weeklyClientIds.add((u?._id || u?.id || u)?.toString?.())
@@ -124,9 +138,9 @@ const deriveKpi = (sessions = [], messages = []) => {
   const now = new Date();
   const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-  const newMessages = messages.filter(
-    (m) => new Date(m?.createdAt || 0) >= dayAgo
-  ).length;
+  const newMessages = messages.filter((m) => {
+    return new Date(m?.createdAt || 0) >= dayAgo;
+  }).length;
 
   const sow = startOfWeek();
   const eow = endOfWeek();
@@ -134,9 +148,11 @@ const deriveKpi = (sessions = [], messages = []) => {
   const checkinsThisWeek = messages.filter((m) => {
     const ts = new Date(m?.createdAt || 0);
     const inWeek = ts >= sow && ts < eow;
+
     const looksLikeCheckin = /check[- ]?in|update|progress|how.*going|status/i.test(
       m?.text || m?.message || ""
     );
+
     return inWeek && looksLikeCheckin;
   }).length;
 
@@ -171,28 +187,32 @@ export default function TrainerHome() {
 
   const [loading, setLoading] = useState(!dashboard);
 
-  const token = useMemo(
-    () =>
+  const token = useMemo(() => {
+    return (
       localStorage.getItem("trainerToken") ||
+      sessionStorage.getItem("trainerToken") ||
       localStorage.getItem("token") ||
-      "",
-    []
-  );
+      sessionStorage.getItem("token") ||
+      ""
+    );
+  }, []);
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        if (!token) return;
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
         setLoading(true);
 
-        const res = await axios.get(
-          "http://localhost:4000/api/trainers/dashboard",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const res = await axios.get(`${API_BASE}/api/trainers/dashboard`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         const data = res.data || {};
+
         setDashboard(data);
         localStorage.setItem("trainer_dashboard_cache", JSON.stringify(data));
       } catch (err) {
@@ -208,12 +228,10 @@ export default function TrainerHome() {
     fetchDashboard();
   }, [token]);
 
-  /* ------------------------------------------------------------------------ */
-  /* Theme classes                                                            */
-  /* ------------------------------------------------------------------------ */
   const baseBg = darkMode
-        ? "bg-gradient-to-br from-[#0b1020] via-[#111827] to-[#0f172a]"
-        : "bg-gradient-to-br from-slate-50 via-indigo-50/40 to-blue-50/60";
+    ? "bg-gradient-to-br from-[#0b1020] via-[#111827] to-[#0f172a]"
+    : "bg-gradient-to-br from-slate-50 via-indigo-50/40 to-blue-50/60";
+
   const baseText = darkMode ? "text-white" : "text-slate-900";
   const mutedText = darkMode ? "text-slate-300" : "text-slate-600";
 
@@ -221,9 +239,7 @@ export default function TrainerHome() {
     ? "bg-white/[0.04] backdrop-blur-xl"
     : "bg-white/90 backdrop-blur-xl";
 
-  const cardBorder = darkMode
-    ? "border-white/10"
-    : "border-slate-200/80";
+  const cardBorder = darkMode ? "border-white/10" : "border-slate-200/80";
 
   const softShadow = darkMode
     ? "shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
@@ -233,9 +249,7 @@ export default function TrainerHome() {
     ? "hover:bg-white/[0.06] hover:border-indigo-400/30"
     : "hover:bg-white hover:border-indigo-200";
 
-  const rowHover = darkMode
-    ? "hover:bg-white/[0.05]"
-    : "hover:bg-slate-50";
+  const rowHover = darkMode ? "hover:bg-white/[0.05]" : "hover:bg-slate-50";
 
   const Button = ({
     children,
@@ -245,6 +259,7 @@ export default function TrainerHome() {
   }) => {
     const base =
       "inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors duration-200";
+
     const styles =
       variant === "outline"
         ? darkMode
@@ -270,7 +285,9 @@ export default function TrainerHome() {
           : "bg-slate-100 text-slate-700 border border-slate-200";
 
     return (
-      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${cls}`}>
+      <span
+        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${cls}`}
+      >
         {children}
       </span>
     );
@@ -295,27 +312,30 @@ export default function TrainerHome() {
     clients: 12,
   };
 
-  const derived = useMemo(
-    () => deriveKpi(dashboard?.sessions || [], dashboard?.messages || []),
-    [dashboard]
-  );
+  const derived = useMemo(() => {
+    return deriveKpi(dashboard?.sessions || [], dashboard?.messages || []);
+  }, [dashboard]);
 
   const kpi = {
     activeClients: dashboard?.kpi?.activeClients ?? derived.activeClients,
     sessionsToday: dashboard?.kpi?.sessionsToday ?? derived.sessionsToday,
     newMessages: dashboard?.kpi?.newMessages ?? derived.newMessages,
+
     weeklySessionsCount:
       (dashboard?.kpi?.weeklySessionsCount || 0) > 0
         ? dashboard.kpi.weeklySessionsCount
         : derived.weeklySessionsCount,
+
     uniqueClientsThisWeek:
       (dashboard?.kpi?.uniqueClientsThisWeek || 0) > 0
         ? dashboard.kpi.uniqueClientsThisWeek
         : derived.uniqueClientsThisWeek,
+
     programUpdatesThisWeek:
       (dashboard?.kpi?.programUpdatesThisWeek || 0) > 0
         ? dashboard.kpi.programUpdatesThisWeek
         : derived.programUpdatesThisWeek,
+
     checkinsThisWeek:
       (dashboard?.kpi?.checkinsThisWeek || 0) > 0
         ? dashboard.kpi.checkinsThisWeek
@@ -329,8 +349,9 @@ export default function TrainerHome() {
     clients: Number(kpi.uniqueClientsThisWeek || 0),
   };
 
-  const pct = (num, den) =>
-    den > 0 ? Math.min(100, Math.round((num / den) * 100)) : 0;
+  const pct = (num, den) => {
+    return den > 0 ? Math.min(100, Math.round((num / den) * 100)) : 0;
+  };
 
   const goAdminChat = () => navigate("/trainer/admin-messages");
 
@@ -372,7 +393,6 @@ export default function TrainerHome() {
   return (
     <div className={`min-h-screen ${baseBg} ${baseText} transition-colors duration-200`}>
       <main className="mx-auto w-full max-w-7xl px-4 pb-20 pt-6 sm:px-6 lg:px-8">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -423,7 +443,6 @@ export default function TrainerHome() {
           </div>
         </motion.div>
 
-        {/* KPI cards */}
         <motion.div
           variants={container}
           initial="hidden"
@@ -442,9 +461,11 @@ export default function TrainerHome() {
                     <p className={`text-sm font-medium ${mutedText}`}>
                       {card.label}
                     </p>
+
                     <div className="mt-2 text-3xl font-bold tracking-tight">
                       {card.value}
                     </div>
+
                     <p className={`mt-1 text-xs ${mutedText}`}>{card.sub}</p>
                   </div>
 
@@ -467,11 +488,8 @@ export default function TrainerHome() {
           ))}
         </motion.div>
 
-        {/* Main grid */}
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-4 gap-4 transition-colors duration-200">
-          {/* Left */}
           <div className="space-y-6 lg:col-span-3">
-            {/* Schedule */}
             <motion.div
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
@@ -486,6 +504,7 @@ export default function TrainerHome() {
                       <CalendarDays className="h-5 w-5 text-indigo-500" />
                       Today’s Schedule
                     </div>
+
                     <p className={`mt-1 text-sm ${mutedText}`}>
                       Manage your sessions and communication in one place.
                     </p>
@@ -509,11 +528,7 @@ export default function TrainerHome() {
                       Message Client
                     </Button>
 
-                    <Button
-                      variant="outline"
-                      className="gap-2"
-                      onClick={goAdminChat}
-                    >
+                    <Button variant="outline" className="gap-2" onClick={goAdminChat}>
                       <Shield className="h-4 w-4" />
                       Admin Chat
                     </Button>
@@ -521,7 +536,6 @@ export default function TrainerHome() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 p-5 xl:grid-cols-2">
-                  {/* Sessions */}
                   <div className="space-y-3">
                     {dashboard?.sessions?.length ? (
                       dashboard.sessions
@@ -534,9 +548,7 @@ export default function TrainerHome() {
                           >
                             <div className="flex items-start gap-3">
                               <div
-                                className={`mt-0.5 rounded-2xl border ${cardBorder} p-2.5 ${darkMode
-                                    ? "bg-white/[0.03]"
-                                    : "bg-slate-50"
+                                className={`mt-0.5 rounded-2xl border ${cardBorder} p-2.5 ${darkMode ? "bg-white/[0.03]" : "bg-slate-50"
                                   }`}
                               >
                                 <Clock className="h-4 w-4 text-indigo-500" />
@@ -547,6 +559,7 @@ export default function TrainerHome() {
                                   <p className="text-sm font-semibold">
                                     {s.time || "TBD"}
                                   </p>
+
                                   <Badge
                                     tone={
                                       s.status === "Confirmed"
@@ -587,7 +600,6 @@ export default function TrainerHome() {
                     )}
                   </div>
 
-                  {/* Weekly target */}
                   <div
                     className={`rounded-2xl border ${cardBorder} p-5 transition-colors duration-200 ${darkMode ? "bg-white/[0.02]" : "bg-slate-50/70"
                       }`}
@@ -622,10 +634,12 @@ export default function TrainerHome() {
                       <div key={i} className="mb-4 last:mb-0">
                         <div className="mb-1.5 flex items-center justify-between text-xs">
                           <span className={mutedText}>{row.label}</span>
+
                           <span className="font-semibold">
                             {row.val} / {row.den}
                           </span>
                         </div>
+
                         <Progress value={pct(row.val, row.den)} />
                       </div>
                     ))}
@@ -634,7 +648,6 @@ export default function TrainerHome() {
               </div>
             </motion.div>
 
-            {/* Tasks */}
             <motion.div
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
@@ -644,12 +657,12 @@ export default function TrainerHome() {
                 className={`rounded-3xl border ${cardBorder} ${cardBg} ${softShadow} p-6 md:p-8 transition-colors duration-200`}
               >
                 <h2 className="text-lg font-semibold mb-4">Trainer Tasks</h2>
+
                 <TrainerTaskBoard />
               </div>
             </motion.div>
           </div>
 
-          {/* Right */}
           <div className="space-y-6">
             <motion.div
               initial={{ opacity: 0 }}
@@ -661,6 +674,7 @@ export default function TrainerHome() {
               >
                 <div className="border-b border-inherit p-5">
                   <h3 className="text-lg font-semibold">Recent Messages</h3>
+
                   <p className={`mt-1 text-sm ${mutedText}`}>
                     Latest updates from your clients.
                   </p>
@@ -678,6 +692,7 @@ export default function TrainerHome() {
                             <p className="text-sm font-semibold">
                               {m?.name || m?.from || "Client"}
                             </p>
+
                             <p className={`mt-1 text-xs leading-relaxed ${mutedText}`}>
                               {m?.text || m?.message || ""}
                             </p>

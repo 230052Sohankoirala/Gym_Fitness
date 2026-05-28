@@ -5,6 +5,8 @@ import { toPng } from "html-to-image";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
 /* ---------- small helpers ---------- */
 const safeName = (u) => u?.fullname || u?.name || u?.email || "Client";
 
@@ -25,48 +27,91 @@ const BarChart = ({ data, width = 900, height = 420, padding = 48 }) => {
             aria-label="Sessions per client bar chart"
             style={{ display: "block" }}
         >
-            {/* bg */}
             <rect x="0" y="0" width={width} height={height} fill="#ffffff" />
-            {/* axes */}
-            <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="#ddd" />
-            <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#ddd" />
-            {/* y ticks */}
+
+            <line
+                x1={padding}
+                y1={padding}
+                x2={padding}
+                y2={height - padding}
+                stroke="#ddd"
+            />
+            <line
+                x1={padding}
+                y1={height - padding}
+                x2={width - padding}
+                y2={height - padding}
+                stroke="#ddd"
+            />
+
             {[0, 0.25, 0.5, 0.75, 1].map((t, i) => {
                 const y = height - padding - t * chartH;
                 const val = Math.round(max * t);
+
                 return (
                     <g key={i}>
-                        <line x1={padding} x2={width - padding} y1={y} y2={y} stroke="#f3f3f3" />
-                        <text x={padding - 8} y={y + 4} fontSize="11" textAnchor="end" fill="#666">{val}</text>
+                        <line
+                            x1={padding}
+                            x2={width - padding}
+                            y1={y}
+                            y2={y}
+                            stroke="#f3f3f3"
+                        />
+                        <text
+                            x={padding - 8}
+                            y={y + 4}
+                            fontSize="11"
+                            textAnchor="end"
+                            fill="#666"
+                        >
+                            {val}
+                        </text>
                     </g>
                 );
             })}
 
-            {/* bars */}
             {values.map((v, i) => {
                 const h = (v / max) * chartH;
                 const x = padding + i * barW + barW * 0.15;
                 const y = height - padding - h;
                 const w = barW * 0.7;
+
                 return (
                     <g key={i}>
                         <rect x={x} y={y} width={w} height={h} fill="#4f46e5" rx="6" />
-                        <text x={x + w / 2} y={y - 6} fontSize="11" textAnchor="middle" fill="#333">{v}</text>
+                        <text
+                            x={x + w / 2}
+                            y={y - 6}
+                            fontSize="11"
+                            textAnchor="middle"
+                            fill="#333"
+                        >
+                            {v}
+                        </text>
                     </g>
                 );
             })}
 
-            {/* x labels (rotate if many) */}
             {labels.map((lbl, i) => {
                 const x = padding + i * barW + barW / 2;
                 const y = height - padding + 14;
                 const rotate = labels.length > 8;
+
                 return rotate ? (
                     <g key={i} transform={`translate(${x},${y + 10}) rotate(-35)`}>
-                        <text fontSize="10" textAnchor="end" fill="#555">{lbl}</text>
+                        <text fontSize="10" textAnchor="end" fill="#555">
+                            {lbl}
+                        </text>
                     </g>
                 ) : (
-                    <text key={i} x={x} y={y + 12} fontSize="10" textAnchor="middle" fill="#555">
+                    <text
+                        key={i}
+                        x={x}
+                        y={y + 12}
+                        fontSize="10"
+                        textAnchor="middle"
+                        fill="#555"
+                    >
                         {lbl}
                     </text>
                 );
@@ -81,21 +126,22 @@ export default function TrainerAnalytics() {
     const [sessions, setSessions] = useState([]);
     const [error, setError] = useState("");
 
-    const token = useMemo(
-        () => localStorage.getItem("trainerToken") || localStorage.getItem("token"),
-        []
-    );
+    const token = useMemo(() => {
+        return (
+            localStorage.getItem("trainerToken") ||
+            sessionStorage.getItem("trainerToken") ||
+            localStorage.getItem("token") ||
+            sessionStorage.getItem("token")
+        );
+    }, []);
 
-    const api = useMemo(
-        () =>
-            axios.create({
-                baseURL: "http://localhost:4000/api",
-                headers: { Authorization: `Bearer ${token}` },
-            }),
-        [token]
-    );
+    const api = useMemo(() => {
+        return axios.create({
+            baseURL: `${API_BASE}/api`,
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+    }, [token]);
 
-    // container ref for PDF capture
     const pdfRef = useRef(null);
 
     useEffect(() => {
@@ -104,37 +150,55 @@ export default function TrainerAnalytics() {
                 setLoading(true);
                 setError("");
 
-                // pull dashboard (name + sessions)
                 const { data } = await api.get("/trainers/dashboard");
+
                 setTrainerName(data?.trainer?.name || "Trainer");
                 setSessions(Array.isArray(data?.sessions) ? data.sessions : []);
             } catch (e) {
-                setError(e?.response?.data?.message || e.message || "Failed to load analytics");
+                setError(
+                    e?.response?.data?.message ||
+                    e.message ||
+                    "Failed to load analytics"
+                );
             } finally {
                 setLoading(false);
             }
         };
-        if (token) run();
+
+        if (token) {
+            run();
+        } else {
+            setLoading(false);
+        }
     }, [api, token]);
 
-    // aggregate: count sessions per client (only this trainer’s sessions are returned)
     const rows = useMemo(() => {
         const map = new Map();
+
         sessions.forEach((s) => {
             (s?.clientsEnrolled || []).forEach((u) => {
                 const name = safeName(u);
                 map.set(name, (map.get(name) || 0) + 1);
             });
         });
-        // convert to array + sort desc
-        const arr = Array.from(map.entries()).map(([label, value]) => ({ label, value }));
+
+        const arr = Array.from(map.entries()).map(([label, value]) => ({
+            label,
+            value,
+        }));
+
         arr.sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+
         return arr;
     }, [sessions]);
 
     const totals = useMemo(() => {
         const uniqueClients = new Set();
-        sessions.forEach((s) => (s?.clientsEnrolled || []).forEach((u) => uniqueClients.add(safeName(u))));
+
+        sessions.forEach((s) =>
+            (s?.clientsEnrolled || []).forEach((u) => uniqueClients.add(safeName(u)))
+        );
+
         return {
             totalSessions: sessions.length,
             uniqueClients: uniqueClients.size,
@@ -142,21 +206,22 @@ export default function TrainerAnalytics() {
         };
     }, [sessions, rows]);
 
-    /* -------- PDF Export (prefers html-to-image, falls back to html2canvas) -------- */
     const exportPdf = async () => {
         const node = pdfRef.current;
+
         if (!node) return;
 
-        // Add a class that avoids problematic CSS while capturing (works even if not present)
         node.classList.add("pdf-safe");
 
         try {
             let dataUrl;
+
             try {
-                // Primary path: html-to-image handles modern CSS better
-                dataUrl = await toPng(node, { cacheBust: true, backgroundColor: "#ffffff" });
+                dataUrl = await toPng(node, {
+                    cacheBust: true,
+                    backgroundColor: "#ffffff",
+                });
             } catch {
-                // Fallback: html2canvas with foreignObject + white BG
                 const canvas = await html2canvas(node, {
                     scale: 2,
                     backgroundColor: "#ffffff",
@@ -164,15 +229,16 @@ export default function TrainerAnalytics() {
                     windowWidth: node.scrollWidth,
                     windowHeight: node.scrollHeight,
                 });
+
                 dataUrl = canvas.toDataURL("image/png");
             }
 
-            const pdf = new jsPDF({ unit: "pt", format: "a4" }); // 595 x 842 pt
+            const pdf = new jsPDF({ unit: "pt", format: "a4" });
             const pageW = pdf.internal.pageSize.getWidth();
             const pageH = pdf.internal.pageSize.getHeight();
 
-            // compute target rect keeping aspect ratio
             const img = new Image();
+
             await new Promise((res) => {
                 img.onload = res;
                 img.src = dataUrl;
@@ -182,8 +248,11 @@ export default function TrainerAnalytics() {
             const maxW = pageW - margin * 2;
             const maxH = pageH - margin * 2;
 
-            let w = img.width, h = img.height;
+            let w = img.width;
+            let h = img.height;
+
             const ratio = Math.min(maxW / w, maxH / h);
+
             w = Math.round(w * ratio);
             h = Math.round(h * ratio);
 
@@ -197,7 +266,6 @@ export default function TrainerAnalytics() {
         }
     };
 
-    /* ---------- UI ---------- */
     if (!token) {
         return (
             <div className="p-6">
@@ -205,6 +273,7 @@ export default function TrainerAnalytics() {
             </div>
         );
     }
+
     if (loading) {
         return (
             <div className="p-6">
@@ -212,6 +281,7 @@ export default function TrainerAnalytics() {
             </div>
         );
     }
+
     if (error) {
         return (
             <div className="p-6">
@@ -225,6 +295,7 @@ export default function TrainerAnalytics() {
             <div className="max-w-5xl mx-auto space-y-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-semibold">Trainer Analytics</h1>
+
                     <button
                         onClick={exportPdf}
                         className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500"
@@ -233,29 +304,26 @@ export default function TrainerAnalytics() {
                     </button>
                 </div>
 
-                {/* capture area */}
                 <div
                     ref={pdfRef}
                     className="rounded-xl border border-gray-200 p-16 bg-white shadow-sm overflow-hidden"
                     style={{ color: "#111" }}
                 >
-                    {/* Header */}
                     <div className="mb-12">
                         <h2 className="text-xl font-bold" style={{ color: "#111" }}>
                             {trainerName} — Sessions per Client
                         </h2>
+
                         <p className="text-sm" style={{ color: "#555" }}>
-                            Total sessions: {totals.totalSessions} • Unique clients: {totals.uniqueClients} • Enrollments:{" "}
-                            {totals.totalEnrollments}
+                            Total sessions: {totals.totalSessions} • Unique clients:{" "}
+                            {totals.uniqueClients} • Enrollments: {totals.totalEnrollments}
                         </p>
                     </div>
 
-                    {/* Chart */}
                     <div className="mb-10">
                         <BarChart data={rows.length ? rows : [{ label: "No Data", value: 0 }]} />
                     </div>
 
-                    {/* Table */}
                     <div>
                         <table
                             style={{
@@ -282,14 +350,30 @@ export default function TrainerAnalytics() {
                                     ))}
                                 </tr>
                             </thead>
+
                             <tbody>
                                 {rows.map((r, i) => (
                                     <tr key={r.label} style={{ borderBottom: "1px solid #f1f1f1" }}>
-                                        <td style={{ padding: "10px 12px", color: "#222" }}>{i + 1}</td>
-                                        <td style={{ padding: "10px 12px", color: "#222" }}>{r.label}</td>
-                                        <td style={{ padding: "10px 12px", color: "#222", textAlign: "right" }}>{r.value}</td>
+                                        <td style={{ padding: "10px 12px", color: "#222" }}>
+                                            {i + 1}
+                                        </td>
+
+                                        <td style={{ padding: "10px 12px", color: "#222" }}>
+                                            {r.label}
+                                        </td>
+
+                                        <td
+                                            style={{
+                                                padding: "10px 12px",
+                                                color: "#222",
+                                                textAlign: "right",
+                                            }}
+                                        >
+                                            {r.value}
+                                        </td>
                                     </tr>
                                 ))}
+
                                 {!rows.length && (
                                     <tr>
                                         <td colSpan={3} style={{ padding: "10px 12px", color: "#666" }}>

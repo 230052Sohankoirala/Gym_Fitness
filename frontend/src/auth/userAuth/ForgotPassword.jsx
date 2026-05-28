@@ -16,7 +16,7 @@ const ForgotPassword = () => {
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    const API_BASE = "http://localhost:4000/api/auth";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
     const clearStatus = () => {
         setError("");
@@ -35,7 +35,7 @@ const ForgotPassword = () => {
         try {
             setLoading(true);
 
-            const response = await fetch(`${API_BASE}/forgot-password`, {
+            const response = await fetch(`${API_BASE}/api/forgot-password`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -71,7 +71,7 @@ const ForgotPassword = () => {
         try {
             setLoading(true);
 
-            const response = await fetch(`${API_BASE}/verify-reset-code`, {
+            const response = await fetch(`${API_BASE}/api/verify-reset-code`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -117,7 +117,7 @@ const ForgotPassword = () => {
         try {
             setLoading(true);
 
-            const response = await fetch(`${API_BASE}/reset-password`, {
+            const response = await fetch(`${API_BASE}/api/reset-password`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

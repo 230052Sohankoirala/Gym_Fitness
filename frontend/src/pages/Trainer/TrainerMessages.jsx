@@ -10,7 +10,6 @@ import React, {
 } from "react";
 
 import { io } from "socket.io-client";
-
 import { motion, AnimatePresence } from "framer-motion";
 
 import {
@@ -29,8 +28,9 @@ import {
 
 import { useTheme } from "../../context/ThemeContext";
 
-const API_BASE = "http://localhost:4000/api";
-const SOCKET_BASE = "http://localhost:4000";
+const API_ROOT = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = `${API_ROOT}/api`;
+const SOCKET_BASE = API_ROOT;
 
 /* ---------------- Helpers ---------------- */
 
@@ -128,15 +128,9 @@ const isSameDay = (a, b) => {
 const dayLabel = (iso) => {
   try {
     const d = new Date(iso);
-
     const now = new Date();
 
-    const today = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
-    );
-
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
     const diff = Math.round((dd.getTime() - today.getTime()) / 86400000);
@@ -162,7 +156,6 @@ const cacheBust = (url, updatedAt) => {
   if (!safeUrl) return "";
 
   const stamp = updatedAt ? new Date(updatedAt).getTime() : Date.now();
-
   const join = safeUrl.includes("?") ? "&" : "?";
 
   return `${safeUrl}${join}v=${stamp}`;
@@ -335,8 +328,6 @@ export default function TrainerMessages() {
     autoGrow();
   }, [input, autoGrow]);
 
-  /* ---------------- Visibility ---------------- */
-
   useEffect(() => {
     const onVis = () => {
       setIsPageVisible(document.visibilityState === "visible");
@@ -351,8 +342,6 @@ export default function TrainerMessages() {
     };
   }, []);
 
-  /* ---------------- Countdown tick ---------------- */
-
   useEffect(() => {
     const t = setInterval(() => {
       setNowTick(Date.now());
@@ -362,8 +351,6 @@ export default function TrainerMessages() {
       clearInterval(t);
     };
   }, []);
-
-  /* ---------------- File pick ---------------- */
 
   const pickFiles = useCallback((e) => {
     const selected = Array.from(e.target.files || []);
@@ -390,8 +377,6 @@ export default function TrainerMessages() {
   const clearFiles = useCallback(() => {
     setFiles([]);
   }, []);
-
-  /* ---------------- 1) Trainer ID ---------------- */
 
   useEffect(() => {
     const loadTrainerProfile = async () => {
@@ -424,8 +409,6 @@ export default function TrainerMessages() {
 
     loadTrainerProfile();
   }, [token]);
-
-  /* ---------------- 2) Threads ---------------- */
 
   const normalizeThread = useCallback((t) => {
     const expires =
@@ -512,8 +495,6 @@ export default function TrainerMessages() {
     loadThreads();
   }, [loadThreads]);
 
-  /* ---------------- 3) Socket connection ---------------- */
-
   useEffect(() => {
     if (!token) return;
 
@@ -554,7 +535,6 @@ export default function TrainerMessages() {
 
     const onConnect = () => {
       setSocketState("online");
-
       joinActiveRoom();
     };
 
@@ -575,7 +555,6 @@ export default function TrainerMessages() {
 
     const onChatError = (payload) => {
       setError(payload?.message || "Chat error");
-
       console.log("❌ TRAINER CHAT ERROR:", payload);
     };
 
@@ -637,7 +616,6 @@ export default function TrainerMessages() {
       });
 
       const active = activeThreadRef.current;
-
       const isActive = String(active?.memberId) === String(memberId);
 
       if (isActive) {
@@ -713,8 +691,6 @@ export default function TrainerMessages() {
     };
   }, [token, scrollBottom]);
 
-  /* ---------------- 4) Load saved messages ---------------- */
-
   const loadMessages = useCallback(
     async (memberId) => {
       if (!trainerId || !memberId) return;
@@ -742,7 +718,6 @@ export default function TrainerMessages() {
         }
 
         setMessages(Array.isArray(data) ? data : []);
-
         scrollBottom();
       } catch (e) {
         setError(e?.message || "Failed to load messages");
@@ -752,8 +727,6 @@ export default function TrainerMessages() {
     },
     [token, trainerId, scrollBottom]
   );
-
-  /* ---------------- 5) Switching thread ---------------- */
 
   const openThread = useCallback((t) => {
     if (!t?.memberId) return;
@@ -812,8 +785,6 @@ export default function TrainerMessages() {
     });
   }, [trainerId, activeThread?.memberId, loadMessages]);
 
-  /* ---------------- 6) Expires ---------------- */
-
   const activeExpiresAt = useMemo(() => {
     return toDate(activeThread?.chatExpiresAt);
   }, [activeThread?.chatExpiresAt]);
@@ -829,8 +800,6 @@ export default function TrainerMessages() {
 
     return msToCountdown(activeExpiresAt.getTime() - Date.now());
   }, [activeExpiresAt, nowTick]);
-
-  /* ---------------- 7) Send text ---------------- */
 
   const sendText = useCallback(async () => {
     const clean = input.trim();
@@ -853,7 +822,6 @@ export default function TrainerMessages() {
       });
 
       setInput("");
-
       scrollBottom();
     } catch {
       setError("Send failed");
@@ -862,13 +830,10 @@ export default function TrainerMessages() {
     }
   }, [input, trainerId, activeThread?.memberId, chatExpired, scrollBottom]);
 
-  /* ---------------- 8) Send media ---------------- */
-
   const sendMedia = useCallback(async () => {
     const clean = input.trim();
 
     if (!trainerId || !activeThread?.memberId) return;
-
     if (!clean && files.length === 0) return;
 
     if (chatExpired) {
@@ -951,7 +916,6 @@ export default function TrainerMessages() {
 
       setInput("");
       clearFiles();
-
       scrollBottom();
     } catch (e) {
       setError(e?.message || "Media upload failed");
@@ -976,8 +940,6 @@ export default function TrainerMessages() {
 
     return sendText();
   }, [files.length, sendMedia, sendText]);
-
-  /* ---------------- UI derived ---------------- */
 
   const filteredThreads = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -1020,8 +982,6 @@ export default function TrainerMessages() {
     return out;
   }, [messages]);
 
-  /* ---------------- Theme ---------------- */
-
   const pageBg = darkMode
     ? "bg-gradient-to-br from-[#08111f] via-[#0f172a] to-[#111827]"
     : "bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/60";
@@ -1035,7 +995,6 @@ export default function TrainerMessages() {
     : "bg-white/75 border-slate-200/70";
 
   const subtleBorder = darkMode ? "border-white/10" : "border-slate-200/70";
-
   const hover = darkMode ? "hover:bg-white/[0.06]" : "hover:bg-slate-50";
 
   const textMain = darkMode ? "text-white" : "text-slate-900";
@@ -1074,16 +1033,13 @@ export default function TrainerMessages() {
   const activeMemberAvatarUpdatedAt = activeThread?.avatarUpdatedAt || null;
 
   return (
-    <div
-      className={`h-[100dvh] w-full ${pageBg} transition-colors duration-200`}
-    >
+    <div className={`h-[100dvh] w-full ${pageBg} transition-colors duration-200`}>
       <div className="h-full w-full p-3 md:p-4">
         <div
           className={`h-full w-full overflow-hidden rounded-[2rem] border ${shellCard} transition-colors duration-200 backdrop-blur-2xl`}
         >
           <div className="h-full w-full flex">
-            {/* ===================== Sidebar ===================== */}
-
+            {/* Sidebar */}
             <aside
               className={`
                 w-full md:w-[360px] shrink-0 border-r ${subtleBorder}
@@ -1093,28 +1049,23 @@ export default function TrainerMessages() {
               `}
             >
               <div
-                className={`p-5 border-b ${subtleBorder} sticky top-0 z-10 backdrop-blur-xl ${
-                  darkMode ? "bg-black/10" : "bg-white/60"
-                }`}
+                className={`p-5 border-b ${subtleBorder} sticky top-0 z-10 backdrop-blur-xl ${darkMode ? "bg-black/10" : "bg-white/60"
+                  }`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div
-                      className={`font-semibold flex items-center gap-2 ${textMain}`}
-                    >
+                    <div className={`font-semibold flex items-center gap-2 ${textMain}`}>
                       <div
-                        className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
-                          darkMode
+                        className={`w-10 h-10 rounded-2xl flex items-center justify-center ${darkMode
                             ? "bg-indigo-500/15 text-indigo-200"
                             : "bg-indigo-50 text-indigo-700"
-                        }`}
+                          }`}
                       >
                         <MessagesSquare size={18} />
                       </div>
 
                       <div>
                         <div className="text-base">Messages</div>
-
                         <div className={`text-xs font-normal ${textFaint}`}>
                           Member inbox
                         </div>
@@ -1127,7 +1078,6 @@ export default function TrainerMessages() {
                       className={`px-3 py-1.5 rounded-full border text-xs flex items-center gap-2 ${statusPill}`}
                     >
                       {statusIcon}
-
                       {socketState === "online"
                         ? "Online"
                         : socketState === "connecting"
@@ -1148,9 +1098,8 @@ export default function TrainerMessages() {
                 <div className="mt-4 relative">
                   <Search
                     size={16}
-                    className={`absolute left-3 top-1/2 -translate-y-1/2 ${
-                      darkMode ? "text-white/40" : "text-slate-400"
-                    }`}
+                    className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-white/40" : "text-slate-400"
+                      }`}
                   />
 
                   <input
@@ -1163,11 +1112,10 @@ export default function TrainerMessages() {
 
                 {error && (
                   <div
-                    className={`mt-3 text-xs rounded-2xl px-3 py-2 border ${
-                      darkMode
+                    className={`mt-3 text-xs rounded-2xl px-3 py-2 border ${darkMode
                         ? "text-rose-200 bg-rose-400/10 border-rose-400/20"
                         : "text-rose-700 bg-rose-50 border-rose-200"
-                    }`}
+                      }`}
                   >
                     {error}
                   </div>
@@ -1208,13 +1156,12 @@ export default function TrainerMessages() {
                         whileTap={{
                           scale: 0.99,
                         }}
-                        className={`w-full flex items-center justify-between px-3.5 py-3.5 rounded-[1.4rem] transition-colors duration-200 border ${
-                          active
+                        className={`w-full flex items-center justify-between px-3.5 py-3.5 rounded-[1.4rem] transition-colors duration-200 border ${active
                             ? darkMode
                               ? "bg-indigo-500/12 border-indigo-400/20 shadow-[0_0_0_1px_rgba(99,102,241,.18)]"
                               : "bg-indigo-50 border-indigo-200"
                             : `border-transparent ${hover}`
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <Avatar
@@ -1236,11 +1183,10 @@ export default function TrainerMessages() {
 
                               {expired && (
                                 <span
-                                  className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                                    darkMode
+                                  className={`text-[10px] px-2 py-0.5 rounded-full border ${darkMode
                                       ? "border-rose-400/25 bg-rose-400/10 text-rose-200"
                                       : "border-rose-200 bg-rose-50 text-rose-700"
-                                  }`}
+                                    }`}
                                 >
                                   Expired
                                 </span>
@@ -1271,17 +1217,14 @@ export default function TrainerMessages() {
               </div>
             </aside>
 
-            {/* ===================== Chat Panel ===================== */}
-
+            {/* Chat Panel */}
             <section
-              className={`flex-1 flex flex-col h-full min-w-0 ${
-                mobileView === "list" ? "hidden md:flex" : "flex"
-              }`}
+              className={`flex-1 flex flex-col h-full min-w-0 ${mobileView === "list" ? "hidden md:flex" : "flex"
+                }`}
             >
               <div
-                className={`px-4 md:px-6 py-4 border-b ${subtleBorder} sticky top-0 z-10 backdrop-blur-xl ${
-                  darkMode ? "bg-black/10" : "bg-white/60"
-                }`}
+                className={`px-4 md:px-6 py-4 border-b ${subtleBorder} sticky top-0 z-10 backdrop-blur-xl ${darkMode ? "bg-black/10" : "bg-white/60"
+                  }`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <button
@@ -1322,21 +1265,18 @@ export default function TrainerMessages() {
                             <span>Chat expires in </span>
 
                             <span
-                              className={`font-semibold ${
-                                chatExpired
+                              className={`font-semibold ${chatExpired
                                   ? "text-rose-400"
                                   : darkMode
                                     ? "text-emerald-300"
                                     : "text-emerald-600"
-                              }`}
+                                }`}
                             >
                               {timeLeftText}
                             </span>
                           </div>
                         ) : (
-                          <div className={`text-xs ${textSoft}`}>
-                            Live chat
-                          </div>
+                          <div className={`text-xs ${textSoft}`}>Live chat</div>
                         )}
 
                         <div
@@ -1361,11 +1301,10 @@ export default function TrainerMessages() {
 
                 {activeThread?.memberId && chatExpired && (
                   <div
-                    className={`mt-3 text-sm px-4 py-3 rounded-2xl border ${
-                      darkMode
+                    className={`mt-3 text-sm px-4 py-3 rounded-2xl border ${darkMode
                         ? "border-rose-400/25 bg-rose-400/10 text-rose-200"
                         : "border-rose-200 bg-rose-50 text-rose-700"
-                    }`}
+                      }`}
                   >
                     Chat expired. Member must book again to unlock chat for 30
                     days.
@@ -1381,11 +1320,10 @@ export default function TrainerMessages() {
                   {!activeThread?.memberId ? (
                     <div className="py-20 text-center">
                       <div
-                        className={`mx-auto mb-4 h-16 w-16 rounded-3xl flex items-center justify-center ${
-                          darkMode
+                        className={`mx-auto mb-4 h-16 w-16 rounded-3xl flex items-center justify-center ${darkMode
                             ? "bg-white/5 text-white/70"
                             : "bg-white text-slate-500 shadow-sm"
-                        }`}
+                          }`}
                       >
                         <MessagesSquare size={28} />
                       </div>
@@ -1405,11 +1343,10 @@ export default function TrainerMessages() {
                   ) : messages.length === 0 ? (
                     <div className="py-16 text-center">
                       <div
-                        className={`mx-auto mb-4 h-16 w-16 rounded-3xl flex items-center justify-center ${
-                          darkMode
+                        className={`mx-auto mb-4 h-16 w-16 rounded-3xl flex items-center justify-center ${darkMode
                             ? "bg-white/5 text-white/70"
                             : "bg-white text-slate-500 shadow-sm"
-                        }`}
+                          }`}
                       >
                         <Sparkles size={26} />
                       </div>
@@ -1440,11 +1377,10 @@ export default function TrainerMessages() {
                               className="flex justify-center"
                             >
                               <div
-                                className={`text-[11px] px-3 py-1 rounded-full border ${subtleBorder} ${
-                                  darkMode
+                                className={`text-[11px] px-3 py-1 rounded-full border ${subtleBorder} ${darkMode
                                     ? "bg-white/5 text-white/70"
                                     : "bg-white text-slate-600"
-                                }`}
+                                  }`}
                               >
                                 {item.label}
                               </div>
@@ -1456,9 +1392,7 @@ export default function TrainerMessages() {
 
                         const senderRole =
                           m?.sender?.role ||
-                          (m?.senderModel === "Trainer"
-                            ? "trainer"
-                            : "member");
+                          (m?.senderModel === "Trainer" ? "trainer" : "member");
 
                         const isOwn = senderRole === "trainer";
 
@@ -1488,9 +1422,8 @@ export default function TrainerMessages() {
                               opacity: 1,
                               y: 0,
                             }}
-                            className={`w-full flex gap-2 ${
-                              isOwn ? "justify-end" : "justify-start"
-                            }`}
+                            className={`w-full flex gap-2 ${isOwn ? "justify-end" : "justify-start"
+                              }`}
                           >
                             {!isOwn && (
                               <Avatar
@@ -1508,20 +1441,18 @@ export default function TrainerMessages() {
 
                             <div className="max-w-[80%]">
                               <div
-                                className={`text-[11px] mb-1 ${
-                                  isOwn ? "text-right" : "text-left"
-                                } ${textFaint}`}
+                                className={`text-[11px] mb-1 ${isOwn ? "text-right" : "text-left"
+                                  } ${textFaint}`}
                               >
                                 <span className="font-medium">{label}</span>
                                 <span> • {prettyTime(m.createdAt)}</span>
                               </div>
 
                               <div
-                                className={`px-4 py-3 rounded-[1.6rem] ${
-                                  isOwn
+                                className={`px-4 py-3 rounded-[1.6rem] ${isOwn
                                     ? `${ownBubble} rounded-br-md`
                                     : `${otherBubble} rounded-bl-md`
-                                }`}
+                                  }`}
                               >
                                 {m?.text ? (
                                   <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
@@ -1530,19 +1461,10 @@ export default function TrainerMessages() {
                                 ) : null}
 
                                 {atts.length > 0 && (
-                                  <div
-                                    className={`${
-                                      m?.text ? "mt-3" : ""
-                                    } space-y-2.5`}
-                                  >
+                                  <div className={`${m?.text ? "mt-3" : ""} space-y-2.5`}>
                                     {atts.map((a, i) => {
-                                      const key =
-                                        a?.url ||
-                                        `${m?._id || idx}-att-${i}`;
-
-                                      const url = normalizeChatUploadPath(
-                                        a?.url
-                                      );
+                                      const key = a?.url || `${m?._id || idx}-att-${i}`;
+                                      const url = normalizeChatUploadPath(a?.url);
 
                                       if (a?.type === "image") {
                                         return (
@@ -1553,13 +1475,8 @@ export default function TrainerMessages() {
                                             className="w-[220px] h-[220px] sm:w-[260px] sm:h-[260px] object-cover rounded-2xl border border-white/10"
                                             loading="lazy"
                                             onError={(ev) => {
-                                              console.log(
-                                                "IMG LOAD FAILED:",
-                                                url
-                                              );
-
-                                              ev.currentTarget.style.display =
-                                                "none";
+                                              console.log("IMG LOAD FAILED:", url);
+                                              ev.currentTarget.style.display = "none";
                                             }}
                                           />
                                         );
@@ -1573,10 +1490,7 @@ export default function TrainerMessages() {
                                             controls
                                             className="w-[240px] h-[170px] sm:w-[280px] sm:h-[190px] object-cover rounded-2xl border border-white/10"
                                             onError={() =>
-                                              console.log(
-                                                "VIDEO LOAD FAILED:",
-                                                url
-                                              )
+                                              console.log("VIDEO LOAD FAILED:", url)
                                             }
                                           />
                                         );
@@ -1607,9 +1521,8 @@ export default function TrainerMessages() {
               </div>
 
               <div
-                className={`border-t ${subtleBorder} px-4 md:px-6 py-4 backdrop-blur-xl ${
-                  darkMode ? "bg-black/10" : "bg-white/60"
-                }`}
+                className={`border-t ${subtleBorder} px-4 md:px-6 py-4 backdrop-blur-xl ${darkMode ? "bg-black/10" : "bg-white/60"
+                  }`}
               >
                 <div className="max-w-4xl mx-auto flex flex-col gap-3">
                   <input
@@ -1624,11 +1537,10 @@ export default function TrainerMessages() {
                   <div className="flex items-end gap-3">
                     <label
                       htmlFor="trainer-chat-media"
-                      className={`inline-flex items-center justify-center rounded-2xl h-12 w-12 border cursor-pointer transition-colors duration-200 ${
-                        darkMode
+                      className={`inline-flex items-center justify-center rounded-2xl h-12 w-12 border cursor-pointer transition-colors duration-200 ${darkMode
                           ? "bg-white/5 hover:bg-white/10 text-white border-white/10"
                           : "bg-white hover:bg-slate-50 text-slate-800 border-slate-200"
-                      }`}
+                        }`}
                       title="Attach image/video"
                     >
                       <Paperclip size={18} />
@@ -1647,9 +1559,8 @@ export default function TrainerMessages() {
                               ? "Chat expired..."
                               : "Type a message…"
                         }
-                        className={`w-full resize-none rounded-[1.6rem] px-4 py-3.5 pr-4 text-sm outline-none border focus:ring-2 focus:ring-indigo-500/30 transition-colors duration-200 ${inputCls} ${
-                          !canType ? "opacity-70" : ""
-                        }`}
+                        className={`w-full resize-none rounded-[1.6rem] px-4 py-3.5 pr-4 text-sm outline-none border focus:ring-2 focus:ring-indigo-500/30 transition-colors duration-200 ${inputCls} ${!canType ? "opacity-70" : ""
+                          }`}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
@@ -1668,16 +1579,15 @@ export default function TrainerMessages() {
                         !activeThread?.memberId ||
                         chatExpired
                       }
-                      className={`rounded-[1.3rem] px-5 h-12 text-white shadow-md transition-colors duration-200 font-semibold flex items-center gap-2 ${
-                        sending ||
-                        (!input.trim() && files.length === 0) ||
-                        !activeThread?.memberId ||
-                        chatExpired
+                      className={`rounded-[1.3rem] px-5 h-12 text-white shadow-md transition-colors duration-200 font-semibold flex items-center gap-2 ${sending ||
+                          (!input.trim() && files.length === 0) ||
+                          !activeThread?.memberId ||
+                          chatExpired
                           ? darkMode
                             ? "bg-white/10 text-white/50 cursor-not-allowed"
                             : "bg-slate-200 text-slate-500 cursor-not-allowed"
                           : "bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 hover:from-indigo-500 hover:via-violet-500 hover:to-blue-500"
-                      }`}
+                        }`}
                       title={
                         !activeThread?.memberId
                           ? "Select a member first"
@@ -1696,11 +1606,10 @@ export default function TrainerMessages() {
                       {files.map((f, idx) => (
                         <div
                           key={`${f.name}-${idx}`}
-                          className={`text-xs px-3 py-2 rounded-2xl border ${subtleBorder} ${
-                            darkMode
+                          className={`text-xs px-3 py-2 rounded-2xl border ${subtleBorder} ${darkMode
                               ? "bg-white/5 text-white"
                               : "bg-white text-slate-700"
-                          } flex items-center gap-2`}
+                            } flex items-center gap-2`}
                           title={f.type}
                         >
                           {isImageMime(f.type) ? (
@@ -1734,9 +1643,7 @@ export default function TrainerMessages() {
                     </div>
                   )}
 
-                  <div
-                    className={`text-[11px] flex items-center justify-between ${textFaint}`}
-                  >
+                  <div className={`text-[11px] flex items-center justify-between ${textFaint}`}>
                     <span>Enter = send • Shift + Enter = new line</span>
 
                     <span>

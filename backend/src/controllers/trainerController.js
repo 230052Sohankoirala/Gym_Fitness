@@ -120,27 +120,56 @@ export const createTrainer = async (req, res) => {
 export const trainerLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const cleanEmail = (email || "").trim().toLowerCase();
 
-    const trainer = await Trainer.findOne({ email: cleanEmail });
-    if (!trainer) {
-      return res.status(401).json({ message: "Invalid credentials" });
+    const cleanEmail = String(email || "").trim().toLowerCase();
+
+    console.log("========== TRAINER LOGIN DEBUG ==========");
+    console.log("Received body:", req.body);
+    console.log("Clean email:", cleanEmail);
+    console.log("Password received:", password ? "YES" : "NO");
+
+    if (!cleanEmail || !password) {
+      return res.status(400).json({
+        message: "Email and password are required",
+      });
     }
 
-    const isMatch = await trainer.matchPassword(password || "");
+    const trainer = await Trainer.findOne({ email: cleanEmail });
+
+    if (!trainer) {
+      console.log("Trainer not found for email:", cleanEmail);
+
+      return res.status(401).json({
+        message: "Trainer not found",
+      });
+    }
+
+    console.log("Trainer found:", trainer.email);
+    console.log("Stored password exists:", trainer.password ? "YES" : "NO");
+
+    const isMatch = await trainer.matchPassword(password);
+
+    console.log("Password match:", isMatch);
+
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({
+        message: "Incorrect password",
+      });
     }
 
     const token = generateToken(trainer._id, trainer.role);
 
-    return res.json({
+    return res.status(200).json({
       message: "Login successful",
       token,
       trainer: sanitizeTrainerResponse(trainer),
     });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    console.error("Trainer login error:", err);
+
+    return res.status(500).json({
+      message: err.message || "Trainer login failed",
+    });
   }
 };
 

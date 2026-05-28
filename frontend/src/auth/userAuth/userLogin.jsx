@@ -7,6 +7,9 @@ import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
 const UserLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -66,22 +69,12 @@ const UserLogin = () => {
     setServerError("");
 
     try {
-      const { data } = await axios.post(
-        "http://localhost:4000/api/auth/login",
-        {
-          email: formData.email,
-          password: formData.password,
-          rememberMe: formData.rememberMe,
-        }
-      );
+      const { data } = await axios.post(`${API_BASE}/api/auth/login`, {
+        email: formData.email,
+        password: formData.password,
+        rememberMe: formData.rememberMe,
+      });
 
-      /**
-       * Important:
-       * AuthContext login function accepts:
-       * login(token, userData, rememberMe)
-       *
-       * So do NOT pass "member" here.
-       */
       login(data.token, data.user, formData.rememberMe);
 
       const userRole = data.user?.role || "member";
@@ -114,29 +107,9 @@ const UserLogin = () => {
     try {
       setServerError("");
 
-      const { data } = await axios.post(
-        "http://localhost:4000/api/auth/google",
-        {
-          token: credentialResponse.credential,
-        }
-      );
-
-      /*
-        Backend should return:
-
-        For new Google account:
-        {
-          isNewUser: true,
-          email: "user@gmail.com"
-        }
-
-        For old Google account:
-        {
-          isNewUser: false,
-          token: "...",
-          user: {...}
-        }
-      */
+      const { data } = await axios.post(`${API_BASE}/api/auth/google`, {
+        token: credentialResponse.credential,
+      });
 
       if (data.isNewUser === true) {
         navigate("/verify-email", {
@@ -148,11 +121,6 @@ const UserLogin = () => {
         return;
       }
 
-      /**
-       * Google login does not have a remember me checkbox.
-       * Here it is set to true, meaning Google login will stay remembered.
-       * Change true to false if you want Google login to only use sessionStorage.
-       */
       login(data.token, data.user, true);
 
       const userRole = data.user?.role || "member";

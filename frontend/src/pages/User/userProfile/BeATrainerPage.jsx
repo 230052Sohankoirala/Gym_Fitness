@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-
-import { motion } from "framer-motion";// eslint-disable-line no-unused-vars
+import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 
 import {
     ArrowLeft,
@@ -20,6 +19,9 @@ import {
 } from "lucide-react";
 
 import { useTheme } from "../../../context/ThemeContext";
+
+const API_ROOT = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = `${API_ROOT}/api`;
 
 const BeATrainerPage = () => {
     const navigate = useNavigate();
@@ -53,10 +55,7 @@ const BeATrainerPage = () => {
 
     const card = useMemo(
         () =>
-            `rounded-2xl border shadow-sm transition-colors duration-200 ${
-                darkMode
-                    ? "bg-gray-800 border-white/10"
-                    : "bg-white border-gray-200"
+            `rounded-2xl border shadow-sm transition-colors duration-200 ${darkMode ? "bg-gray-800 border-white/10" : "bg-white border-gray-200"
             }`,
         [darkMode]
     );
@@ -89,12 +88,7 @@ const BeATrainerPage = () => {
             return;
         }
 
-        const allowedTypes = [
-            "image/png",
-            "image/jpeg",
-            "image/jpg",
-            "image/webp",
-        ];
+        const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
         if (!allowedTypes.includes(file.type)) {
             setMessage("Please upload a valid image file: PNG, JPG, JPEG, or WEBP.");
@@ -137,8 +131,12 @@ const BeATrainerPage = () => {
         if (!formData.experience.trim()) return "Experience is required.";
         if (!formData.specialization.trim()) return "Specialization is required.";
         if (!formData.workedPlace.trim()) return "Worked place is required.";
-        if (!formData.workedPlacePhone.trim()) return "Workplace phone number is required.";
-        if (!formData.certificationsText.trim()) return "Certification text is required.";
+        if (!formData.workedPlacePhone.trim()) {
+            return "Workplace phone number is required.";
+        }
+        if (!formData.certificationsText.trim()) {
+            return "Certification text is required.";
+        }
         if (!certificateImage) return "Certificate proof image is required.";
         if (!formData.bio.trim()) return "Professional bio is required.";
         if (!formData.motivation.trim()) return "Motivation is required.";
@@ -179,7 +177,10 @@ const BeATrainerPage = () => {
             payload.append("certificateImage", certificateImage);
 
             const token =
-                localStorage.getItem("token") || sessionStorage.getItem("token");
+                localStorage.getItem("trainerToken") ||
+                sessionStorage.getItem("trainerToken") ||
+                localStorage.getItem("token") ||
+                sessionStorage.getItem("token");
 
             const headers = {};
 
@@ -187,31 +188,31 @@ const BeATrainerPage = () => {
                 headers.Authorization = `Bearer ${token}`;
             }
 
-            const response = await fetch(
-                "http://localhost:4000/api/trainer-applications",
-                {
-                    method: "POST",
-                    headers,
-                    body: payload,
-                }
-            );
+            const response = await fetch(`${API_BASE}/trainer-applications`, {
+                method: "POST",
+                headers,
+                body: payload,
+            });
 
-            const data = await response.json();
+            const data = await response.json().catch(() => ({}));
 
             if (!response.ok) {
                 throw new Error(data?.message || "Failed to submit application.");
             }
 
             setSuccess(true);
+
             setMessage(
                 data?.message ||
-                    "Trainer application submitted successfully. Admin will review your application."
+                "Trainer application submitted successfully. Admin will review your application."
             );
 
             resetForm();
         } catch (error) {
             console.error("Trainer application failed:", error);
+
             setSuccess(false);
+
             setMessage(
                 error.message || "Failed to submit application. Please try again."
             );
@@ -236,9 +237,8 @@ const BeATrainerPage = () => {
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigate("/trainerLogin")}
-                        className={`p-2 rounded-full transition-colors duration-200 ${
-                            darkMode ? "hover:bg-gray-700" : "hover:bg-gray-200"
-                        }`}
+                        className={`p-2 rounded-full transition-colors duration-200 ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-200"
+                            }`}
                     >
                         <ArrowLeft size={20} />
                     </motion.button>
@@ -247,6 +247,7 @@ const BeATrainerPage = () => {
                         <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
                             Be a Trainer
                         </h1>
+
                         <p className={`text-sm ${softText}`}>
                             Recruitment application for trainer role
                         </p>
@@ -264,38 +265,30 @@ const BeATrainerPage = () => {
                     >
                         <div className="flex items-center gap-3 mb-4">
                             <div
-                                className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                                    darkMode ? "bg-gray-700" : "bg-indigo-50"
-                                }`}
+                                className={`w-12 h-12 rounded-2xl flex items-center justify-center ${darkMode ? "bg-gray-700" : "bg-indigo-50"
+                                    }`}
                             >
                                 <Briefcase size={22} className="text-indigo-500" />
                             </div>
 
                             <div>
-                                <h2 className="text-lg font-semibold">
-                                    Trainer Recruitment
-                                </h2>
-                                <p className={`text-sm ${softText}`}>
-                                    Apply professionally
-                                </p>
+                                <h2 className="text-lg font-semibold">Trainer Recruitment</h2>
+
+                                <p className={`text-sm ${softText}`}>Apply professionally</p>
                             </div>
                         </div>
 
                         <p className={`text-sm leading-6 ${subtle}`}>
-                            Submit your trainer application with your experience,
-                            workplace history, and certification proof for admin review.
+                            Submit your trainer application with your experience, workplace
+                            history, and certification proof for admin review.
                         </p>
 
                         <div className="mt-6 space-y-3">
                             {benefits.map((benefit, index) => (
                                 <div key={index} className="flex items-start gap-3">
-                                    <CheckCircle2
-                                        size={18}
-                                        className="text-green-500 mt-0.5"
-                                    />
-                                    <span className={`text-sm ${subtle}`}>
-                                        {benefit}
-                                    </span>
+                                    <CheckCircle2 size={18} className="text-green-500 mt-0.5" />
+
+                                    <span className={`text-sm ${subtle}`}>{benefit}</span>
                                 </div>
                             ))}
                         </div>
@@ -311,23 +304,22 @@ const BeATrainerPage = () => {
                             <h2 className="text-lg md:text-xl font-semibold">
                                 Trainer Application Form
                             </h2>
+
                             <p className={`text-sm mt-1 ${softText}`}>
-                                Fill in the form carefully like a real recruitment
-                                application.
+                                Fill in the form carefully like a real recruitment application.
                             </p>
                         </div>
 
                         {message && (
                             <div
-                                className={`mb-5 rounded-xl px-4 py-3 text-sm border ${
-                                    success
+                                className={`mb-5 rounded-xl px-4 py-3 text-sm border ${success
                                         ? darkMode
                                             ? "bg-green-900/30 text-green-300 border-green-700"
                                             : "bg-green-50 text-green-700 border-green-200"
                                         : darkMode
                                             ? "bg-yellow-900/30 text-yellow-300 border-yellow-700"
                                             : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                                }`}
+                                    }`}
                             >
                                 {message}
                             </div>
@@ -549,11 +541,10 @@ const BeATrainerPage = () => {
                                 </label>
 
                                 <div
-                                    className={`rounded-2xl border p-4 transition-colors duration-200 ${
-                                        darkMode
+                                    className={`rounded-2xl border p-4 transition-colors duration-200 ${darkMode
                                             ? "bg-gray-900 border-gray-700"
                                             : "bg-gray-50 border-gray-200"
-                                    }`}
+                                        }`}
                                 >
                                     <div className="relative">
                                         <ImageIcon
@@ -635,11 +626,10 @@ const BeATrainerPage = () => {
                                 <button
                                     type="button"
                                     onClick={() => navigate("/trainerLogin")}
-                                    className={`px-6 py-3 rounded-xl font-medium transition duration-200 ${
-                                        darkMode
+                                    className={`px-6 py-3 rounded-xl font-medium transition duration-200 ${darkMode
                                             ? "bg-gray-700 hover:bg-gray-600 text-white"
                                             : "bg-gray-200 hover:bg-gray-300 text-gray-900"
-                                    }`}
+                                        }`}
                                 >
                                     Back to Trainer Login
                                 </button>
