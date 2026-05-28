@@ -74,28 +74,35 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
-app.use(
-  cors({
-    origin(origin, callback) {
-      if (!origin) {
-        return callback(null, true);
-      }
+const isOriginAllowed = (origin) => {
+  if (!origin) {
+    return true;
+  }
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+  const isAllowedExact = allowedOrigins.includes(origin);
 
-      console.log("❌ Blocked by CORS origin:", origin);
+  const isAllowedVercel =
+    origin.endsWith(".vercel.app") && origin.includes("gym-fitness");
 
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+  return isAllowedExact || isAllowedVercel;
+};
 
-app.options("/{*splat}", cors());
+const corsOptions = {
+  origin(origin, callback) {
+    if (isOriginAllowed(origin)) {
+      return callback(null, true);
+    }
+
+    console.log("❌ Blocked by CORS origin:", origin);
+
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
 
 app.use(
   helmet({
@@ -196,11 +203,7 @@ const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
   cors: {
     origin(origin, callback) {
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      if (allowedOrigins.includes(origin)) {
+      if (isOriginAllowed(origin)) {
         return callback(null, true);
       }
 
