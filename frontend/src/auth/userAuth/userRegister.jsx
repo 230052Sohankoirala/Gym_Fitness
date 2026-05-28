@@ -1,5 +1,8 @@
+/* eslint-disable no-unused-vars */
+// src/pages/auth/UserRegister.jsx
+
 import React, { useState } from "react";
-import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
+import { motion } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, AlertCircle, ArrowLeft } from "lucide-react";
 import registerImg from "../../assets/Images/Signup.jpg";
 import { Link, useNavigate } from "react-router-dom";
@@ -7,11 +10,25 @@ import { Typewriter } from "react-simple-typewriter";
 import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+/**
+ * Deployment-safe backend URL.
+ *
+ * In Vercel Environment Variables:
+ * VITE_API_URL=https://your-new-render-backend-url.onrender.com
+ *
+ * Example:
+ * VITE_API_URL=https://gym-fitness-backend-d13i.onrender.com
+ */
+const RAW_API_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://gym-fitness-backend-d13i.onrender.com";
+
+const API_BASE = RAW_API_URL.replace(/\/+$/, "");
 
 const UserRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     fullname: "",
@@ -27,6 +44,20 @@ const UserRegister = () => {
 
   const navigate = useNavigate();
 
+  const cachePendingEmail = (email) => {
+    const safeEmail = (email || "").trim();
+
+    if (!safeEmail) return;
+
+    sessionStorage.setItem("registerEmail", safeEmail);
+    localStorage.setItem("pendingEmail", safeEmail);
+  };
+
+  const clearPendingEmail = () => {
+    sessionStorage.removeItem("registerEmail");
+    localStorage.removeItem("pendingEmail");
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -40,6 +71,10 @@ const UserRegister = () => {
         ...prev,
         [name]: "",
       }));
+    }
+
+    if (serverError) {
+      setServerError("");
     }
   };
 
@@ -77,18 +112,47 @@ const UserRegister = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const cachePendingEmail = (email) => {
-    const safeEmail = (email || "").trim();
+  const handleRegisterResponse = (data, fallbackEmail = "") => {
+    const safeEmail = (
+      data?.user?.email ||
+      data?.email ||
+      fallbackEmail ||
+      ""
+    ).trim();
 
-    if (!safeEmail) return;
+    const requiresVerification =
+      data?.requiresVerification === true ||
+      data?.isNewUser === true ||
+      data?.needsVerification === true ||
+      data?.verificationRequired === true ||
+      (typeof data?.message === "string" && /verify|verification|otp|code/i.test(data.message));
 
-    sessionStorage.setItem("registerEmail", safeEmail);
-    localStorage.setItem("pendingEmail", safeEmail);
-  };
+    if (safeEmail) {
+      cachePendingEmail(safeEmail);
+    }
 
-  const clearPendingEmail = () => {
-    sessionStorage.removeItem("registerEmail");
-    localStorage.removeItem("pendingEmail");
+    if (requiresVerification) {
+      navigate("/verify-email", {
+        state: {
+          email: safeEmail,
+        },
+      });
+
+      return;
+    }
+
+    if (data?.token && data?.user) {
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      clearPendingEmail();
+
+      navigate("/home");
+
+      return;
+    }
+
+    navigate("/memberLogin");
   };
 
   const handleSubmit = async (e) => {
@@ -109,34 +173,7 @@ const UserRegister = () => {
         password: formData.password,
       });
 
-      const requiresVerification =
-        data?.requiresVerification === true ||
-        data?.isNewUser === true ||
-        data?.needsVerification === true ||
-        (typeof data?.message === "string" && /verify/i.test(data.message));
-
-      if (requiresVerification) {
-        cachePendingEmail(safeEmail);
-
-        navigate("/verify-email", {
-          state: { email: safeEmail },
-        });
-
-        return;
-      }
-
-      if (data?.token && data?.user) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-
-        clearPendingEmail();
-
-        navigate("/home");
-
-        return;
-      }
-
-      navigate("/memberLogin");
+      handleRegisterResponse(data, safeEmail);
     } catch (err) {
       const msg = err?.response?.data?.message;
 
@@ -151,48 +188,42 @@ const UserRegister = () => {
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
+    if (isGoogleSubmitting) return;
+
+    setIsGoogleSubmitting(true);
+    setServerError("");
+
     try {
+      const googleCredential = credentialResponse?.credential;
+
+      if (!googleCredential) {
+        setServerError("Google signup failed. No credential received.");
+        return;
+      }
+
+      console.log("Google Client ID: ✅ Loaded");
+      console.log("Current origin:", window.location.origin);
+
       const { data } = await axios.post(`${API_BASE}/api/auth/google`, {
-        token: credentialResponse.credential,
+        token: googleCredential,
       });
 
       console.log("Google response:", data);
 
-      const safeEmail = (data?.user?.email || data?.email || "").trim();
-
-      if (safeEmail) {
-        sessionStorage.setItem("registerEmail", safeEmail);
-        localStorage.setItem("pendingEmail", safeEmail);
-      }
-
-      if (data?.requiresVerification) {
-        navigate("/verify-email", {
-          state: { email: safeEmail },
-        });
-
-        return;
-      }
-
-      if (data?.token && data?.user) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-
-        sessionStorage.removeItem("registerEmail");
-        localStorage.removeItem("pendingEmail");
-
-        navigate("/home");
-
-        return;
-      }
-
-      navigate("/memberLogin");
+      handleRegisterResponse(data);
     } catch (err) {
       console.error("Google signup error:", err);
 
       const msg = err?.response?.data?.message;
 
       setServerError(msg || "Google signup failed. Try again.");
+    } finally {
+      setIsGoogleSubmitting(false);
     }
+  };
+
+  const handleGoogleError = () => {
+    setServerError("Google signup failed. Please try again.");
   };
 
   return (
@@ -271,7 +302,8 @@ const UserRegister = () => {
 
               {errors.fullname && (
                 <p className="text-sm text-red-600 flex items-center mt-1">
-                  <AlertCircle className="w-4 h-4 mr-1" /> {errors.fullname}
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.fullname}
                 </p>
               )}
             </div>
@@ -291,7 +323,8 @@ const UserRegister = () => {
 
               {errors.username && (
                 <p className="text-sm text-red-600 flex items-center mt-1">
-                  <AlertCircle className="w-4 h-4 mr-1" /> {errors.username}
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.username}
                 </p>
               )}
             </div>
@@ -315,7 +348,8 @@ const UserRegister = () => {
 
               {errors.email && (
                 <p className="text-sm text-red-600 flex items-center mt-1">
-                  <AlertCircle className="w-4 h-4 mr-1" /> {errors.email}
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.email}
                 </p>
               )}
             </div>
@@ -338,7 +372,7 @@ const UserRegister = () => {
 
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setShowPassword((prev) => !prev)}
                   className="absolute right-3 top-3.5"
                 >
                   {showPassword ? (
@@ -351,7 +385,8 @@ const UserRegister = () => {
 
               {errors.password && (
                 <p className="text-sm text-red-600 flex items-center mt-1">
-                  <AlertCircle className="w-4 h-4 mr-1" /> {errors.password}
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.password}
                 </p>
               )}
             </div>
@@ -374,7 +409,7 @@ const UserRegister = () => {
 
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
                   className="absolute right-3 top-3.5"
                 >
                   {showConfirmPassword ? (
@@ -387,7 +422,7 @@ const UserRegister = () => {
 
               {errors.confirmPassword && (
                 <p className="text-sm text-red-600 flex items-center mt-1">
-                  <AlertCircle className="w-4 h-4 mr-1" />{" "}
+                  <AlertCircle className="w-4 h-4 mr-1" />
                   {errors.confirmPassword}
                 </p>
               )}
@@ -395,7 +430,7 @@ const UserRegister = () => {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isGoogleSubmitting}
               className="w-full py-3.5 mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-60"
             >
               {isSubmitting ? "Signing up..." : "Sign Up"}
@@ -411,20 +446,24 @@ const UserRegister = () => {
           </div>
 
           <div className="mt-4 flex justify-center">
-            <GoogleLogin
-              theme="filled_blue"
-              size="large"
-              shape="pill"
-              width="280"
-              onSuccess={handleGoogleSuccess}
-              onError={() => setServerError("Google signup failed")}
-            />
+            {isGoogleSubmitting ? (
+              <div className="text-sm text-gray-600">Processing Google signup...</div>
+            ) : (
+              <GoogleLogin
+                theme="filled_blue"
+                size="large"
+                shape="pill"
+                width="280"
+                useOneTap={false}
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+              />
+            )}
           </div>
 
           <div className="mt-6 text-center">
             <p className="text-gray-600">
               Already have an account?{" "}
-
               <Link
                 to="/memberLogin"
                 className="font-semibold text-indigo-600 hover:text-indigo-500"
