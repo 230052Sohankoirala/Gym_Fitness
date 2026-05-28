@@ -24,16 +24,21 @@ import {
 
 /* ---------------- Environment base URL ---------------- */
 /**
- * For local:
- * VITE_API_BASE_URL=http://localhost:4000
+ * Vercel Environment Variables:
  *
- * For Render:
- * VITE_API_BASE_URL=https://your-backend-name.onrender.com
+ * VITE_API_URL=https://gym-fitness-hgq7.onrender.com
+ * VITE_SOCKET_URL=https://gym-fitness-hgq7.onrender.com
+ *
+ * SOCKET_BASE = backend root
+ * API_BASE    = backend API root
  */
-const SOCKET_BASE =
-import.meta.env.VITE_API_URL || "http://localhost:4000";
+const RAW_BACKEND_URL =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_SOCKET_URL ||
+  "https://gym-fitness-hgq7.onrender.com";
 
-const API_BASE = `${SOCKET_BASE}`;
+const SOCKET_BASE = RAW_BACKEND_URL.replace(/\/+$/, "");
+const API_BASE = `${SOCKET_BASE}/api`;
 
 /* ---------------- helpers ---------------- */
 const prettyTime = (iso) => {
@@ -103,7 +108,19 @@ const normalizeUrl = (u) => {
 
   if (!s) return "";
 
-  if (s.startsWith("http://") || s.startsWith("https://")) {
+  if (s.startsWith("http://localhost:4000")) {
+    return s.replace("http://localhost:4000", SOCKET_BASE);
+  }
+
+  if (s.startsWith("http://127.0.0.1:4000")) {
+    return s.replace("http://127.0.0.1:4000", SOCKET_BASE);
+  }
+
+  if (s.startsWith("https://localhost:4000")) {
+    return s.replace("https://localhost:4000", SOCKET_BASE);
+  }
+
+  if (s.startsWith("https://") || s.startsWith("http://")) {
     return s;
   }
 
@@ -117,7 +134,9 @@ const normalizeUrl = (u) => {
 const normalizeChatUploadPath = (u) => {
   const n = normalizeUrl(u);
 
-  return n.replace("/upload/chat/", "/uploads/chat/");
+  return n
+    .replace("/upload/chat/", "/uploads/chat/")
+    .replace("/uploads//chat/", "/uploads/chat/");
 };
 
 const getInitial = (name = "T") => {
@@ -137,7 +156,9 @@ export default function MessagePortal() {
   const navigate = useNavigate();
   const { darkMode } = useTheme();
 
-  const token = useMemo(() => localStorage.getItem("token") || "", []);
+  const token = useMemo(() => {
+    return localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+  }, []);
 
   const [trainerInfo, setTrainerInfo] = useState({
     name: "Trainer",
@@ -260,6 +281,7 @@ export default function MessagePortal() {
       const candidates = [
         `${API_BASE}/trainers/${trainerId}`,
         `${API_BASE}/trainers/profile/${trainerId}`,
+        `${API_BASE}/trainers/public`,
       ];
 
       let data = null;
@@ -272,8 +294,17 @@ export default function MessagePortal() {
         });
 
         if (res.ok) {
-          data = await safeJson(res);
-          break;
+          const responseData = await safeJson(res);
+
+          if (Array.isArray(responseData)) {
+            data = responseData.find((trainer) => {
+              return String(trainer?._id || trainer?.id) === String(trainerId);
+            });
+          } else {
+            data = responseData;
+          }
+
+          if (data) break;
         }
       }
 
@@ -314,7 +345,7 @@ export default function MessagePortal() {
     setError("");
 
     try {
-      const res = await fetch(`${API_BASE}/api/messages/${trainerId}`, {
+      const res = await fetch(`${API_BASE}/messages/${trainerId}`, {
         method: "GET",
         headers: authHeaders(token, {
           "Content-Type": "application/json",
@@ -331,7 +362,17 @@ export default function MessagePortal() {
 
       const list = Array.isArray(data) ? data : [];
 
-      setMessages(list);
+      const fixedList = list.map((msg) => ({
+        ...msg,
+        attachments: Array.isArray(msg?.attachments)
+          ? msg.attachments.map((a) => ({
+              ...a,
+              url: normalizeChatUploadPath(a?.url),
+            }))
+          : [],
+      }));
+
+      setMessages(fixedList);
     } catch (err) {
       setError(err?.message || "Could not load messages.");
     } finally {
@@ -484,7 +525,7 @@ export default function MessagePortal() {
         fd.append("files", item.file);
       });
 
-      const res = await fetch(`${API_BASE}/api/messages/${trainerId}/media`, {
+      const res = await fetch(`${API_BASE}/messages/${trainerId}/media`, {
         method: "POST",
         headers: authHeaders(token),
         body: fd,
