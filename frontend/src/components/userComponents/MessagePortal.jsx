@@ -272,66 +272,56 @@ export default function MessagePortal() {
   }, [files]);
 
   /* ---------------- trainer header fetch ---------------- */
-  const fetchTrainerInfo = useCallback(async () => {
-    if (!trainerId || !token) return;
+const fetchTrainerInfo = useCallback(async () => {
+  if (!trainerId || !token) return;
 
-    setLoadingTrainer(true);
+  setLoadingTrainer(true);
 
-    try {
-      const candidates = [
-        `${API_BASE}/trainers/${trainerId}`,
-        `${API_BASE}/trainers/profile/${trainerId}`,
-        `${API_BASE}/trainers/public`,
-      ];
+  try {
+    const res = await fetch(`${API_BASE}/trainers/public`, {
+      method: "GET",
+      headers: authHeaders(token),
+      credentials: "include",
+    });
 
-      let data = null;
+    const data = await safeJson(res);
 
-      for (const url of candidates) {
-        const res = await fetch(url, {
-          method: "GET",
-          headers: authHeaders(token),
-          credentials: "include",
-        });
-
-        if (res.ok) {
-          const responseData = await safeJson(res);
-
-          if (Array.isArray(responseData)) {
-            data = responseData.find((trainer) => {
-              return String(trainer?._id || trainer?.id) === String(trainerId);
-            });
-          } else {
-            data = responseData;
-          }
-
-          if (data) break;
-        }
-      }
-
-      if (!data) {
-        throw new Error("Trainer route not found");
-      }
-
-      const name =
-        data?.name ||
-        data?.fullName ||
-        data?.fullname ||
-        data?.trainerName ||
-        "Trainer";
-
-      setTrainerInfo({
-        name,
-        email: data?.email || "",
-      });
-    } catch {
-      setTrainerInfo({
-        name: "Trainer",
-        email: "",
-      });
-    } finally {
-      setLoadingTrainer(false);
+    if (!res.ok) {
+      throw new Error(data?.message || "Could not load trainer info");
     }
-  }, [trainerId, token]);
+
+    const trainers = Array.isArray(data) ? data : [];
+
+    const matchedTrainer = trainers.find((trainer) => {
+      return String(trainer?._id || trainer?.id) === String(trainerId);
+    });
+
+    if (!matchedTrainer) {
+      throw new Error("Trainer not found in public list");
+    }
+
+    const name =
+      matchedTrainer?.name ||
+      matchedTrainer?.fullName ||
+      matchedTrainer?.fullname ||
+      matchedTrainer?.trainerName ||
+      "Trainer";
+
+    setTrainerInfo({
+      name,
+      email: matchedTrainer?.email || "",
+    });
+  } catch (err) {
+    console.error("Trainer info fetch failed:", err);
+
+    setTrainerInfo({
+      name: "Trainer",
+      email: "",
+    });
+  } finally {
+    setLoadingTrainer(false);
+  }
+}, [trainerId, token]);
 
   useEffect(() => {
     fetchTrainerInfo();
