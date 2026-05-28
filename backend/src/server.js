@@ -554,7 +554,21 @@ app.use((err, _req, res, _next) => {
     message: err.message || "Server Error",
   });
 });
+app.get("/api/debug", (_req, res) => {
+  res.json({
+    success: true,
+    message: "Latest backend code is running",
+    trainerLoginRoute: "POST /api/trainers/login",
+    time: new Date().toISOString(),
+  });
+});
 
+app.post("/api/trainers/login-ping", (_req, res) => {
+  res.json({
+    success: true,
+    message: "Trainer login ping route exists",
+  });
+});
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 4000;
 
