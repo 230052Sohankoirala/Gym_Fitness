@@ -19,6 +19,61 @@ import { useTheme } from "../../context/ThemeContext";
 const BACKEND_URL =
   import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com";
 
+const normalizeAvatarUrl = (avatar) => {
+  if (!avatar) {
+    return "";
+  }
+
+  const cleanAvatar = String(avatar).trim();
+
+  if (!cleanAvatar) {
+    return "";
+  }
+
+  if (cleanAvatar.startsWith("blob:")) {
+    return cleanAvatar;
+  }
+
+  if (cleanAvatar.startsWith("http://localhost:4000")) {
+    return cleanAvatar.replace(
+      "http://localhost:4000",
+      "https://gym-fitness-hgq7.onrender.com"
+    );
+  }
+
+  if (cleanAvatar.startsWith("https://localhost:4000")) {
+    return cleanAvatar.replace(
+      "https://localhost:4000",
+      "https://gym-fitness-hgq7.onrender.com"
+    );
+  }
+
+  if (cleanAvatar.startsWith("http://gym-fitness-hgq7.onrender.com")) {
+    return cleanAvatar.replace(
+      "http://gym-fitness-hgq7.onrender.com",
+      "https://gym-fitness-hgq7.onrender.com"
+    );
+  }
+
+  if (cleanAvatar.startsWith("https://gym-fitness-hgq7.onrender.com")) {
+    return cleanAvatar;
+  }
+
+  if (cleanAvatar.startsWith("http://")) {
+    return cleanAvatar.replace("http://", "https://");
+  }
+
+  if (cleanAvatar.startsWith("https://")) {
+    return cleanAvatar;
+  }
+
+  if (cleanAvatar.startsWith("/")) {
+    return `${BACKEND_URL}${cleanAvatar}`;
+  }
+
+  return `${BACKEND_URL}/${cleanAvatar}`;
+};
+
 const Navbar = ({ notifications = 0 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -40,44 +95,7 @@ const Navbar = ({ notifications = 0 }) => {
   const location = useLocation();
 
   const avatarSrc = useMemo(() => {
-    if (!user?.avatar) return "";
-
-    const avatar = String(user.avatar).trim();
-
-    if (!avatar) return "";
-
-    if (avatar.startsWith("http://localhost:4000")) {
-      return avatar.replace("http://localhost:4000", BACKEND_URL);
-    }
-
-    if (avatar.startsWith("https://localhost:4000")) {
-      return avatar.replace("https://localhost:4000", BACKEND_URL);
-    }
-
-    if (avatar.startsWith("http://gym-fitness-hgq7.onrender.com")) {
-      return avatar.replace(
-        "http://gym-fitness-hgq7.onrender.com",
-        "https://gym-fitness-hgq7.onrender.com"
-      );
-    }
-
-    if (avatar.startsWith("https://gym-fitness-hgq7.onrender.com")) {
-      return avatar;
-    }
-
-    if (avatar.startsWith("http://")) {
-      return avatar.replace("http://", "https://");
-    }
-
-    if (avatar.startsWith("https://")) {
-      return avatar;
-    }
-
-    if (avatar.startsWith("/")) {
-      return `${BACKEND_URL}${avatar}`;
-    }
-
-    return `${BACKEND_URL}/${avatar}`;
+    return normalizeAvatarUrl(user?.avatar);
   }, [user?.avatar]);
 
   useEffect(() => {
@@ -205,17 +223,28 @@ const Navbar = ({ notifications = 0 }) => {
           src={avatarSrc}
           alt="Profile"
           draggable={false}
-          onError={(e) => {
-            e.currentTarget.onerror = null;
-            e.currentTarget.style.display = "none";
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.style.display = "none";
+
+            const fallback = event.currentTarget.nextElementSibling;
+
+            if (fallback) {
+              fallback.style.display = "flex";
+            }
           }}
           className="w-10 h-10 rounded-full border-2 border-blue-500 object-cover cursor-pointer select-none"
         />
-      ) : (
-        <div className="w-10 h-10 rounded-full border-2 border-blue-500 bg-gray-200 flex items-center justify-center">
-          <User size={20} className="text-gray-500" />
-        </div>
-      )}
+      ) : null}
+
+      <div
+        style={{
+          display: avatarSrc ? "none" : "flex",
+        }}
+        className="w-10 h-10 rounded-full border-2 border-blue-500 bg-gray-200 items-center justify-center"
+      >
+        <User size={20} className="text-gray-500" />
+      </div>
     </Link>
   );
 

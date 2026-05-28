@@ -5,33 +5,54 @@ import fs from "fs";
 const avatarsDir = path.join(process.cwd(), "uploads", "avatars");
 
 if (!fs.existsSync(avatarsDir)) {
-  fs.mkdirSync(avatarsDir, { recursive: true });
+  fs.mkdirSync(avatarsDir, {
+    recursive: true,
+  });
 }
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, avatarsDir);
   },
+
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname || "").toLowerCase();
-    const base = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    cb(null, `${base}${ext}`);
+
+    const safeName = `${Date.now()}-${Math.random()
+      .toString(16)
+      .slice(2)}${ext}`;
+
+    cb(null, safeName);
   },
 });
 
 const fileFilter = (_req, file, cb) => {
-  const allowed = [".jpeg", ".jpg", ".png", ".gif", ".webp"];
+  const allowedExtensions = [".jpeg", ".jpg", ".png", ".gif", ".webp"];
+
+  const allowedMimeTypes = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+  ];
+
   const ext = path.extname(file.originalname || "").toLowerCase();
 
-  if (allowed.includes(ext)) {
-    cb(null, true);
-  } else {
-    cb(new Error("Only JPG, JPEG, PNG, GIF, and WEBP images are allowed"));
+  if (allowedExtensions.includes(ext) && allowedMimeTypes.includes(file.mimetype)) {
+    return cb(null, true);
   }
+
+  return cb(
+    new Error("Only JPG, JPEG, PNG, GIF, and WEBP images are allowed"),
+    false
+  );
 };
 
 export const uploadAvatar = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
 });

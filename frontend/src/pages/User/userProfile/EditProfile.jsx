@@ -18,11 +18,96 @@ import axios from "axios";
 const API_BASE =
     import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com";
 
+const normalizeAvatarUrl = (avatar) => {
+    if (!avatar) {
+        return "";
+    }
+
+    const cleanAvatar = String(avatar).trim();
+
+    if (!cleanAvatar) {
+        return "";
+    }
+
+    if (cleanAvatar.startsWith("blob:")) {
+        return cleanAvatar;
+    }
+
+    if (cleanAvatar.startsWith("http://localhost:4000")) {
+        return cleanAvatar.replace(
+            "http://localhost:4000",
+            "https://gym-fitness-hgq7.onrender.com"
+        );
+    }
+
+    if (cleanAvatar.startsWith("https://localhost:4000")) {
+        return cleanAvatar.replace(
+            "https://localhost:4000",
+            "https://gym-fitness-hgq7.onrender.com"
+        );
+    }
+
+    if (cleanAvatar.startsWith("http://gym-fitness-hgq7.onrender.com")) {
+        return cleanAvatar.replace(
+            "http://gym-fitness-hgq7.onrender.com",
+            "https://gym-fitness-hgq7.onrender.com"
+        );
+    }
+
+    if (cleanAvatar.startsWith("https://gym-fitness-hgq7.onrender.com")) {
+        return cleanAvatar;
+    }
+
+    if (cleanAvatar.startsWith("http://")) {
+        return cleanAvatar.replace("http://", "https://");
+    }
+
+    if (cleanAvatar.startsWith("https://")) {
+        return cleanAvatar;
+    }
+
+    if (cleanAvatar.startsWith("/")) {
+        return `${API_BASE}${cleanAvatar}`;
+    }
+
+    return `${API_BASE}/${cleanAvatar}`;
+};
+
+const updateStoredUser = (updatedUser) => {
+    const localRaw = localStorage.getItem("user");
+    const sessionRaw = sessionStorage.getItem("user");
+
+    let oldUser = {};
+
+    try {
+        oldUser = JSON.parse(localRaw || sessionRaw || "{}");
+    } catch {
+        oldUser = {};
+    }
+
+    const mergedUser = {
+        ...oldUser,
+        ...updatedUser,
+    };
+
+    if (localRaw) {
+        localStorage.setItem("user", JSON.stringify(mergedUser));
+    }
+
+    if (sessionRaw) {
+        sessionStorage.setItem("user", JSON.stringify(mergedUser));
+    }
+
+    window.dispatchEvent(new Event("user-profile-updated"));
+    window.dispatchEvent(new Event("auth-user-updated"));
+};
+
 const EditProfile = () => {
     const navigate = useNavigate();
     const { darkMode } = useTheme?.() ?? { darkMode: false };
 
     const [saving, setSaving] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [showSaved, setShowSaved] = useState(false);
 
     const [showPw, setShowPw] = useState({
@@ -44,51 +129,6 @@ const EditProfile = () => {
         passwordNew: "",
         passwordConfirm: "",
     });
-
-    const normalizeAvatarUrl = (avatar) => {
-        if (!avatar) {
-            return "";
-        }
-
-        const cleanAvatar = String(avatar).trim();
-
-        if (!cleanAvatar) {
-            return "";
-        }
-
-        if (cleanAvatar.startsWith("http://localhost:4000")) {
-            return cleanAvatar.replace("http://localhost:4000", API_BASE);
-        }
-
-        if (cleanAvatar.startsWith("https://localhost:4000")) {
-            return cleanAvatar.replace("https://localhost:4000", API_BASE);
-        }
-
-        if (cleanAvatar.startsWith("http://gym-fitness-hgq7.onrender.com")) {
-            return cleanAvatar.replace(
-                "http://gym-fitness-hgq7.onrender.com",
-                "https://gym-fitness-hgq7.onrender.com"
-            );
-        }
-
-        if (cleanAvatar.startsWith("https://gym-fitness-hgq7.onrender.com")) {
-            return cleanAvatar;
-        }
-
-        if (cleanAvatar.startsWith("http://")) {
-            return cleanAvatar.replace("http://", "https://");
-        }
-
-        if (cleanAvatar.startsWith("https://")) {
-            return cleanAvatar;
-        }
-
-        if (cleanAvatar.startsWith("/")) {
-            return `${API_BASE}${cleanAvatar}`;
-        }
-
-        return `${API_BASE}/${cleanAvatar}`;
-    };
 
     const previewAvatar = useMemo(() => {
         if (!form.avatar) {
@@ -113,8 +153,15 @@ const EditProfile = () => {
     useEffect(() => {
         const fetchProfile = async () => {
             try {
+                setLoading(true);
+
                 const token =
                     localStorage.getItem("token") || sessionStorage.getItem("token");
+
+                if (!token) {
+                    navigate("/login");
+                    return;
+                }
 
                 const { data } = await axios.get(`${API_BASE}/api/users/me`, {
                     headers: {
@@ -130,41 +177,59 @@ const EditProfile = () => {
                     fullname: data.fullname || "",
                     username: data.username || "",
                     email: data.email || "",
-                    age: data.age || "",
-                    weight: data.weight || "",
-                    height: data.height || "",
+                    age: data.age ?? "",
+                    weight: data.weight ?? "",
+                    height: data.height ?? "",
                     gender: data.gender || "Other",
+                    passwordCurrent: "",
+                    passwordNew: "",
+                    passwordConfirm: "",
                 }));
 
-                const currentStored =
-                    JSON.parse(
-                        localStorage.getItem("user") ||
-                        sessionStorage.getItem("user") ||
-                        "null"
-                    ) || {};
-
-                const mergedUser = {
-                    ...currentStored,
+                updateStoredUser({
                     ...data,
-                    avatar: fixedAvatar || currentStored.avatar || null,
-                };
-
-                if (localStorage.getItem("user")) {
-                    localStorage.setItem("user", JSON.stringify(mergedUser));
-                }
-
-                if (sessionStorage.getItem("user")) {
-                    sessionStorage.setItem("user", JSON.stringify(mergedUser));
-                }
-
-                window.dispatchEvent(new Event("user-profile-updated"));
-            } catch (err) {
-                console.error("Error fetching profile:", err);
+                    avatar: fixedAvatar || "",
+                });
+            } catch (error) {
+                console.error("Error fetching profile:", error);
+            } finally {
+                setLoading(false);
             }
         };
 
         fetchProfile();
-    }, []);
+    }, [navigate]);
+
+    const onAvatarChange = (event) => {
+        const file = event.target.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        const allowedTypes = [
+            "image/jpeg",
+            "image/jpg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+        ];
+
+        if (!allowedTypes.includes(file.type)) {
+            alert("Only JPG, JPEG, PNG, GIF, and WEBP images are allowed.");
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            alert("Avatar image must be less than 10MB.");
+            return;
+        }
+
+        setForm((prev) => ({
+            ...prev,
+            avatar: file,
+        }));
+    };
 
     const onSave = async () => {
         try {
@@ -172,6 +237,31 @@ const EditProfile = () => {
 
             const token =
                 localStorage.getItem("token") || sessionStorage.getItem("token");
+
+            if (!token) {
+                navigate("/login");
+                return;
+            }
+
+            if (form.passwordCurrent || form.passwordNew || form.passwordConfirm) {
+                if (!form.passwordCurrent || !form.passwordNew || !form.passwordConfirm) {
+                    alert("Please fill all password fields.");
+                    setSaving(false);
+                    return;
+                }
+
+                if (form.passwordNew !== form.passwordConfirm) {
+                    alert("New password and confirmation do not match.");
+                    setSaving(false);
+                    return;
+                }
+
+                if (form.passwordNew.length < 6) {
+                    alert("New password must be at least 6 characters.");
+                    setSaving(false);
+                    return;
+                }
+            }
 
             const formData = new FormData();
 
@@ -188,12 +278,6 @@ const EditProfile = () => {
             }
 
             if (form.passwordCurrent && form.passwordNew) {
-                if (form.passwordNew !== form.passwordConfirm) {
-                    setSaving(false);
-                    alert("New password and confirmation do not match");
-                    return;
-                }
-
                 formData.append("passwordCurrent", form.passwordCurrent);
                 formData.append("passwordNew", form.passwordNew);
             }
@@ -201,12 +285,16 @@ const EditProfile = () => {
             const { data } = await axios.put(`${API_BASE}/api/users/me`, formData, {
                 headers: {
                     Authorization: `Bearer ${token}`,
-                    "Content-Type": "multipart/form-data",
                 },
             });
 
-            const updatedUser = data?.user || {};
+            const updatedUser = data?.user || data || {};
             const fixedUpdatedAvatar = normalizeAvatarUrl(updatedUser.avatar || "");
+
+            const finalUser = {
+                ...updatedUser,
+                avatar: fixedUpdatedAvatar || "",
+            };
 
             setForm((prev) => ({
                 ...prev,
@@ -223,42 +311,22 @@ const EditProfile = () => {
                 passwordConfirm: "",
             }));
 
-            const currentStored =
-                JSON.parse(
-                    localStorage.getItem("user") ||
-                    sessionStorage.getItem("user") ||
-                    "null"
-                ) || {};
+            updateStoredUser(finalUser);
 
-            const mergedUser = {
-                ...currentStored,
-                ...updatedUser,
-                avatar: fixedUpdatedAvatar || currentStored.avatar || null,
-            };
-
-            if (localStorage.getItem("user")) {
-                localStorage.setItem("user", JSON.stringify(mergedUser));
-            }
-
-            if (sessionStorage.getItem("user")) {
-                sessionStorage.setItem("user", JSON.stringify(mergedUser));
-            }
-
-            window.dispatchEvent(new Event("user-profile-updated"));
-
-            setSaving(false);
             setShowSaved(true);
 
             setTimeout(() => {
                 setShowSaved(false);
             }, 1800);
-        } catch (err) {
+        } catch (error) {
             console.error(
                 "Update failed:",
-                err.response?.status,
-                err.response?.data || err.message
+                error.response?.status,
+                error.response?.data || error.message
             );
 
+            alert(error.response?.data?.message || "Profile update failed.");
+        } finally {
             setSaving(false);
         }
     };
@@ -274,6 +342,17 @@ const EditProfile = () => {
         : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-indigo-500";
 
     const labelTheme = darkMode ? "text-gray-300" : "text-gray-700";
+
+    if (loading) {
+        return (
+            <div
+                className={`min-h-screen grid place-items-center transition-colors duration-200 ${darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-800"
+                    }`}
+            >
+                Loading profile...
+            </div>
+        );
+    }
 
     return (
         <div
@@ -321,7 +400,7 @@ const EditProfile = () => {
                                 } inline-flex items-center gap-2`}
                         >
                             <Save size={16} />
-                            Save
+                            {saving ? "Saving..." : "Save"}
                         </button>
                     </div>
                 </div>
@@ -367,6 +446,10 @@ const EditProfile = () => {
                                         src={previewAvatar}
                                         alt="avatar"
                                         className="w-full h-full object-cover"
+                                        onError={(event) => {
+                                            event.currentTarget.onerror = null;
+                                            event.currentTarget.style.display = "none";
+                                        }}
                                     />
                                 ) : (
                                     <User size={32} />
@@ -376,18 +459,9 @@ const EditProfile = () => {
                             <label className="mt-2 inline-flex items-center gap-2 text-sm cursor-pointer">
                                 <input
                                     type="file"
-                                    accept="image/*"
+                                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                                     className="hidden"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-
-                                        if (file) {
-                                            setForm((f) => ({
-                                                ...f,
-                                                avatar: file,
-                                            }));
-                                        }
-                                    }}
+                                    onChange={onAvatarChange}
                                 />
 
                                 <span
@@ -406,10 +480,10 @@ const EditProfile = () => {
                             <Input
                                 label="Full Name"
                                 value={form.fullname}
-                                onChange={(v) =>
-                                    setForm((f) => ({
-                                        ...f,
-                                        fullname: v,
+                                onChange={(value) =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        fullname: value,
                                     }))
                                 }
                                 icon={<User size={16} />}
@@ -421,10 +495,10 @@ const EditProfile = () => {
                             <Input
                                 label="Username"
                                 value={form.username}
-                                onChange={(v) =>
-                                    setForm((f) => ({
-                                        ...f,
-                                        username: v,
+                                onChange={(value) =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        username: value,
                                     }))
                                 }
                                 icon={<User size={16} />}
@@ -436,10 +510,10 @@ const EditProfile = () => {
                             <Input
                                 label="Email"
                                 value={form.email}
-                                onChange={(v) =>
-                                    setForm((f) => ({
-                                        ...f,
-                                        email: v,
+                                onChange={(value) =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        email: value,
                                     }))
                                 }
                                 icon={<Mail size={16} />}
@@ -452,10 +526,10 @@ const EditProfile = () => {
                             <Input
                                 label="Age"
                                 value={form.age}
-                                onChange={(v) =>
-                                    setForm((f) => ({
-                                        ...f,
-                                        age: v,
+                                onChange={(value) =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        age: value,
                                     }))
                                 }
                                 icon={<Calendar size={16} />}
@@ -468,10 +542,10 @@ const EditProfile = () => {
                             <Input
                                 label="Weight"
                                 value={form.weight}
-                                onChange={(v) =>
-                                    setForm((f) => ({
-                                        ...f,
-                                        weight: v,
+                                onChange={(value) =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        weight: value,
                                     }))
                                 }
                                 icon={<User size={16} />}
@@ -484,10 +558,10 @@ const EditProfile = () => {
                             <Input
                                 label="Height"
                                 value={form.height}
-                                onChange={(v) =>
-                                    setForm((f) => ({
-                                        ...f,
-                                        height: v,
+                                onChange={(value) =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        height: value,
                                     }))
                                 }
                                 icon={<User size={16} />}
@@ -500,10 +574,10 @@ const EditProfile = () => {
                             <Select
                                 label="Gender"
                                 value={form.gender}
-                                onChange={(v) =>
-                                    setForm((f) => ({
-                                        ...f,
-                                        gender: v,
+                                onChange={(value) =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        gender: value,
                                     }))
                                 }
                                 options={[
@@ -535,17 +609,17 @@ const EditProfile = () => {
                         <PasswordInput
                             label="Current"
                             value={form.passwordCurrent}
-                            onChange={(v) =>
-                                setForm((f) => ({
-                                    ...f,
-                                    passwordCurrent: v,
+                            onChange={(value) =>
+                                setForm((prev) => ({
+                                    ...prev,
+                                    passwordCurrent: value,
                                 }))
                             }
                             show={showPw.current}
                             onToggle={() =>
-                                setShowPw((s) => ({
-                                    ...s,
-                                    current: !s.current,
+                                setShowPw((prev) => ({
+                                    ...prev,
+                                    current: !prev.current,
                                 }))
                             }
                             inputBase={inputBase}
@@ -556,17 +630,17 @@ const EditProfile = () => {
                         <PasswordInput
                             label="New"
                             value={form.passwordNew}
-                            onChange={(v) =>
-                                setForm((f) => ({
-                                    ...f,
-                                    passwordNew: v,
+                            onChange={(value) =>
+                                setForm((prev) => ({
+                                    ...prev,
+                                    passwordNew: value,
                                 }))
                             }
                             show={showPw.next}
                             onToggle={() =>
-                                setShowPw((s) => ({
-                                    ...s,
-                                    next: !s.next,
+                                setShowPw((prev) => ({
+                                    ...prev,
+                                    next: !prev.next,
                                 }))
                             }
                             inputBase={inputBase}
@@ -577,17 +651,17 @@ const EditProfile = () => {
                         <PasswordInput
                             label="Confirm"
                             value={form.passwordConfirm}
-                            onChange={(v) =>
-                                setForm((f) => ({
-                                    ...f,
-                                    passwordConfirm: v,
+                            onChange={(value) =>
+                                setForm((prev) => ({
+                                    ...prev,
+                                    passwordConfirm: value,
                                 }))
                             }
                             show={showPw.confirm}
                             onToggle={() =>
-                                setShowPw((s) => ({
-                                    ...s,
-                                    confirm: !s.confirm,
+                                setShowPw((prev) => ({
+                                    ...prev,
+                                    confirm: !prev.confirm,
                                 }))
                             }
                             inputBase={inputBase}
@@ -633,7 +707,7 @@ const Input = ({
                 type={type}
                 className={`${inputBase} ${inputTheme} ${icon ? "pl-9" : ""}`}
                 value={value}
-                onChange={(e) => onChange(e.target.value)}
+                onChange={(event) => onChange(event.target.value)}
                 placeholder={placeholder}
             />
         </div>
@@ -662,7 +736,7 @@ const PasswordInput = ({
                 type={show ? "text" : "password"}
                 className={`${inputBase} ${inputTheme} pl-9 pr-9`}
                 value={value}
-                onChange={(e) => onChange(e.target.value)}
+                onChange={(event) => onChange(event.target.value)}
             />
 
             <button
@@ -692,11 +766,11 @@ const Select = ({
         <select
             className={`${inputBase} ${inputTheme}`}
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(event) => onChange(event.target.value)}
         >
-            {options.map((o) => (
-                <option key={o.value} value={o.value}>
-                    {o.label}
+            {options.map((option) => (
+                <option key={option.value} value={option.value}>
+                    {option.label}
                 </option>
             ))}
         </select>
