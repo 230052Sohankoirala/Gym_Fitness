@@ -46,11 +46,15 @@ const EditProfile = () => {
     });
 
     const normalizeAvatarUrl = (avatar) => {
-        if (!avatar) return "";
+        if (!avatar) {
+            return "";
+        }
 
         const cleanAvatar = String(avatar).trim();
 
-        if (!cleanAvatar) return "";
+        if (!cleanAvatar) {
+            return "";
+        }
 
         if (cleanAvatar.startsWith("http://localhost:4000")) {
             return cleanAvatar.replace("http://localhost:4000", API_BASE);
@@ -60,7 +64,22 @@ const EditProfile = () => {
             return cleanAvatar.replace("https://localhost:4000", API_BASE);
         }
 
-        if (cleanAvatar.startsWith("http://") || cleanAvatar.startsWith("https://")) {
+        if (cleanAvatar.startsWith("http://gym-fitness-hgq7.onrender.com")) {
+            return cleanAvatar.replace(
+                "http://gym-fitness-hgq7.onrender.com",
+                "https://gym-fitness-hgq7.onrender.com"
+            );
+        }
+
+        if (cleanAvatar.startsWith("https://gym-fitness-hgq7.onrender.com")) {
+            return cleanAvatar;
+        }
+
+        if (cleanAvatar.startsWith("http://")) {
+            return cleanAvatar.replace("http://", "https://");
+        }
+
+        if (cleanAvatar.startsWith("https://")) {
             return cleanAvatar;
         }
 
@@ -72,7 +91,9 @@ const EditProfile = () => {
     };
 
     const previewAvatar = useMemo(() => {
-        if (!form.avatar) return "";
+        if (!form.avatar) {
+            return "";
+        }
 
         if (typeof form.avatar === "string") {
             return normalizeAvatarUrl(form.avatar);
