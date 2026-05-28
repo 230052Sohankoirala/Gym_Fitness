@@ -76,54 +76,64 @@ const normalizeAvatarUrl = (avatar) => {
 
 const Navbar = ({ notifications = 0 }) => {
   const [isOpen, setIsOpen] = useState(false);
-
-  const [user, setUser] = useState(() => {
-    try {
-      const raw =
-        localStorage.getItem("user") ||
-        sessionStorage.getItem("user") ||
-        "null";
-
-      return JSON.parse(raw);
-    } catch {
-      return null;
-    }
-  });
+  const [backendUser, setBackendUser] = useState(null);
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   const menuRef = useRef(null);
   const { darkMode } = useTheme();
   const location = useLocation();
 
   const avatarSrc = useMemo(() => {
-    return normalizeAvatarUrl(user?.avatar);
-  }, [user?.avatar]);
+    return normalizeAvatarUrl(backendUser?.avatar);
+  }, [backendUser?.avatar]);
 
   useEffect(() => {
-    const syncUserFromStorage = () => {
+    const fetchUserFromBackend = async () => {
       try {
-        const raw =
-          localStorage.getItem("user") ||
-          sessionStorage.getItem("user") ||
-          "null";
+        const token =
+          localStorage.getItem("token") || sessionStorage.getItem("token");
 
-        const parsed = JSON.parse(raw);
+        if (!token) {
+          setBackendUser(null);
+          return;
+        }
 
-        setUser(parsed);
-      } catch {
-        setUser(null);
+        const response = await fetch(`${BACKEND_URL}/api/users/me`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setBackendUser(null);
+          return;
+        }
+
+        setBackendUser(data);
+        setAvatarFailed(false);
+      } catch (error) {
+        console.error("Navbar user fetch failed:", error);
+        setBackendUser(null);
       }
     };
 
-    window.addEventListener("storage", syncUserFromStorage);
-    window.addEventListener("user-profile-updated", syncUserFromStorage);
-    window.addEventListener("auth-user-updated", syncUserFromStorage);
+    fetchUserFromBackend();
+
+    window.addEventListener("user-profile-updated", fetchUserFromBackend);
+    window.addEventListener("auth-user-updated", fetchUserFromBackend);
 
     return () => {
-      window.removeEventListener("storage", syncUserFromStorage);
-      window.removeEventListener("user-profile-updated", syncUserFromStorage);
-      window.removeEventListener("auth-user-updated", syncUserFromStorage);
+      window.removeEventListener("user-profile-updated", fetchUserFromBackend);
+      window.removeEventListener("auth-user-updated", fetchUserFromBackend);
     };
   }, []);
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [avatarSrc]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -218,33 +228,21 @@ const Navbar = ({ notifications = 0 }) => {
 
   const avatarNode = (
     <Link to="/profile" className="block">
-      {avatarSrc ? (
+      {avatarSrc && !avatarFailed ? (
         <img
           src={avatarSrc}
           alt="Profile"
           draggable={false}
-          onError={(event) => {
-            event.currentTarget.onerror = null;
-            event.currentTarget.style.display = "none";
-
-            const fallback = event.currentTarget.nextElementSibling;
-
-            if (fallback) {
-              fallback.style.display = "flex";
-            }
+          onError={() => {
+            setAvatarFailed(true);
           }}
           className="w-10 h-10 rounded-full border-2 border-blue-500 object-cover cursor-pointer select-none"
         />
-      ) : null}
-
-      <div
-        style={{
-          display: avatarSrc ? "none" : "flex",
-        }}
-        className="w-10 h-10 rounded-full border-2 border-blue-500 bg-gray-200 items-center justify-center"
-      >
-        <User size={20} className="text-gray-500" />
-      </div>
+      ) : (
+        <div className="w-10 h-10 rounded-full border-2 border-blue-500 bg-gray-200 flex items-center justify-center">
+          <User size={20} className="text-gray-500" />
+        </div>
+      )}
     </Link>
   );
 
@@ -267,7 +265,8 @@ const Navbar = ({ notifications = 0 }) => {
               key={link.name}
               to={link.to}
               className={({ isActive }) =>
-                `px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${baseText} ${hoverText} ${isActive ? (darkMode ? "bg-gray-700" : "bg-gray-100") : ""
+                `px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${baseText} ${hoverText} ${
+                  isActive ? (darkMode ? "bg-gray-700" : "bg-gray-100") : ""
                 }`
               }
             >
@@ -308,8 +307,9 @@ const Navbar = ({ notifications = 0 }) => {
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className={`focus:outline-none ml-2 ${darkMode ? "text-gray-200" : "text-gray-800"
-              } transition-colors duration-200`}
+            className={`focus:outline-none ml-2 ${
+              darkMode ? "text-gray-200" : "text-gray-800"
+            } transition-colors duration-200`}
             aria-label="Toggle menu"
             aria-expanded={isOpen}
           >
@@ -326,23 +326,27 @@ const Navbar = ({ notifications = 0 }) => {
             animate="visible"
             exit="hidden"
             variants={menuVariants}
-            className={`md:hidden border-t transition-colors ${darkMode
+            className={`md:hidden border-t transition-colors ${
+              darkMode
                 ? "bg-gray-900 border-gray-700"
                 : "bg-white border-gray-200"
-              }`}
+            }`}
           >
             {links.map((link) => (
               <motion.div
                 key={link.name}
                 variants={itemVariants}
-                className={`px-4 py-3 border-b transition-colors ${darkMode ? "border-gray-700" : "border-gray-200"
-                  }`}
+                className={`px-4 py-3 border-b transition-colors ${
+                  darkMode ? "border-gray-700" : "border-gray-200"
+                }`}
               >
                 <NavLink
                   to={link.to}
                   className={({ isActive }) =>
-                    `flex items-center gap-2 ${darkMode ? "text-gray-200" : "text-gray-800"
-                    } ${hoverText} ${isActive ? (darkMode ? "bg-gray-800" : "bg-gray-100") : ""
+                    `flex items-center gap-2 ${
+                      darkMode ? "text-gray-200" : "text-gray-800"
+                    } ${hoverText} ${
+                      isActive ? (darkMode ? "bg-gray-800" : "bg-gray-100") : ""
                     } px-2 py-2 rounded-lg`
                   }
                 >
