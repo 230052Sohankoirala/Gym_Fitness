@@ -13,7 +13,7 @@ import axios from "axios";
 /**
  * Deployment-safe backend URL.
  *
- * In Vercel Environment Variables:
+ * Vercel Environment Variable:
  * VITE_API_URL=https://gym-fitness-hgq7.onrender.com
  */
 const RAW_API_URL =
@@ -41,10 +41,6 @@ const UserRegister = () => {
 
   const navigate = useNavigate();
 
-  /**
-   * Saves email temporarily so VerifyEmail.jsx can still access it
-   * even if page refreshes.
-   */
   const cachePendingEmail = (email) => {
     const safeEmail = String(email || "").trim();
 
@@ -56,17 +52,37 @@ const UserRegister = () => {
     localStorage.setItem("pendingEmail", safeEmail);
   };
 
-  /**
-   * Clears pending verification email after successful login/verification.
-   */
   const clearPendingEmail = () => {
     sessionStorage.removeItem("registerEmail");
     localStorage.removeItem("pendingEmail");
   };
 
-  /**
-   * Handles form input changes.
-   */
+  const clearAuthStorage = () => {
+    [
+      "token",
+      "user",
+      "role",
+      "auth_token",
+      "auth_user",
+      "isAdmin",
+    ].forEach((key) => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
+  };
+
+  const saveAuthData = (token, user) => {
+    if (!token || !user) {
+      return;
+    }
+
+    clearAuthStorage();
+
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem("role", user?.role || "member");
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -87,9 +103,6 @@ const UserRegister = () => {
     }
   };
 
-  /**
-   * Validates password.
-   */
   const validatePassword = (password) => {
     if (!password) {
       return "Password is required";
@@ -102,9 +115,6 @@ const UserRegister = () => {
     return "";
   };
 
-  /**
-   * Validates full registration form.
-   */
   const validateForm = () => {
     const newErrors = {};
 
@@ -139,41 +149,33 @@ const UserRegister = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  /**
-   * Redirects user based on role after successful token login.
-   */
   const redirectByRole = (user) => {
     const role = user?.role || "member";
 
     if (role === "admin") {
-      navigate("/admin/dashboard");
+      navigate("/admin/dashboard", { replace: true });
       return;
     }
 
     if (role === "trainer") {
-      navigate("/trainer/dashboard");
+      navigate("/trainer/dashboard", { replace: true });
       return;
     }
 
-    navigate("/home");
+    navigate("/home", { replace: true });
   };
 
   /**
-   * Checks backend response and decides where to send user.
-   *
-   * Your backend register controller returns:
-   * requiresVerification: true
-   * email: user.email
-   *
-   * Your uploaded register page already uses this style of checking and navigating
-   * to /verify-email when verification is needed. :contentReference[oaicite:0]{index=0}
+   * Normal register response:
+   * Backend should return requiresVerification: true.
+   * Your current register page already checks this flag before navigating. :contentReference[oaicite:0]{index=0}
    */
   const handleRegisterResponse = (data, fallbackEmail = "") => {
     const safeEmail = String(
       data?.user?.email ||
-        data?.email ||
-        fallbackEmail ||
-        ""
+      data?.email ||
+      fallbackEmail ||
+      ""
     ).trim();
 
     const requiresVerification =
@@ -188,6 +190,7 @@ const UserRegister = () => {
       cachePendingEmail(safeEmail);
 
       navigate("/verify-email", {
+        replace: true,
         state: {
           email: safeEmail,
         },
@@ -197,87 +200,7 @@ const UserRegister = () => {
     }
 
     if (data?.token && data?.user) {
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      clearPendingEmail();
-
-      redirectByRole(data.user);
-
-      return;
-    }
-
-    navigate("/memberLogin");
-  };
-
-  /**
-   * Normal email/password signup.
-   */
-const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  if (!validateForm()) {
-    return;
-  }
-
-  setIsSubmitting(true);
-  setServerError("");
-
-  try {
-    const safeEmail = formData.email.trim().toLowerCase();
-
-    console.log("REGISTER API URL:", `${API_BASE}/api/auth/register`);
-
-    const { data } = await axios.post(
-      `${API_BASE}/api/auth/register`,
-      {
-        fullname: formData.fullname.trim(),
-        username: formData.username.trim(),
-        email: safeEmail,
-        password: formData.password,
-      },
-      {
-        timeout: 60000,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    console.log("REGISTER RESPONSE:", data);
-
-    const responseEmail = String(
-      data?.user?.email || data?.email || safeEmail || ""
-    ).trim();
-
-    const requiresVerification =
-      data?.requiresVerification === true ||
-      data?.isNewUser === true ||
-      data?.needsVerification === true ||
-      data?.verificationRequired === true ||
-      (typeof data?.message === "string" &&
-        /verify|verification|otp|code/i.test(data.message));
-
-    console.log("REQUIRES VERIFICATION:", requiresVerification);
-    console.log("EMAIL TO VERIFY:", responseEmail);
-
-    if (requiresVerification) {
-      sessionStorage.setItem("registerEmail", responseEmail);
-      localStorage.setItem("pendingEmail", responseEmail);
-
-      navigate("/verify-email", {
-        replace: true,
-        state: {
-          email: responseEmail,
-        },
-      });
-
-      return;
-    }
-
-    if (data?.token && data?.user) {
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      saveAuthData(data.token, data.user);
 
       clearPendingEmail();
 
@@ -287,56 +210,97 @@ const handleSubmit = async (e) => {
     }
 
     setServerError("Register worked, but backend did not request verification.");
-  } catch (err) {
-    console.error("REGISTER ERROR FULL:", err);
-    console.error("REGISTER ERROR RESPONSE:", err?.response?.data);
+  };
 
-    if (err.code === "ECONNABORTED") {
-      setServerError("Registration took too long. Please try again.");
+  /**
+   * Normal email/password signup.
+   * This must go to /verify-email when backend returns requiresVerification.
+   */
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
       return;
     }
 
-    const data = err?.response?.data;
-    const msg = data?.message;
-    const safeEmail = data?.email || formData.email.trim().toLowerCase();
+    setIsSubmitting(true);
+    setServerError("");
 
-    const requiresVerification =
-      data?.requiresVerification === true ||
-      data?.isNewUser === true ||
-      data?.needsVerification === true ||
-      data?.verificationRequired === true ||
-      (typeof msg === "string" &&
-        /verify|verification|otp|code/i.test(msg));
+    try {
+      const safeEmail = formData.email.trim().toLowerCase();
 
-    if (requiresVerification) {
-      sessionStorage.setItem("registerEmail", safeEmail);
-      localStorage.setItem("pendingEmail", safeEmail);
+      console.log("REGISTER API URL:", `${API_BASE}/api/auth/register`);
 
-      navigate("/verify-email", {
-        replace: true,
-        state: {
+      const { data } = await axios.post(
+        `${API_BASE}/api/auth/register`,
+        {
+          fullname: formData.fullname.trim(),
+          username: formData.username.trim(),
           email: safeEmail,
+          password: formData.password,
         },
-      });
+        {
+          timeout: 60000,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-      return;
-    }
+      console.log("REGISTER RESPONSE:", data);
 
-    if (msg === "User already exists" || msg === "User already exists.") {
-      setServerError("This email is already registered. Please log in instead.");
-    } else {
-      setServerError(msg || "Something went wrong. Try again!");
+      handleRegisterResponse(data, safeEmail);
+    } catch (err) {
+      console.error("REGISTER ERROR FULL:", err);
+      console.error("REGISTER ERROR RESPONSE:", err?.response?.data);
+
+      if (err.code === "ECONNABORTED") {
+        setServerError(
+          "Registration took too long. Backend may still be waiting for email sending."
+        );
+        return;
+      }
+
+      const data = err?.response?.data;
+      const msg = data?.message;
+      const safeEmail = data?.email || formData.email.trim().toLowerCase();
+
+      const requiresVerification =
+        data?.requiresVerification === true ||
+        data?.isNewUser === true ||
+        data?.needsVerification === true ||
+        data?.verificationRequired === true ||
+        (typeof msg === "string" &&
+          /verify|verification|otp|code/i.test(msg));
+
+      if (requiresVerification) {
+        cachePendingEmail(safeEmail);
+
+        navigate("/verify-email", {
+          replace: true,
+          state: {
+            email: safeEmail,
+          },
+        });
+
+        return;
+      }
+
+      if (msg === "User already exists" || msg === "User already exists.") {
+        setServerError("This email is already registered. Please log in instead.");
+      } else {
+        setServerError(msg || "Something went wrong. Try again!");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   /**
    * Google signup/login.
    *
-   * Your backend currently marks Google users as verified automatically.
-   * So Google users usually go to /home instead of /verify-email.
+   * Google login should go directly to /userInfo.
+   * Backend may also send redirectTo: "/userInfo".
    */
   const handleGoogleSuccess = async (credentialResponse) => {
     if (isGoogleSubmitting) {
@@ -354,6 +318,9 @@ const handleSubmit = async (e) => {
         return;
       }
 
+      console.log("Google signup started");
+      console.log("Current origin:", window.location.origin);
+
       const { data } = await axios.post(
         `${API_BASE}/api/auth/google`,
         {
@@ -367,10 +334,12 @@ const handleSubmit = async (e) => {
         }
       );
 
+      console.log("Google signup response:", data);
+
       const safeEmail = String(
         data?.user?.email ||
-          data?.email ||
-          ""
+        data?.email ||
+        ""
       ).trim();
 
       const requiresVerification =
@@ -385,6 +354,7 @@ const handleSubmit = async (e) => {
         cachePendingEmail(safeEmail);
 
         navigate("/verify-email", {
+          replace: true,
           state: {
             email: safeEmail,
           },
@@ -394,12 +364,13 @@ const handleSubmit = async (e) => {
       }
 
       if (data?.token && data?.user) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
+        saveAuthData(data.token, data.user);
 
         clearPendingEmail();
 
-        redirectByRole(data.user);
+        navigate(data?.redirectTo || "/userInfo", {
+          replace: true,
+        });
 
         return;
       }
@@ -429,6 +400,7 @@ const handleSubmit = async (e) => {
         cachePendingEmail(safeEmail);
 
         navigate("/verify-email", {
+          replace: true,
           state: {
             email: safeEmail,
           },

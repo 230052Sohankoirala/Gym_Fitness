@@ -7,23 +7,20 @@ import User from "../models/User.js";
 
 /**
  * Google OAuth Client
- *
- * Render .env:
- * GOOGLE_CLIENT_ID=your_google_client_id
  */
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 /**
  * Generate JWT token.
  */
-const generateToken = (userId) => {
+const generateToken = (userId, rememberMe = false) => {
   return jwt.sign(
     {
       id: userId,
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: "7d",
+      expiresIn: rememberMe ? "30d" : "7d",
     }
   );
 };
@@ -36,22 +33,32 @@ const generateSixDigitCode = () => {
 };
 
 /**
- * Hash code before saving to database.
+ * Hash verification/reset code.
  */
 const hashCode = (code) => {
   return crypto.createHash("sha256").update(String(code)).digest("hex");
 };
 
 /**
- * Create Gmail SMTP transporter.
+ * Gmail SMTP transporter.
  *
- * Render .env:
+ * Render env:
  * EMAIL_USER=yourgmail@gmail.com
  * EMAIL_PASS=your_google_app_password
  */
 const createEmailTransporter = () => {
   return nodemailer.createTransport({
     service: "gmail",
+
+    /**
+     * Important:
+     * These timeouts stop Render from hanging forever
+     * if Gmail SMTP is slow or blocked.
+     */
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
@@ -60,7 +67,7 @@ const createEmailTransporter = () => {
 };
 
 /**
- * Send email verification code.
+ * Send verification email.
  */
 const sendVerificationEmail = async ({ email, fullname, code }) => {
   const transporter = createEmailTransporter();
@@ -102,7 +109,7 @@ const sendVerificationEmail = async ({ email, fullname, code }) => {
 };
 
 /**
- * Send password reset code.
+ * Send password reset email.
  */
 const sendPasswordResetEmail = async ({ email, fullname, code }) => {
   const transporter = createEmailTransporter();
@@ -148,6 +155,12 @@ const sendPasswordResetEmail = async ({ email, fullname, code }) => {
  *
  * Route:
  * POST /api/auth/register
+ *
+ * Normal register will:
+ * 1. Create user as unverified
+ * 2. Generate verification code
+ * 3. Return response immediately
+ * 4. Send email in background
  */
 export const register = async (req, res) => {
   try {
@@ -179,20 +192,23 @@ export const register = async (req, res) => {
 
         await existingUser.save();
 
-        try {
-          await sendVerificationEmail({
-            email: existingUser.email,
-            fullname: existingUser.fullname,
-            code: plainCode,
-          });
-        } catch (emailError) {
+        /**
+         * Important:
+         * Do not await this.
+         * This prevents frontend timeout.
+         */
+        sendVerificationEmail({
+          email: existingUser.email,
+          fullname: existingUser.fullname,
+          code: plainCode,
+        }).catch((emailError) => {
           console.error("Verification email failed:", emailError);
-        }
+        });
 
         return res.status(200).json({
           success: true,
           message:
-            "Account exists but is not verified. Please check your email or resend the code.",
+            "Account exists but is not verified. A verification code has been generated.",
           requiresVerification: true,
           email: existingUser.email,
         });
@@ -210,26 +226,35 @@ export const register = async (req, res) => {
       fullname: safeFullname,
       username: safeUsername,
       email: safeEmail,
+
+      /**
+       * Do not hash here.
+       * Your User model pre-save middleware hashes password.
+       */
       password,
+
       role: "member",
       isVerified: false,
       verificationCode: hashCode(plainCode),
       verificationCodeExpires: new Date(Date.now() + 10 * 60 * 1000),
     });
 
-    try {
-      await sendVerificationEmail({
-        email: user.email,
-        fullname: user.fullname,
-        code: plainCode,
-      });
-    } catch (emailError) {
+    /**
+     * Important:
+     * Do not await this.
+     * Frontend should go to verification page immediately.
+     */
+    sendVerificationEmail({
+      email: user.email,
+      fullname: user.fullname,
+      code: plainCode,
+    }).catch((emailError) => {
       console.error("Verification email failed:", emailError);
-    }
+    });
 
     return res.status(201).json({
       success: true,
-      message: "Registration successful. Verification code sent to email.",
+      message: "Registration successful. Verification code generated.",
       requiresVerification: true,
       email: user.email,
     });
@@ -297,36 +322,31 @@ export const login = async (req, res) => {
 
       await user.save();
 
-      await sendVerificationEmail({
+      sendVerificationEmail({
         email: user.email,
         fullname: user.fullname,
         code: plainCode,
+      }).catch((emailError) => {
+        console.error("Verification email failed:", emailError);
       });
 
       return res.status(403).json({
         success: false,
         message:
-          "Please verify your email first. A new verification code has been sent.",
+          "Please verify your email first. A new verification code has been generated.",
         requiresVerification: true,
         email: user.email,
       });
     }
 
-    const token = jwt.sign(
-      {
-        id: user._id,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: rememberMe ? "30d" : "7d",
-      }
-    );
+    const token = generateToken(user._id, rememberMe);
 
     return res.status(200).json({
       success: true,
       message: "Login successful.",
       token,
       user: user.toJSON(),
+      redirectTo: "/home",
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -343,6 +363,14 @@ export const login = async (req, res) => {
  *
  * Route:
  * POST /api/auth/google
+ *
+ * Google login will:
+ * - Create account if new
+ * - Mark Google user as verified
+ * - Return redirectTo: "/userInfo"
+ *
+ * Backend cannot directly navigate the browser.
+ * Frontend should read redirectTo and navigate there.
  */
 export const googleLogin = async (req, res) => {
   try {
@@ -400,7 +428,7 @@ export const googleLogin = async (req, res) => {
         role: "member",
 
         /**
-         * Google email is verified by Google.
+         * Google email is already verified by Google.
          */
         isVerified: true,
         verificationCode: null,
@@ -422,13 +450,18 @@ export const googleLogin = async (req, res) => {
       await user.save();
     }
 
-    const jwtToken = generateToken(user._id);
+    const jwtToken = generateToken(user._id, true);
 
     return res.status(200).json({
       success: true,
       message: "Google login successful.",
       token: jwtToken,
       user: user.toJSON(),
+
+      /**
+       * Frontend should navigate here.
+       */
+      redirectTo: "/userInfo",
     });
   } catch (error) {
     console.error("Google login error:", error);
@@ -445,12 +478,6 @@ export const googleLogin = async (req, res) => {
  *
  * Route:
  * POST /api/auth/verify-email
- *
- * Body:
- * {
- *   "email": "user@gmail.com",
- *   "code": "123456"
- * }
  */
 export const verifyEmail = async (req, res) => {
   try {
@@ -485,6 +512,7 @@ export const verifyEmail = async (req, res) => {
         message: "Email is already verified.",
         token,
         user: user.toJSON(),
+        redirectTo: "/home",
       });
     }
 
@@ -524,6 +552,7 @@ export const verifyEmail = async (req, res) => {
       message: "Email verified successfully.",
       token,
       user: user.toJSON(),
+      redirectTo: "/home",
     });
   } catch (error) {
     console.error("Verify email error:", error);
@@ -579,15 +608,17 @@ export const resendVerificationCode = async (req, res) => {
 
     await user.save();
 
-    await sendVerificationEmail({
+    sendVerificationEmail({
       email: user.email,
       fullname: user.fullname,
       code: plainCode,
+    }).catch((emailError) => {
+      console.error("Verification email failed:", emailError);
     });
 
     return res.status(200).json({
       success: true,
-      message: "New verification code sent successfully.",
+      message: "New verification code generated.",
       requiresVerification: true,
       email: user.email,
     });
@@ -659,15 +690,17 @@ export const forgotPassword = async (req, res) => {
 
     await user.save();
 
-    await sendPasswordResetEmail({
+    sendPasswordResetEmail({
       email: user.email,
       fullname: user.fullname,
       code: plainCode,
+    }).catch((emailError) => {
+      console.error("Password reset email failed:", emailError);
     });
 
     return res.status(200).json({
       success: true,
-      message: "Password reset code sent to email.",
+      message: "Password reset code generated.",
       email: user.email,
     });
   } catch (error) {
@@ -800,9 +833,8 @@ export const resetPassword = async (req, res) => {
     }
 
     /**
-     * Important:
-     * Give plain password here.
-     * User.js pre-save middleware will hash it.
+     * Do not hash manually.
+     * User model will hash password.
      */
     user.password = finalPassword;
 
