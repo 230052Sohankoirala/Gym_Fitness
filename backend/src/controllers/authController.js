@@ -20,21 +20,25 @@ const generateToken = (id, role, rememberMe = false) => {
 /* ---------------- Mail Transport Helper ---------------- */
 
 const createMailTransporter = () => {
+  const emailHost = process.env.EMAIL_HOST || "smtp-relay.brevo.com";
+  const emailPort = Number(process.env.EMAIL_PORT || 587);
+  const emailSecure = String(process.env.EMAIL_SECURE || "false") === "true";
+
   return nodemailer.createTransport({
-    service: "gmail",
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    requireTLS: true,
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 30000,
+    host: emailHost,
+    port: emailPort,
+    secure: emailSecure,
+    requireTLS: !emailSecure,
+    connectionTimeout: 60000,
+    greetingTimeout: 60000,
+    socketTimeout: 60000,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
   });
 };
+
 /* ---------------- Email Helper: Verification ---------------- */
 
 const sendVerificationEmail = async (email, code, fullname) => {
@@ -42,30 +46,42 @@ const sendVerificationEmail = async (email, code, fullname) => {
     const transporter = createMailTransporter();
 
     const info = await transporter.sendMail({
-      from: `"FitTrack Team" <${process.env.EMAIL_USER}>`,
+      from:
+        process.env.EMAIL_FROM ||
+        `"FitTrack Team" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "🎉 Verify Your FitTrack Account",
+      subject: "Verify Your FitTrack Account",
       html: `
         <div style="font-family: Arial, sans-serif; padding:20px; border:1px solid #eee; border-radius:10px; max-width:600px;">
-          <h2 style="color:#4f46e5;">👋 Hello ${fullname || "User"},</h2>
-          <p>Welcome to <b>FitTrack</b> — your fitness journey starts here!</p>
-          <p>Use the following code to verify your account:</p>
+          <h2 style="color:#4f46e5;">Hello ${fullname || "User"},</h2>
+
+          <p>Welcome to <b>FitTrack</b>.</p>
+
+          <p>Use this code to verify your account:</p>
+
           <div style="text-align:center; margin:20px 0;">
-            <span style="display:inline-block; font-size:22px; font-weight:bold; background:#4f46e5; color:white; padding:10px 20px; border-radius:6px; letter-spacing:3px;">
+            <span style="display:inline-block; font-size:26px; font-weight:bold; background:#4f46e5; color:white; padding:12px 24px; border-radius:8px; letter-spacing:4px;">
               ${code}
             </span>
           </div>
+
           <p>This code will expire in <b>15 minutes</b>.</p>
-          <p>If you didn’t request this, just ignore this email.</p>
-          <hr style="margin:25px 0;">
-          <p>💪 Stay strong,<br>The FitTrack Team</p>
+          <p>If you did not request this, you can safely ignore this email.</p>
+
+          <hr style="margin:25px 0;" />
+          <p>FitTrack Team</p>
         </div>
       `,
     });
 
     console.log(`✅ Verification email sent to ${email}: ${info.messageId}`);
+
+    return info;
   } catch (error) {
-    console.error("❌ Email send failed:", error.message);
+    console.error("❌ Verification email send failed:", error.message);
+    console.error("❌ Email error code:", error.code);
+    console.error("❌ Email command:", error.command);
+
     throw new Error("Failed to send verification email. Try again later.");
   }
 };
@@ -77,30 +93,42 @@ const sendResetPasswordEmail = async (email, code, fullname) => {
     const transporter = createMailTransporter();
 
     const info = await transporter.sendMail({
-      from: `"FitTrack Support" <${process.env.EMAIL_USER}>`,
+      from:
+        process.env.EMAIL_FROM ||
+        `"FitTrack Support" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "🔐 Reset Your FitTrack Password",
+      subject: "Reset Your FitTrack Password",
       html: `
         <div style="font-family: Arial, sans-serif; padding:20px; border:1px solid #eee; border-radius:10px; max-width:600px;">
           <h2 style="color:#4f46e5;">Hello ${fullname || "User"},</h2>
+
           <p>We received a request to reset your <b>FitTrack</b> password.</p>
-          <p>Use the following code to continue:</p>
+
+          <p>Use this code to continue:</p>
+
           <div style="text-align:center; margin:20px 0;">
-            <span style="display:inline-block; font-size:22px; font-weight:bold; background:#4f46e5; color:white; padding:10px 20px; border-radius:6px; letter-spacing:3px;">
+            <span style="display:inline-block; font-size:26px; font-weight:bold; background:#4f46e5; color:white; padding:12px 24px; border-radius:8px; letter-spacing:4px;">
               ${code}
             </span>
           </div>
+
           <p>This code will expire in <b>10 minutes</b>.</p>
-          <p>If you did not request this password reset, you can safely ignore this email.</p>
-          <hr style="margin:25px 0;">
+          <p>If you did not request this reset, you can safely ignore this email.</p>
+
+          <hr style="margin:25px 0;" />
           <p>FitTrack Support Team</p>
         </div>
       `,
     });
 
     console.log(`✅ Reset password email sent to ${email}: ${info.messageId}`);
+
+    return info;
   } catch (error) {
     console.error("❌ Reset password email failed:", error.message);
+    console.error("❌ Email error code:", error.code);
+    console.error("❌ Email command:", error.command);
+
     throw new Error("Failed to send reset password email. Try again later.");
   }
 };
@@ -132,6 +160,7 @@ export const register = async (req, res) => {
       await existing.save();
 
       res.status(200).json({
+        success: true,
         message: "Verification code resent. Please verify your email.",
         requiresVerification: true,
         isNewUser: true,
@@ -177,6 +206,7 @@ export const register = async (req, res) => {
     });
 
     res.status(201).json({
+      success: true,
       message: "User registered successfully. Please verify your email.",
       isNewUser: true,
       requiresVerification: true,
@@ -233,6 +263,7 @@ export const verifyEmail = async (req, res) => {
       const token = generateToken(user._id, user.role, true);
 
       return res.json({
+        success: true,
         message: "Email already verified",
         verified: true,
         token,
@@ -266,6 +297,7 @@ export const verifyEmail = async (req, res) => {
     const token = generateToken(user._id, user.role, true);
 
     return res.json({
+      success: true,
       message: "Email verified successfully",
       verified: true,
       token,
@@ -322,13 +354,15 @@ export const forgotPassword = async (req, res) => {
     await sendResetPasswordEmail(user.email, resetCode, user.fullname);
 
     return res.status(200).json({
+      success: true,
       message: "Password reset code sent to your email.",
+      email: user.email,
     });
   } catch (error) {
     console.error("❌ Forgot password error:", error);
 
     return res.status(500).json({
-      message: "Server error while sending reset code.",
+      message: error.message || "Server error while sending reset code.",
     });
   }
 };
@@ -380,6 +414,7 @@ export const verifyResetCode = async (req, res) => {
     await user.save();
 
     return res.status(200).json({
+      success: true,
       message: "Reset code verified successfully.",
     });
   } catch (error) {
@@ -453,7 +488,9 @@ export const resetPassword = async (req, res) => {
     await user.save();
 
     return res.status(200).json({
-      message: "Password reset successful. You can now log in with your new password.",
+      success: true,
+      message:
+        "Password reset successful. You can now log in with your new password.",
     });
   } catch (error) {
     console.error("❌ Reset password error:", error);
@@ -498,13 +535,15 @@ export const login = async (req, res) => {
 
     if (user.googleId && !user.password) {
       return res.status(400).json({
-        message: "This account was created with Google. Please login using Google Sign-In.",
+        message:
+          "This account was created with Google. Please login using Google Sign-In.",
       });
     }
 
     if (!user.password) {
       return res.status(500).json({
-        message: "Password missing for this user in database. Please reset password or recreate user.",
+        message:
+          "Password missing for this user in database. Please reset password or recreate user.",
       });
     }
 
@@ -519,6 +558,7 @@ export const login = async (req, res) => {
     const token = generateToken(user._id, user.role, rememberMe);
 
     return res.json({
+      success: true,
       message: "Login successful",
       token,
       user: {
@@ -566,12 +606,7 @@ export const googleLogin = async (req, res) => {
       });
     }
 
-    const {
-      sub: googleId,
-      email,
-      name,
-      email_verified,
-    } = payload;
+    const { sub: googleId, email, name, email_verified } = payload;
 
     if (!email) {
       return res.status(400).json({
@@ -627,7 +662,10 @@ export const googleLogin = async (req, res) => {
 
       sendVerificationEmail(user.email, code, user.fullname).catch(
         (emailError) => {
-          console.error("❌ Google verification email failed:", emailError.message);
+          console.error(
+            "❌ Google verification email failed:",
+            emailError.message
+          );
         }
       );
 
@@ -661,7 +699,10 @@ export const googleLogin = async (req, res) => {
 
       sendVerificationEmail(user.email, code, user.fullname).catch(
         (emailError) => {
-          console.error("❌ Google verification email failed:", emailError.message);
+          console.error(
+            "❌ Google verification email failed:",
+            emailError.message
+          );
         }
       );
 
@@ -703,8 +744,9 @@ export const googleLogin = async (req, res) => {
 
 /* ---------------- Logout ---------------- */
 
-export const logout = (req, res) => {
+export const logout = (_req, res) => {
   return res.json({
+    success: true,
     message: "Logout successful",
   });
 };
