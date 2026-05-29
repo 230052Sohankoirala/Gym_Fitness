@@ -1,37 +1,57 @@
-// src/controllers/authController.js
-
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import User from "../models/User.js";
-import { OAuth2Client } from "google-auth-library";
+// controllers/authController.js
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import { OAuth2Client } from "google-auth-library";
+import User from "../models/User.js";
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+/**
+ * Google OAuth Client
+ *
+ * Render .env:
+ * GOOGLE_CLIENT_ID=your_google_client_id
+ */
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-/* ---------------- JWT Helper ---------------- */
-
-const generateToken = (id, role, rememberMe = false) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
-    expiresIn: rememberMe ? "30d" : "1d",
-  });
+/**
+ * Generate JWT token.
+ */
+const generateToken = (userId) => {
+  return jwt.sign(
+    {
+      id: userId,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "7d",
+    }
+  );
 };
 
-/* ---------------- Mail Transport Helper ---------------- */
+/**
+ * Generate 6 digit code.
+ */
+const generateSixDigitCode = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
-const createMailTransporter = () => {
-  const emailHost = process.env.EMAIL_HOST || "smtp-relay.brevo.com";
-  const emailPort = Number(process.env.EMAIL_PORT || 587);
-  const emailSecure = String(process.env.EMAIL_SECURE || "false") === "true";
+/**
+ * Hash code before saving to database.
+ */
+const hashCode = (code) => {
+  return crypto.createHash("sha256").update(String(code)).digest("hex");
+};
 
+/**
+ * Create Gmail SMTP transporter.
+ *
+ * Render .env:
+ * EMAIL_USER=yourgmail@gmail.com
+ * EMAIL_PASS=your_google_app_password
+ */
+const createEmailTransporter = () => {
   return nodemailer.createTransport({
-    host: emailHost,
-    port: emailPort,
-    secure: emailSecure,
-    requireTLS: !emailSecure,
-    connectionTimeout: 60000,
-    greetingTimeout: 60000,
-    socketTimeout: 60000,
+    service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
@@ -39,373 +59,677 @@ const createMailTransporter = () => {
   });
 };
 
-/* ---------------- Email Helper: Verification ---------------- */
+/**
+ * Send email verification code.
+ */
+const sendVerificationEmail = async ({ email, fullname, code }) => {
+  const transporter = createEmailTransporter();
 
-const sendVerificationEmail = async (email, code, fullname) => {
-  try {
-    const transporter = createMailTransporter();
+  await transporter.sendMail({
+    from: `"FitFlow" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: "Verify your FitFlow account",
+    html: `
+      <div style="font-family: Arial, sans-serif; background: #f4f4f5; padding: 30px;">
+        <div style="max-width: 520px; margin: auto; background: #ffffff; padding: 28px; border-radius: 14px; border: 1px solid #e5e7eb;">
+          <h2 style="margin-top: 0; color: #111827;">Verify your email</h2>
 
-    const info = await transporter.sendMail({
-      from:
-        process.env.EMAIL_FROM ||
-        `"FitTrack Team" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "Verify Your FitTrack Account",
-      html: `
-        <div style="font-family: Arial, sans-serif; padding:20px; border:1px solid #eee; border-radius:10px; max-width:600px;">
-          <h2 style="color:#4f46e5;">Hello ${fullname || "User"},</h2>
+          <p style="font-size: 15px; color: #374151;">
+            Hello ${fullname || "there"},
+          </p>
 
-          <p>Welcome to <b>FitTrack</b>.</p>
+          <p style="font-size: 15px; color: #374151;">
+            Thank you for registering with FitFlow. Please use the code below to verify your account.
+          </p>
 
-          <p>Use this code to verify your account:</p>
-
-          <div style="text-align:center; margin:20px 0;">
-            <span style="display:inline-block; font-size:26px; font-weight:bold; background:#4f46e5; color:white; padding:12px 24px; border-radius:8px; letter-spacing:4px;">
+          <div style="text-align: center; margin: 28px 0;">
+            <div style="display: inline-block; font-size: 34px; letter-spacing: 8px; font-weight: bold; color: #4f46e5; background: #eef2ff; padding: 16px 26px; border-radius: 12px;">
               ${code}
-            </span>
+            </div>
           </div>
 
-          <p>This code will expire in <b>15 minutes</b>.</p>
-          <p>If you did not request this, you can safely ignore this email.</p>
+          <p style="font-size: 14px; color: #6b7280;">
+            This code will expire in 10 minutes.
+          </p>
 
-          <hr style="margin:25px 0;" />
-          <p>FitTrack Team</p>
+          <p style="font-size: 14px; color: #6b7280;">
+            If you did not create this account, please ignore this email.
+          </p>
         </div>
-      `,
-    });
-
-    console.log(`✅ Verification email sent to ${email}: ${info.messageId}`);
-
-    return info;
-  } catch (error) {
-    console.error("❌ Verification email send failed:", error.message);
-    console.error("❌ Email error code:", error.code);
-    console.error("❌ Email command:", error.command);
-
-    throw new Error("Failed to send verification email. Try again later.");
-  }
+      </div>
+    `,
+  });
 };
 
-/* ---------------- Email Helper: Reset Password ---------------- */
+/**
+ * Send password reset code.
+ */
+const sendPasswordResetEmail = async ({ email, fullname, code }) => {
+  const transporter = createEmailTransporter();
 
-const sendResetPasswordEmail = async (email, code, fullname) => {
-  try {
-    const transporter = createMailTransporter();
+  await transporter.sendMail({
+    from: `"FitFlow" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: "Reset your FitFlow password",
+    html: `
+      <div style="font-family: Arial, sans-serif; background: #f4f4f5; padding: 30px;">
+        <div style="max-width: 520px; margin: auto; background: #ffffff; padding: 28px; border-radius: 14px; border: 1px solid #e5e7eb;">
+          <h2 style="margin-top: 0; color: #111827;">Password Reset Code</h2>
 
-    const info = await transporter.sendMail({
-      from:
-        process.env.EMAIL_FROM ||
-        `"FitTrack Support" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "Reset Your FitTrack Password",
-      html: `
-        <div style="font-family: Arial, sans-serif; padding:20px; border:1px solid #eee; border-radius:10px; max-width:600px;">
-          <h2 style="color:#4f46e5;">Hello ${fullname || "User"},</h2>
+          <p style="font-size: 15px; color: #374151;">
+            Hello ${fullname || "there"},
+          </p>
 
-          <p>We received a request to reset your <b>FitTrack</b> password.</p>
+          <p style="font-size: 15px; color: #374151;">
+            Use the code below to reset your FitFlow password.
+          </p>
 
-          <p>Use this code to continue:</p>
-
-          <div style="text-align:center; margin:20px 0;">
-            <span style="display:inline-block; font-size:26px; font-weight:bold; background:#4f46e5; color:white; padding:12px 24px; border-radius:8px; letter-spacing:4px;">
+          <div style="text-align: center; margin: 28px 0;">
+            <div style="display: inline-block; font-size: 34px; letter-spacing: 8px; font-weight: bold; color: #4f46e5; background: #eef2ff; padding: 16px 26px; border-radius: 12px;">
               ${code}
-            </span>
+            </div>
           </div>
 
-          <p>This code will expire in <b>10 minutes</b>.</p>
-          <p>If you did not request this reset, you can safely ignore this email.</p>
+          <p style="font-size: 14px; color: #6b7280;">
+            This code will expire in 10 minutes.
+          </p>
 
-          <hr style="margin:25px 0;" />
-          <p>FitTrack Support Team</p>
+          <p style="font-size: 14px; color: #6b7280;">
+            If you did not request this, please ignore this email.
+          </p>
         </div>
-      `,
-    });
-
-    console.log(`✅ Reset password email sent to ${email}: ${info.messageId}`);
-
-    return info;
-  } catch (error) {
-    console.error("❌ Reset password email failed:", error.message);
-    console.error("❌ Email error code:", error.code);
-    console.error("❌ Email command:", error.command);
-
-    throw new Error("Failed to send reset password email. Try again later.");
-  }
+      </div>
+    `,
+  });
 };
 
-/* ---------------- Register User ---------------- */
-
+/**
+ * REGISTER
+ *
+ * Route:
+ * POST /api/auth/register
+ */
 export const register = async (req, res) => {
   try {
     const { fullname, username, email, password } = req.body;
 
     if (!fullname || !username || !email || !password) {
       return res.status(400).json({
-        message: "Full name, username, email, and password are required.",
+        success: false,
+        message: "All fields are required.",
       });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const safeFullname = String(fullname).trim();
+    const safeUsername = String(username).trim();
+    const safeEmail = String(email).trim().toLowerCase();
 
-    const existing = await User.findOne({
-      email: normalizedEmail,
-    });
+    const existingUser = await User.findOne({
+      $or: [{ email: safeEmail }, { username: safeUsername }],
+    }).select("+verificationCode +verificationCodeExpires");
 
-    if (existing && !existing.isVerified) {
-      const code = crypto.randomInt(100000, 999999).toString();
+    if (existingUser) {
+      if (!existingUser.isVerified && existingUser.email === safeEmail) {
+        const plainCode = generateSixDigitCode();
 
-      existing.verificationCode = code;
-      existing.verificationCodeExpires = Date.now() + 15 * 60 * 1000;
+        existingUser.verificationCode = hashCode(plainCode);
+        existingUser.verificationCodeExpires = new Date(
+          Date.now() + 10 * 60 * 1000
+        );
 
-      await existing.save();
+        await existingUser.save();
 
-      res.status(200).json({
-        success: true,
-        message: "Verification code resent. Please verify your email.",
-        requiresVerification: true,
-        isNewUser: true,
-        email: existing.email,
-        user: {
-          id: existing._id,
-          fullname: existing.fullname,
-          email: existing.email,
-          username: existing.username,
-          role: existing.role,
-          isVerified: existing.isVerified,
-        },
-      });
+        await sendVerificationEmail({
+          email: existingUser.email,
+          fullname: existingUser.fullname,
+          code: plainCode,
+        });
 
-      sendVerificationEmail(existing.email, code, existing.fullname).catch(
-        (emailError) => {
-          console.error("❌ Verification email failed:", emailError.message);
-        }
-      );
+        return res.status(200).json({
+          success: true,
+          message:
+            "Account already exists but is not verified. A new verification code has been sent.",
+          requiresVerification: true,
+          email: existingUser.email,
+        });
+      }
 
-      return;
-    }
-
-    if (existing && existing.isVerified) {
       return res.status(400).json({
+        success: false,
         message: "User already exists",
       });
     }
 
-    const code = crypto.randomInt(100000, 999999).toString();
+    const plainCode = generateSixDigitCode();
 
     const user = await User.create({
-      fullname,
-      username,
-      email: normalizedEmail,
+      fullname: safeFullname,
+      username: safeUsername,
+      email: safeEmail,
+
+      /**
+       * Important:
+       * Give plain password here.
+       * User.js pre-save middleware will hash it.
+       */
       password,
+
+      role: "member",
       isVerified: false,
-      verificationCode: code,
-      verificationCodeExpires: Date.now() + 15 * 60 * 1000,
-      resetCode: null,
-      resetCodeExpires: null,
-      resetCodeVerified: false,
+      verificationCode: hashCode(plainCode),
+      verificationCodeExpires: new Date(Date.now() + 10 * 60 * 1000),
     });
 
-    res.status(201).json({
+    await sendVerificationEmail({
+      email: user.email,
+      fullname: user.fullname,
+      code: plainCode,
+    });
+
+    return res.status(201).json({
       success: true,
-      message: "User registered successfully. Please verify your email.",
-      isNewUser: true,
+      message: "Registration successful. Verification code sent to email.",
       requiresVerification: true,
       email: user.email,
-      user: {
-        id: user._id,
-        fullname: user.fullname,
-        email: user.email,
-        username: user.username,
-        role: user.role,
-        isVerified: user.isVerified,
-      },
     });
-
-    sendVerificationEmail(user.email, code, fullname).catch((emailError) => {
-      console.error("❌ Verification email failed:", emailError.message);
-    });
-
-    return;
   } catch (error) {
-    console.error("❌ Register error:", error);
+    console.error("Register error:", error);
 
     return res.status(500).json({
-      message: "Server error during registration",
+      success: false,
+      message: "Server error during registration.",
     });
   }
 };
 
-/* ---------------- Verify Email ---------------- */
+/**
+ * LOGIN
+ *
+ * Route:
+ * POST /api/auth/login
+ */
+export const login = async (req, res) => {
+  try {
+    const { email, password, rememberMe } = req.body;
 
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required.",
+      });
+    }
+
+    const safeEmail = String(email).trim().toLowerCase();
+
+    const user = await User.findOne({ email: safeEmail }).select(
+      "+password +verificationCode +verificationCodeExpires"
+    );
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password.",
+      });
+    }
+
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        message: "This account uses Google login. Please sign in with Google.",
+      });
+    }
+
+    const isPasswordCorrect = await user.matchPassword(password);
+
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password.",
+      });
+    }
+
+    if (!user.isVerified) {
+      const plainCode = generateSixDigitCode();
+
+      user.verificationCode = hashCode(plainCode);
+      user.verificationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+      await user.save();
+
+      await sendVerificationEmail({
+        email: user.email,
+        fullname: user.fullname,
+        code: plainCode,
+      });
+
+      return res.status(403).json({
+        success: false,
+        message:
+          "Please verify your email first. A new verification code has been sent.",
+        requiresVerification: true,
+        email: user.email,
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: rememberMe ? "30d" : "7d",
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful.",
+      token,
+      user: user.toJSON(),
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error during login.",
+    });
+  }
+};
+
+/**
+ * GOOGLE LOGIN
+ *
+ * Route:
+ * POST /api/auth/google
+ */
+export const googleLogin = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "Google token is required.",
+      });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    const googleId = payload?.sub;
+    const email = payload?.email;
+    const fullname = payload?.name || "Google User";
+    const avatar = payload?.picture || "";
+
+    if (!googleId || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "Google account information is incomplete.",
+      });
+    }
+
+    const safeEmail = String(email).trim().toLowerCase();
+
+    let user = await User.findOne({ email: safeEmail });
+
+    if (!user) {
+      const baseUsername =
+        safeEmail.split("@")[0].replace(/[^a-zA-Z0-9]/g, "") ||
+        `user${Date.now()}`;
+
+      let username = baseUsername;
+
+      const usernameExists = await User.findOne({ username });
+
+      if (usernameExists) {
+        username = `${baseUsername}${Date.now()}`;
+      }
+
+      user = await User.create({
+        fullname,
+        username,
+        email: safeEmail,
+        googleId,
+        avatar,
+        role: "member",
+
+        /**
+         * Google email is verified by Google.
+         */
+        isVerified: true,
+        verificationCode: null,
+        verificationCodeExpires: null,
+      });
+    } else {
+      if (!user.googleId) {
+        user.googleId = googleId;
+      }
+
+      if (!user.avatar && avatar) {
+        user.avatar = avatar;
+      }
+
+      user.isVerified = true;
+      user.verificationCode = null;
+      user.verificationCodeExpires = null;
+
+      await user.save();
+    }
+
+    const jwtToken = generateToken(user._id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Google login successful.",
+      token: jwtToken,
+      user: user.toJSON(),
+    });
+  } catch (error) {
+    console.error("Google login error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Google authentication failed.",
+    });
+  }
+};
+
+/**
+ * VERIFY EMAIL
+ *
+ * Route:
+ * POST /api/auth/verify-email
+ *
+ * Body:
+ * {
+ *   "email": "user@gmail.com",
+ *   "code": "123456"
+ * }
+ */
 export const verifyEmail = async (req, res) => {
   try {
     const { email, code } = req.body;
 
     if (!email || !code) {
       return res.status(400).json({
-        message: "Email and code are required.",
+        success: false,
+        message: "Email and verification code are required.",
       });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const safeEmail = String(email).trim().toLowerCase();
+    const safeCode = String(code).trim();
 
-    const user = await User.findOne({
-      email: normalizedEmail,
-    });
+    const user = await User.findOne({ email: safeEmail }).select(
+      "+verificationCode +verificationCodeExpires"
+    );
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found",
+        success: false,
+        message: "User not found.",
       });
     }
 
     if (user.isVerified) {
-      const token = generateToken(user._id, user.role, true);
+      const token = generateToken(user._id);
 
-      return res.json({
+      return res.status(200).json({
         success: true,
-        message: "Email already verified",
-        verified: true,
+        message: "Email is already verified.",
         token,
-        user: {
-          id: user._id,
-          fullname: user.fullname,
-          email: user.email,
-          username: user.username,
-          role: user.role,
-          isVerified: user.isVerified,
-        },
+        user: user.toJSON(),
       });
     }
 
-    if (
-      user.verificationCode !== code ||
-      !user.verificationCodeExpires ||
-      user.verificationCodeExpires < Date.now()
-    ) {
+    if (!user.verificationCode || !user.verificationCodeExpires) {
       return res.status(400).json({
-        message: "Invalid or expired code",
+        success: false,
+        message: "No verification code found. Please request a new code.",
+      });
+    }
+
+    if (user.verificationCodeExpires.getTime() < Date.now()) {
+      return res.status(400).json({
+        success: false,
+        message: "Verification code expired. Please request a new code.",
+      });
+    }
+
+    const hashedInputCode = hashCode(safeCode);
+
+    if (hashedInputCode !== user.verificationCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid verification code.",
       });
     }
 
     user.isVerified = true;
-    user.verificationCode = undefined;
-    user.verificationCodeExpires = undefined;
+    user.verificationCode = null;
+    user.verificationCodeExpires = null;
 
     await user.save();
 
-    const token = generateToken(user._id, user.role, true);
+    const token = generateToken(user._id);
 
-    return res.json({
+    return res.status(200).json({
       success: true,
-      message: "Email verified successfully",
-      verified: true,
+      message: "Email verified successfully.",
       token,
-      user: {
-        id: user._id,
-        fullname: user.fullname,
-        email: user.email,
-        username: user.username,
-        role: user.role,
-        isVerified: user.isVerified,
-      },
+      user: user.toJSON(),
     });
   } catch (error) {
-    console.error("❌ Verify email error:", error);
+    console.error("Verify email error:", error);
 
     return res.status(500).json({
-      message: "Server error during verification",
+      success: false,
+      message: "Server error during email verification.",
     });
   }
 };
 
-/* ---------------- Forgot Password: Send Code ---------------- */
+/**
+ * RESEND VERIFICATION CODE
+ *
+ * Route:
+ * POST /api/auth/resend-verification
+ */
+export const resendVerificationCode = async (req, res) => {
+  try {
+    const { email } = req.body;
 
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required.",
+      });
+    }
+
+    const safeEmail = String(email).trim().toLowerCase();
+
+    const user = await User.findOne({ email: safeEmail }).select(
+      "+verificationCode +verificationCodeExpires"
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already verified.",
+      });
+    }
+
+    const plainCode = generateSixDigitCode();
+
+    user.verificationCode = hashCode(plainCode);
+    user.verificationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+    await user.save();
+
+    await sendVerificationEmail({
+      email: user.email,
+      fullname: user.fullname,
+      code: plainCode,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "New verification code sent successfully.",
+      requiresVerification: true,
+      email: user.email,
+    });
+  } catch (error) {
+    console.error("Resend verification error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error while resending verification code.",
+    });
+  }
+};
+
+/**
+ * LOGOUT
+ *
+ * Route:
+ * POST /api/auth/logout
+ */
+export const logout = async (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: "Logged out successfully.",
+  });
+};
+
+/**
+ * FORGOT PASSWORD
+ *
+ * Route:
+ * POST /api/auth/forgot-password
+ */
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
     if (!email) {
       return res.status(400).json({
+        success: false,
         message: "Email is required.",
       });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const safeEmail = String(email).trim().toLowerCase();
 
-    const user = await User.findOne({
-      email: normalizedEmail,
-    });
+    const user = await User.findOne({ email: safeEmail }).select(
+      "+resetCode +resetCodeExpires +resetCodeVerified"
+    );
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found with this email.",
+        success: false,
+        message: "User not found.",
       });
     }
 
-    const resetCode = crypto.randomInt(100000, 999999).toString();
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        message: "This account uses Google login. Please sign in with Google.",
+      });
+    }
 
-    user.resetCode = resetCode;
-    user.resetCodeExpires = Date.now() + 10 * 60 * 1000;
+    const plainCode = generateSixDigitCode();
+
+    user.resetCode = hashCode(plainCode);
+    user.resetCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
     user.resetCodeVerified = false;
 
     await user.save();
 
-    await sendResetPasswordEmail(user.email, resetCode, user.fullname);
+    await sendPasswordResetEmail({
+      email: user.email,
+      fullname: user.fullname,
+      code: plainCode,
+    });
 
     return res.status(200).json({
       success: true,
-      message: "Password reset code sent to your email.",
+      message: "Password reset code sent to email.",
       email: user.email,
     });
   } catch (error) {
-    console.error("❌ Forgot password error:", error);
+    console.error("Forgot password error:", error);
 
     return res.status(500).json({
-      message: error.message || "Server error while sending reset code.",
+      success: false,
+      message: "Server error while sending password reset code.",
     });
   }
 };
 
-/* ---------------- Forgot Password: Verify Code ---------------- */
-
+/**
+ * VERIFY RESET CODE
+ *
+ * Route:
+ * POST /api/auth/verify-reset-code
+ */
 export const verifyResetCode = async (req, res) => {
   try {
     const { email, code } = req.body;
 
     if (!email || !code) {
       return res.status(400).json({
-        message: "Email and code are required.",
+        success: false,
+        message: "Email and reset code are required.",
       });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const safeEmail = String(email).trim().toLowerCase();
+    const safeCode = String(code).trim();
 
-    const user = await User.findOne({
-      email: normalizedEmail,
-    });
+    const user = await User.findOne({ email: safeEmail }).select(
+      "+resetCode +resetCodeExpires +resetCodeVerified"
+    );
 
     if (!user) {
       return res.status(404).json({
+        success: false,
         message: "User not found.",
       });
     }
 
     if (!user.resetCode || !user.resetCodeExpires) {
       return res.status(400).json({
-        message: "No reset code found. Please request a new one.",
+        success: false,
+        message: "No reset code found. Please request a new code.",
       });
     }
 
-    if (user.resetCode !== code) {
+    if (user.resetCodeExpires.getTime() < Date.now()) {
       return res.status(400).json({
-        message: "Invalid verification code.",
+        success: false,
+        message: "Reset code expired. Please request a new code.",
       });
     }
 
-    if (user.resetCodeExpires < Date.now()) {
+    const hashedInputCode = hashCode(safeCode);
+
+    if (hashedInputCode !== user.resetCode) {
       return res.status(400).json({
-        message: "Verification code has expired.",
+        success: false,
+        message: "Invalid reset code.",
       });
     }
 
@@ -416,71 +740,71 @@ export const verifyResetCode = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Reset code verified successfully.",
+      email: user.email,
     });
   } catch (error) {
-    console.error("❌ Verify reset code error:", error);
+    console.error("Verify reset code error:", error);
 
     return res.status(500).json({
+      success: false,
       message: "Server error while verifying reset code.",
     });
   }
 };
 
-/* ---------------- Forgot Password: Reset Password ---------------- */
-
+/**
+ * RESET PASSWORD
+ *
+ * Route:
+ * POST /api/auth/reset-password
+ */
 export const resetPassword = async (req, res) => {
   try {
-    const { email, code, newPassword } = req.body;
+    const { email, newPassword, password } = req.body;
 
-    if (!email || !code || !newPassword) {
+    const finalPassword = newPassword || password;
+
+    if (!email || !finalPassword) {
       return res.status(400).json({
-        message: "Email, code, and new password are required.",
+        success: false,
+        message: "Email and new password are required.",
       });
     }
 
-    if (String(newPassword).length < 6) {
+    if (String(finalPassword).length < 6) {
       return res.status(400).json({
-        message: "New password must be at least 6 characters long.",
+        success: false,
+        message: "Password must be at least 6 characters.",
       });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const safeEmail = String(email).trim().toLowerCase();
 
-    const user = await User.findOne({
-      email: normalizedEmail,
-    }).select("+password");
+    const user = await User.findOne({ email: safeEmail }).select(
+      "+password +resetCode +resetCodeExpires +resetCodeVerified"
+    );
 
     if (!user) {
       return res.status(404).json({
+        success: false,
         message: "User not found.",
-      });
-    }
-
-    if (!user.resetCode || !user.resetCodeExpires) {
-      return res.status(400).json({
-        message: "No password reset request found.",
-      });
-    }
-
-    if (user.resetCode !== code) {
-      return res.status(400).json({
-        message: "Invalid reset code.",
-      });
-    }
-
-    if (user.resetCodeExpires < Date.now()) {
-      return res.status(400).json({
-        message: "Reset code has expired.",
       });
     }
 
     if (!user.resetCodeVerified) {
       return res.status(400).json({
-        message: "Please verify the reset code first.",
+        success: false,
+        message: "Please verify reset code first.",
       });
     }
 
-    user.password = newPassword;
+    /**
+     * Important:
+     * Give plain password here.
+     * User.js pre-save middleware will hash it.
+     */
+    user.password = finalPassword;
+
     user.resetCode = null;
     user.resetCodeExpires = null;
     user.resetCodeVerified = false;
@@ -489,264 +813,14 @@ export const resetPassword = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message:
-        "Password reset successful. You can now log in with your new password.",
+      message: "Password reset successful. Please login with your new password.",
     });
   } catch (error) {
-    console.error("❌ Reset password error:", error);
-
-    return res.status(500).json({
-      message: "Server error while resetting password.",
-    });
-  }
-};
-
-/* ---------------- Login ---------------- */
-
-export const login = async (req, res) => {
-  try {
-    const { email, password, rememberMe } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({
-        message: "Email and password are required.",
-      });
-    }
-
-    const normalizedEmail = email.toLowerCase().trim();
-
-    const user = await User.findOne({
-      email: normalizedEmail,
-    }).select("+password");
-
-    if (!user) {
-      return res.status(400).json({
-        message: "Invalid credentials",
-      });
-    }
-
-    if (!user.isVerified) {
-      return res.status(400).json({
-        message: "Please verify your email before logging in.",
-        requiresVerification: true,
-        email: user.email,
-      });
-    }
-
-    if (user.googleId && !user.password) {
-      return res.status(400).json({
-        message:
-          "This account was created with Google. Please login using Google Sign-In.",
-      });
-    }
-
-    if (!user.password) {
-      return res.status(500).json({
-        message:
-          "Password missing for this user in database. Please reset password or recreate user.",
-      });
-    }
-
-    const isMatch = await bcrypt.compare(String(password), String(user.password));
-
-    if (!isMatch) {
-      return res.status(400).json({
-        message: "Invalid credentials",
-      });
-    }
-
-    const token = generateToken(user._id, user.role, rememberMe);
-
-    return res.json({
-      success: true,
-      message: "Login successful",
-      token,
-      user: {
-        id: user._id,
-        fullname: user.fullname,
-        email: user.email,
-        username: user.username,
-        role: user.role,
-        isVerified: user.isVerified,
-      },
-    });
-  } catch (error) {
-    console.error("❌ Login error:", error);
-
-    return res.status(500).json({
-      message: "Server error during login",
-    });
-  }
-};
-
-/* ---------------- Google OAuth ---------------- */
-
-export const googleLogin = async (req, res) => {
-  try {
-    const { token } = req.body;
-
-    if (!token) {
-      return res.status(400).json({
-        success: false,
-        message: "Google token required",
-      });
-    }
-
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-
-    if (!payload) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid Google token payload",
-      });
-    }
-
-    const { sub: googleId, email, name, email_verified } = payload;
-
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: "Google account email not found",
-      });
-    }
-
-    if (!email_verified) {
-      return res.status(400).json({
-        success: false,
-        message: "Your Google email is not verified.",
-      });
-    }
-
-    const normalizedEmail = email.toLowerCase().trim();
-
-    let user = await User.findOne({
-      email: normalizedEmail,
-    });
-
-    if (!user) {
-      const code = crypto.randomInt(100000, 999999).toString();
-
-      user = await User.create({
-        fullname: name || "Google User",
-        username: normalizedEmail.split("@")[0],
-        email: normalizedEmail,
-        googleId,
-        isVerified: false,
-        verificationCode: code,
-        verificationCodeExpires: Date.now() + 15 * 60 * 1000,
-        resetCode: null,
-        resetCodeExpires: null,
-        resetCodeVerified: false,
-      });
-
-      res.status(201).json({
-        success: true,
-        message: "New Google account created. Please verify your email.",
-        isNewUser: true,
-        requiresVerification: true,
-        email: user.email,
-        user: {
-          id: user._id,
-          fullname: user.fullname,
-          email: user.email,
-          username: user.username,
-          role: user.role,
-          isVerified: user.isVerified,
-        },
-      });
-
-      sendVerificationEmail(user.email, code, user.fullname).catch(
-        (emailError) => {
-          console.error(
-            "❌ Google verification email failed:",
-            emailError.message
-          );
-        }
-      );
-
-      return;
-    }
-
-    if (!user.isVerified) {
-      const code = crypto.randomInt(100000, 999999).toString();
-
-      user.googleId = user.googleId || googleId;
-      user.verificationCode = code;
-      user.verificationCodeExpires = Date.now() + 15 * 60 * 1000;
-
-      await user.save();
-
-      res.status(200).json({
-        success: true,
-        message: "Please verify your email before continuing.",
-        isNewUser: true,
-        requiresVerification: true,
-        email: user.email,
-        user: {
-          id: user._id,
-          fullname: user.fullname,
-          email: user.email,
-          username: user.username,
-          role: user.role,
-          isVerified: user.isVerified,
-        },
-      });
-
-      sendVerificationEmail(user.email, code, user.fullname).catch(
-        (emailError) => {
-          console.error(
-            "❌ Google verification email failed:",
-            emailError.message
-          );
-        }
-      );
-
-      return;
-    }
-
-    if (!user.googleId) {
-      user.googleId = googleId;
-      await user.save();
-    }
-
-    const jwtToken = generateToken(user._id, user.role, true);
-
-    return res.status(200).json({
-      success: true,
-      message: "Google login successful",
-      isNewUser: false,
-      requiresVerification: false,
-      token: jwtToken,
-      email: user.email,
-      user: {
-        id: user._id,
-        fullname: user.fullname,
-        email: user.email,
-        username: user.username,
-        role: user.role,
-        isVerified: user.isVerified,
-      },
-    });
-  } catch (error) {
-    console.error("❌ Google login error:", error);
+    console.error("Reset password error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Server error during Google login",
+      message: "Server error while resetting password.",
     });
   }
-};
-
-/* ---------------- Logout ---------------- */
-
-export const logout = (_req, res) => {
-  return res.json({
-    success: true,
-    message: "Logout successful",
-  });
 };
