@@ -14,7 +14,7 @@ import axios from "axios";
  * Deployment-safe backend URL.
  *
  * In Vercel Environment Variables:
- * VITE_API_URL=https://your-render-backend-url.onrender.com
+ * VITE_API_URL=https://gym-fitness-hgq7.onrender.com
  */
 const RAW_API_URL =
   import.meta.env.VITE_API_URL ||
@@ -41,20 +41,32 @@ const UserRegister = () => {
 
   const navigate = useNavigate();
 
+  /**
+   * Saves email temporarily so VerifyEmail.jsx can still access it
+   * even if page refreshes.
+   */
   const cachePendingEmail = (email) => {
-    const safeEmail = (email || "").trim();
+    const safeEmail = String(email || "").trim();
 
-    if (!safeEmail) return;
+    if (!safeEmail) {
+      return;
+    }
 
     sessionStorage.setItem("registerEmail", safeEmail);
     localStorage.setItem("pendingEmail", safeEmail);
   };
 
+  /**
+   * Clears pending verification email after successful login/verification.
+   */
   const clearPendingEmail = () => {
     sessionStorage.removeItem("registerEmail");
     localStorage.removeItem("pendingEmail");
   };
 
+  /**
+   * Handles form input changes.
+   */
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -75,6 +87,24 @@ const UserRegister = () => {
     }
   };
 
+  /**
+   * Validates password.
+   */
+  const validatePassword = (password) => {
+    if (!password) {
+      return "Password is required";
+    }
+
+    if (password.length < 6) {
+      return "Password must be at least 6 characters";
+    }
+
+    return "";
+  };
+
+  /**
+   * Validates full registration form.
+   */
   const validateForm = () => {
     const newErrors = {};
 
@@ -88,14 +118,14 @@ const UserRegister = () => {
 
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    } else if (!/\S+@\S+\.\S+/.test(formData.email.trim())) {
       newErrors.email = "Invalid email format";
     }
 
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    const passwordError = validatePassword(formData.password);
+
+    if (passwordError) {
+      newErrors.password = passwordError;
     }
 
     if (!formData.confirmPassword) {
@@ -109,12 +139,41 @@ const UserRegister = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  /**
+   * Redirects user based on role after successful token login.
+   */
+  const redirectByRole = (user) => {
+    const role = user?.role || "member";
+
+    if (role === "admin") {
+      navigate("/admin/dashboard");
+      return;
+    }
+
+    if (role === "trainer") {
+      navigate("/trainer/dashboard");
+      return;
+    }
+
+    navigate("/home");
+  };
+
+  /**
+   * Checks backend response and decides where to send user.
+   *
+   * Your backend register controller returns:
+   * requiresVerification: true
+   * email: user.email
+   *
+   * Your uploaded register page already uses this style of checking and navigating
+   * to /verify-email when verification is needed. :contentReference[oaicite:0]{index=0}
+   */
   const handleRegisterResponse = (data, fallbackEmail = "") => {
-    const safeEmail = (
+    const safeEmail = String(
       data?.user?.email ||
-      data?.email ||
-      fallbackEmail ||
-      ""
+        data?.email ||
+        fallbackEmail ||
+        ""
     ).trim();
 
     const requiresVerification =
@@ -125,11 +184,9 @@ const UserRegister = () => {
       (typeof data?.message === "string" &&
         /verify|verification|otp|code/i.test(data.message));
 
-    if (safeEmail) {
-      cachePendingEmail(safeEmail);
-    }
-
     if (requiresVerification) {
+      cachePendingEmail(safeEmail);
+
       navigate("/verify-email", {
         state: {
           email: safeEmail,
@@ -145,7 +202,7 @@ const UserRegister = () => {
 
       clearPendingEmail();
 
-      navigate("/home");
+      redirectByRole(data.user);
 
       return;
     }
@@ -153,16 +210,21 @@ const UserRegister = () => {
     navigate("/memberLogin");
   };
 
+  /**
+   * Normal email/password signup.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      return;
+    }
 
     setIsSubmitting(true);
     setServerError("");
 
     try {
-      const safeEmail = formData.email.trim();
+      const safeEmail = formData.email.trim().toLowerCase();
 
       const { data } = await axios.post(
         `${API_BASE}/api/auth/register`,
@@ -189,9 +251,31 @@ const UserRegister = () => {
         return;
       }
 
-      const msg = err?.response?.data?.message;
+      const data = err?.response?.data;
+      const msg = data?.message;
+      const safeEmail = data?.email || formData.email.trim().toLowerCase();
 
-      if (msg === "User already exists") {
+      const requiresVerification =
+        data?.requiresVerification === true ||
+        data?.isNewUser === true ||
+        data?.needsVerification === true ||
+        data?.verificationRequired === true ||
+        (typeof msg === "string" &&
+          /verify|verification|otp|code/i.test(msg));
+
+      if (requiresVerification) {
+        cachePendingEmail(safeEmail);
+
+        navigate("/verify-email", {
+          state: {
+            email: safeEmail,
+          },
+        });
+
+        return;
+      }
+
+      if (msg === "User already exists" || msg === "User already exists.") {
         setServerError("This email is already registered. Please log in instead.");
       } else {
         setServerError(msg || "Something went wrong. Try again!");
@@ -201,8 +285,16 @@ const UserRegister = () => {
     }
   };
 
+  /**
+   * Google signup/login.
+   *
+   * Your backend currently marks Google users as verified automatically.
+   * So Google users usually go to /home instead of /verify-email.
+   */
   const handleGoogleSuccess = async (credentialResponse) => {
-    if (isGoogleSubmitting) return;
+    if (isGoogleSubmitting) {
+      return;
+    }
 
     setIsGoogleSubmitting(true);
     setServerError("");
@@ -214,9 +306,6 @@ const UserRegister = () => {
         setServerError("Google signup failed. No credential received.");
         return;
       }
-
-      console.log("Google signup started");
-      console.log("Current origin:", window.location.origin);
 
       const { data } = await axios.post(
         `${API_BASE}/api/auth/google`,
@@ -231,17 +320,11 @@ const UserRegister = () => {
         }
       );
 
-      console.log("Google signup response:", data);
-
-      const safeEmail = (
+      const safeEmail = String(
         data?.user?.email ||
-        data?.email ||
-        ""
+          data?.email ||
+          ""
       ).trim();
-
-      if (safeEmail) {
-        cachePendingEmail(safeEmail);
-      }
 
       const requiresVerification =
         data?.requiresVerification === true ||
@@ -252,6 +335,8 @@ const UserRegister = () => {
           /verify|verification|otp|code/i.test(data.message));
 
       if (requiresVerification) {
+        cachePendingEmail(safeEmail);
+
         navigate("/verify-email", {
           state: {
             email: safeEmail,
@@ -267,7 +352,7 @@ const UserRegister = () => {
 
         clearPendingEmail();
 
-        navigate("/home");
+        redirectByRole(data.user);
 
         return;
       }
@@ -281,7 +366,29 @@ const UserRegister = () => {
         return;
       }
 
-      const msg = err?.response?.data?.message;
+      const data = err?.response?.data;
+      const msg = data?.message;
+      const safeEmail = data?.email || "";
+
+      const requiresVerification =
+        data?.requiresVerification === true ||
+        data?.isNewUser === true ||
+        data?.needsVerification === true ||
+        data?.verificationRequired === true ||
+        (typeof msg === "string" &&
+          /verify|verification|otp|code/i.test(msg));
+
+      if (requiresVerification) {
+        cachePendingEmail(safeEmail);
+
+        navigate("/verify-email", {
+          state: {
+            email: safeEmail,
+          },
+        });
+
+        return;
+      }
 
       setServerError(msg || "Google signup failed. Try again.");
     } finally {
@@ -305,18 +412,34 @@ const UserRegister = () => {
         <motion.img
           src={registerImg}
           alt="Register Visual"
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.8 }}
+          initial={{
+            scale: 0.9,
+            opacity: 0,
+          }}
+          animate={{
+            scale: 1,
+            opacity: 1,
+          }}
+          transition={{
+            duration: 0.8,
+          }}
           className="w-4/5 h-auto object-cover rounded-3xl shadow-2xl"
         />
       </div>
 
       <div className="w-full lg:w-1/2 flex items-center justify-center p-4">
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          initial={{
+            opacity: 0,
+            y: 40,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            duration: 0.6,
+          }}
           className="w-full max-w-md p-8 rounded-3xl shadow-xl bg-white border border-gray-100"
         >
           <div className="text-center mb-6">
@@ -343,11 +466,17 @@ const UserRegister = () => {
 
           {serverError && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{
+                opacity: 0,
+                y: -10,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
               className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-center"
             >
-              <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+              <AlertCircle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0" />
 
               <p className="text-sm text-red-700">{serverError}</p>
             </motion.div>
@@ -364,6 +493,7 @@ const UserRegister = () => {
                 name="fullname"
                 value={formData.fullname}
                 onChange={handleChange}
+                autoComplete="name"
                 className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
               />
 
@@ -385,6 +515,7 @@ const UserRegister = () => {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
+                autoComplete="username"
                 className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
               />
 
@@ -409,6 +540,7 @@ const UserRegister = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
+                  autoComplete="email"
                   className="w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
                 />
               </div>
@@ -434,6 +566,7 @@ const UserRegister = () => {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
+                  autoComplete="new-password"
                   className="w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
                 />
 
@@ -456,6 +589,12 @@ const UserRegister = () => {
                   {errors.password}
                 </p>
               )}
+
+              {!errors.password && formData.password && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Password must be at least 6 characters.
+                </p>
+              )}
             </div>
 
             <div>
@@ -471,6 +610,7 @@ const UserRegister = () => {
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
+                  autoComplete="new-password"
                   className="w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
                 />
 
@@ -498,7 +638,7 @@ const UserRegister = () => {
             <button
               type="submit"
               disabled={isSubmitting || isGoogleSubmitting}
-              className="w-full py-3.5 mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-60"
+              className="w-full py-3.5 mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Signing up..." : "Sign Up"}
             </button>
@@ -533,6 +673,7 @@ const UserRegister = () => {
           <div className="mt-6 text-center">
             <p className="text-gray-600">
               Already have an account?{" "}
+
               <Link
                 to="/memberLogin"
                 className="font-semibold text-indigo-600 hover:text-indigo-500"
