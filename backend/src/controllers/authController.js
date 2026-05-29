@@ -21,20 +21,20 @@ const generateToken = (id, role, rememberMe = false) => {
 
 const createMailTransporter = () => {
   return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: Number(process.env.EMAIL_PORT || 587),
-    secure: String(process.env.EMAIL_SECURE) === "true",
-    requireTLS: String(process.env.EMAIL_SECURE) !== "true",
-    connectionTimeout: 60000,
-    greetingTimeout: 60000,
-    socketTimeout: 60000,
+    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    requireTLS: true,
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
   });
 };
-
 /* ---------------- Email Helper: Verification ---------------- */
 
 const sendVerificationEmail = async (email, code, fullname) => {
@@ -42,32 +42,23 @@ const sendVerificationEmail = async (email, code, fullname) => {
     const transporter = createMailTransporter();
 
     const info = await transporter.sendMail({
-      from:
-        process.env.EMAIL_FROM ||
-        `"FitTrack Team" <${process.env.EMAIL_USER}>`,
+      from: `"FitTrack Team" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Verify Your FitTrack Account",
+      subject: "🎉 Verify Your FitTrack Account",
       html: `
         <div style="font-family: Arial, sans-serif; padding:20px; border:1px solid #eee; border-radius:10px; max-width:600px;">
-          <h2 style="color:#4f46e5;">Hello ${fullname || "User"},</h2>
-
-          <p>Welcome to <b>FitTrack</b> — your fitness journey starts here.</p>
-
+          <h2 style="color:#4f46e5;">👋 Hello ${fullname || "User"},</h2>
+          <p>Welcome to <b>FitTrack</b> — your fitness journey starts here!</p>
           <p>Use the following code to verify your account:</p>
-
           <div style="text-align:center; margin:20px 0;">
-            <span style="display:inline-block; font-size:24px; font-weight:bold; background:#4f46e5; color:white; padding:12px 24px; border-radius:8px; letter-spacing:4px;">
+            <span style="display:inline-block; font-size:22px; font-weight:bold; background:#4f46e5; color:white; padding:10px 20px; border-radius:6px; letter-spacing:3px;">
               ${code}
             </span>
           </div>
-
           <p>This code will expire in <b>15 minutes</b>.</p>
-
-          <p>If you did not request this, you can safely ignore this email.</p>
-
-          <hr style="margin:25px 0;" />
-
-          <p>Stay strong,<br/>The FitTrack Team</p>
+          <p>If you didn’t request this, just ignore this email.</p>
+          <hr style="margin:25px 0;">
+          <p>💪 Stay strong,<br>The FitTrack Team</p>
         </div>
       `,
     });
@@ -86,31 +77,22 @@ const sendResetPasswordEmail = async (email, code, fullname) => {
     const transporter = createMailTransporter();
 
     const info = await transporter.sendMail({
-      from:
-        process.env.EMAIL_FROM ||
-        `"FitTrack Support" <${process.env.EMAIL_USER}>`,
+      from: `"FitTrack Support" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Reset Your FitTrack Password",
+      subject: "🔐 Reset Your FitTrack Password",
       html: `
         <div style="font-family: Arial, sans-serif; padding:20px; border:1px solid #eee; border-radius:10px; max-width:600px;">
           <h2 style="color:#4f46e5;">Hello ${fullname || "User"},</h2>
-
           <p>We received a request to reset your <b>FitTrack</b> password.</p>
-
           <p>Use the following code to continue:</p>
-
           <div style="text-align:center; margin:20px 0;">
-            <span style="display:inline-block; font-size:24px; font-weight:bold; background:#4f46e5; color:white; padding:12px 24px; border-radius:8px; letter-spacing:4px;">
+            <span style="display:inline-block; font-size:22px; font-weight:bold; background:#4f46e5; color:white; padding:10px 20px; border-radius:6px; letter-spacing:3px;">
               ${code}
             </span>
           </div>
-
           <p>This code will expire in <b>10 minutes</b>.</p>
-
           <p>If you did not request this password reset, you can safely ignore this email.</p>
-
-          <hr style="margin:25px 0;" />
-
+          <hr style="margin:25px 0;">
           <p>FitTrack Support Team</p>
         </div>
       `,
@@ -346,8 +328,7 @@ export const forgotPassword = async (req, res) => {
     console.error("❌ Forgot password error:", error);
 
     return res.status(500).json({
-      message:
-        error.message || "Server error while sending reset code.",
+      message: "Server error while sending reset code.",
     });
   }
 };
@@ -472,8 +453,7 @@ export const resetPassword = async (req, res) => {
     await user.save();
 
     return res.status(200).json({
-      message:
-        "Password reset successful. You can now log in with your new password.",
+      message: "Password reset successful. You can now log in with your new password.",
     });
   } catch (error) {
     console.error("❌ Reset password error:", error);
@@ -518,15 +498,13 @@ export const login = async (req, res) => {
 
     if (user.googleId && !user.password) {
       return res.status(400).json({
-        message:
-          "This account was created with Google. Please login using Google Sign-In.",
+        message: "This account was created with Google. Please login using Google Sign-In.",
       });
     }
 
     if (!user.password) {
       return res.status(500).json({
-        message:
-          "Password missing for this user in database. Please reset password or recreate user.",
+        message: "Password missing for this user in database. Please reset password or recreate user.",
       });
     }
 
@@ -649,10 +627,7 @@ export const googleLogin = async (req, res) => {
 
       sendVerificationEmail(user.email, code, user.fullname).catch(
         (emailError) => {
-          console.error(
-            "❌ Google verification email failed:",
-            emailError.message
-          );
+          console.error("❌ Google verification email failed:", emailError.message);
         }
       );
 
@@ -686,10 +661,7 @@ export const googleLogin = async (req, res) => {
 
       sendVerificationEmail(user.email, code, user.fullname).catch(
         (emailError) => {
-          console.error(
-            "❌ Google verification email failed:",
-            emailError.message
-          );
+          console.error("❌ Google verification email failed:", emailError.message);
         }
       );
 

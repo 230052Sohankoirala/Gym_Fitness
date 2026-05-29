@@ -1,38 +1,34 @@
-/* eslint-disable no-unused-vars */
-// src/pages/auth/UserRegister.jsx
+// src/pages/auth/UserLogin.jsx
 
 import React, { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";// eslint-disable-line no-unused-vars
 import { Eye, EyeOff, Mail, Lock, AlertCircle, ArrowLeft } from "lucide-react";
-import registerImg from "../../assets/Images/Signup.jpg";
+import loginImg from "../../assets/Images/loginBG.d2986f65998a8b583e78.png";
 import { Link, useNavigate } from "react-router-dom";
-import { Typewriter } from "react-simple-typewriter";
 import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
+import { useAuth } from "../../context/AuthContext";
 
 /**
  * Deployment-safe backend URL.
  *
  * In Vercel Environment Variables:
- * VITE_API_URL=https://your-render-backend-url.onrender.com
+ * VITE_API_URL=https://gym-fitness-hgq7.onrender.com
  */
 const RAW_API_URL =
   import.meta.env.VITE_API_URL ||
-  "https://gym-fitness-backend-d13i.onrender.com";
+  "https://gym-fitness-hgq7.onrender.com";
 
 const API_BASE = RAW_API_URL.replace(/\/+$/, "");
 
-const UserRegister = () => {
+const UserLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
-    fullname: "",
-    username: "",
     email: "",
     password: "",
-    confirmPassword: "",
+    rememberMe: false,
   });
 
   const [errors, setErrors] = useState({});
@@ -40,6 +36,7 @@ const UserRegister = () => {
   const [serverError, setServerError] = useState("");
 
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const cachePendingEmail = (email) => {
     const safeEmail = (email || "").trim();
@@ -56,11 +53,11 @@ const UserRegister = () => {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
 
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
 
     if (errors[name]) {
@@ -78,14 +75,6 @@ const UserRegister = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.fullname.trim()) {
-      newErrors.fullname = "Full name is required";
-    }
-
-    if (!formData.username.trim()) {
-      newErrors.username = "Username is required";
-    }
-
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -94,14 +83,6 @@ const UserRegister = () => {
 
     if (!formData.password) {
       newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "Confirm password required";
-    } else if (formData.confirmPassword !== formData.password) {
-      newErrors.confirmPassword = "Passwords do not match";
     }
 
     setErrors(newErrors);
@@ -109,48 +90,14 @@ const UserRegister = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleRegisterResponse = (data, fallbackEmail = "") => {
-    const safeEmail = (
-      data?.user?.email ||
-      data?.email ||
-      fallbackEmail ||
-      ""
-    ).trim();
-
-    const requiresVerification =
-      data?.requiresVerification === true ||
-      data?.isNewUser === true ||
-      data?.needsVerification === true ||
-      data?.verificationRequired === true ||
-      (typeof data?.message === "string" &&
-        /verify|verification|otp|code/i.test(data.message));
-
-    if (safeEmail) {
-      cachePendingEmail(safeEmail);
-    }
-
-    if (requiresVerification) {
-      navigate("/verify-email", {
-        state: {
-          email: safeEmail,
-        },
-      });
-
-      return;
-    }
-
-    if (data?.token && data?.user) {
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      clearPendingEmail();
-
+  const redirectByRole = (userRole) => {
+    if (userRole === "admin") {
+      navigate("/admin/dashboard");
+    } else if (userRole === "trainer") {
+      navigate("/trainer/dashboard");
+    } else {
       navigate("/home");
-
-      return;
     }
-
-    navigate("/memberLogin");
   };
 
   const handleSubmit = async (e) => {
@@ -165,12 +112,11 @@ const UserRegister = () => {
       const safeEmail = formData.email.trim();
 
       const { data } = await axios.post(
-        `${API_BASE}/api/auth/register`,
+        `${API_BASE}/api/auth/login`,
         {
-          fullname: formData.fullname.trim(),
-          username: formData.username.trim(),
           email: safeEmail,
           password: formData.password,
+          rememberMe: formData.rememberMe,
         },
         {
           timeout: 60000,
@@ -180,28 +126,54 @@ const UserRegister = () => {
         }
       );
 
-      handleRegisterResponse(data, safeEmail);
+      if (data?.token && data?.user) {
+        login(data.token, data.user, formData.rememberMe);
+
+        clearPendingEmail();
+
+        const userRole = data.user?.role || "member";
+
+        redirectByRole(userRole);
+
+        return;
+      }
+
+      setServerError("Login response was incomplete. Please try again.");
     } catch (err) {
-      console.error("Register error:", err);
+      console.error("Login error:", err);
 
       if (err.code === "ECONNABORTED") {
-        setServerError("Registration took too long. Please try again.");
+        setServerError("Login took too long. Please try again.");
         return;
       }
 
       const msg = err?.response?.data?.message;
+      const emailFromServer = err?.response?.data?.email;
+      const safeEmail = emailFromServer || formData.email.trim();
 
-      if (msg === "User already exists") {
-        setServerError("This email is already registered. Please log in instead.");
-      } else {
-        setServerError(msg || "Something went wrong. Try again!");
+      const requiresVerification =
+        err?.response?.data?.requiresVerification === true ||
+        (typeof msg === "string" && /verify|verification|otp|code/i.test(msg));
+
+      if (requiresVerification) {
+        cachePendingEmail(safeEmail);
+
+        navigate("/verify-email", {
+          state: {
+            email: safeEmail,
+          },
+        });
+
+        return;
       }
+
+      setServerError(msg || "Login failed. Try again!");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse) => {
+  const handleGoogleLoginSuccess = async (credentialResponse) => {
     if (isGoogleSubmitting) return;
 
     setIsGoogleSubmitting(true);
@@ -211,11 +183,11 @@ const UserRegister = () => {
       const googleCredential = credentialResponse?.credential;
 
       if (!googleCredential) {
-        setServerError("Google signup failed. No credential received.");
+        setServerError("Google login failed. No credential received.");
         return;
       }
 
-      console.log("Google signup started");
+      console.log("Google login started");
       console.log("Current origin:", window.location.origin);
 
       const { data } = await axios.post(
@@ -231,17 +203,13 @@ const UserRegister = () => {
         }
       );
 
-      console.log("Google signup response:", data);
+      console.log("Google login response:", data);
 
       const safeEmail = (
         data?.user?.email ||
         data?.email ||
         ""
       ).trim();
-
-      if (safeEmail) {
-        cachePendingEmail(safeEmail);
-      }
 
       const requiresVerification =
         data?.requiresVerification === true ||
@@ -252,6 +220,8 @@ const UserRegister = () => {
           /verify|verification|otp|code/i.test(data.message));
 
       if (requiresVerification) {
+        cachePendingEmail(safeEmail);
+
         navigate("/verify-email", {
           state: {
             email: safeEmail,
@@ -262,289 +232,361 @@ const UserRegister = () => {
       }
 
       if (data?.token && data?.user) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
+        login(data.token, data.user, true);
 
         clearPendingEmail();
 
-        navigate("/home");
+        const userRole = data.user?.role || "member";
+
+        redirectByRole(userRole);
 
         return;
       }
 
-      setServerError("Google signup response was incomplete. Please try normal signup.");
+      setServerError("Google login response was incomplete. Please try again.");
     } catch (err) {
-      console.error("Google signup error:", err);
+      console.error("Google login error:", err);
 
       if (err.code === "ECONNABORTED") {
-        setServerError("Google signup took too long. Please try again.");
+        setServerError("Google login took too long. Please try again.");
         return;
       }
 
       const msg = err?.response?.data?.message;
+      const safeEmail = err?.response?.data?.email || "";
 
-      setServerError(msg || "Google signup failed. Try again.");
+      const requiresVerification =
+        err?.response?.data?.requiresVerification === true ||
+        (typeof msg === "string" && /verify|verification|otp|code/i.test(msg));
+
+      if (requiresVerification) {
+        cachePendingEmail(safeEmail);
+
+        navigate("/verify-email", {
+          state: {
+            email: safeEmail,
+          },
+        });
+
+        return;
+      }
+
+      setServerError(msg || "Google login failed. Try again.");
     } finally {
       setIsGoogleSubmitting(false);
     }
   };
 
-  const handleGoogleError = () => {
-    setServerError("Google signup failed. Please try again.");
+  const handleGoogleLoginError = () => {
+    setServerError("Google login failed. Please try again.");
+  };
+
+  const containerVariants = {
+    hidden: {
+      opacity: 0,
+    },
+    visible: {
+      opacity: 1,
+      transition: {
+        delayChildren: 0.3,
+        staggerChildren: 0.2,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: {
+      y: 20,
+      opacity: 0,
+    },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 120,
+        damping: 12,
+      },
+    },
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-gradient-to-br from-indigo-50 to-purple-50 p-4">
+    <div className="min-h-screen flex bg-gradient-to-br from-indigo-50 to-purple-50 p-4">
       <div className="absolute top-6 left-6 z-10">
         <Link to="/" className="text-gray-600 hover:text-gray-800">
           <ArrowLeft className="w-6 h-6" />
         </Link>
       </div>
 
-      <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12">
-        <motion.img
-          src={registerImg}
-          alt="Register Visual"
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          className="w-4/5 h-auto object-cover rounded-3xl shadow-2xl"
-        />
-      </div>
+      <motion.button
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        onClick={() => navigate(-1)}
+        className="lg:hidden absolute top-6 left-6 p-2 rounded-full bg-white shadow-md hover:bg-gray-50 z-10"
+      >
+        <ArrowLeft className="w-5 h-5 text-gray-700" />
+      </motion.button>
 
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="w-full max-w-md p-8 rounded-3xl shadow-xl bg-white border border-gray-100"
-        >
-          <div className="text-center mb-6">
-            <h2 className="text-3xl font-bold text-gray-800 mb-2">
-              Create Account
-            </h2>
+      <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12">
+        <div className="relative w-full max-w-2xl">
+          <motion.img
+            src={loginImg}
+            alt="Login Visual"
+            initial={{
+              scale: 0.9,
+              opacity: 0,
+            }}
+            animate={{
+              scale: 1,
+              opacity: 1,
+            }}
+            transition={{
+              duration: 0.8,
+            }}
+            className="w-4/5 h-96 object-cover rounded-3xl shadow-2xl"
+          />
+
+          <motion.div
+            initial={{
+              y: 40,
+              opacity: 0,
+            }}
+            animate={{
+              y: 0,
+              opacity: 1,
+            }}
+            transition={{
+              delay: 0.5,
+              duration: 0.6,
+            }}
+            className="absolute -bottom-6 -left-6 bg-white p-6 rounded-2xl shadow-xl max-w-sm border border-gray-100"
+          >
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              Secure Access
+            </h3>
 
             <p className="text-gray-600">
-              <Typewriter
-                words={[
-                  "Unlock the Power of Fitness",
-                  "Join Our Community Today",
-                  "Track Your Progress Easily",
-                ]}
-                loop
-                cursor
-                cursorStyle="|"
-                typeSpeed={70}
-                deleteSpeed={50}
-                delaySpeed={1000}
-              />
+              Your data is protected with industry-standard encryption.
             </p>
+          </motion.div>
+        </div>
+      </div>
+
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6">
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={containerVariants}
+          className="w-full max-w-md p-8 rounded-3xl shadow-xl bg-white border border-gray-100 relative overflow-hidden"
+        >
+          <div className="text-center mb-8 relative z-10">
+            <motion.h2
+              variants={itemVariants}
+              className="text-3xl font-bold text-gray-800 mb-2"
+            >
+              Welcome Back
+            </motion.h2>
+
+            <motion.p variants={itemVariants} className="text-gray-600">
+              Sign in to continue your fitness journey
+            </motion.p>
           </div>
 
-          {serverError && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-center"
-            >
-              <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+          <AnimatePresence>
+            {serverError && (
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  height: 0,
+                }}
+                animate={{
+                  opacity: 1,
+                  height: "auto",
+                }}
+                exit={{
+                  opacity: 0,
+                  height: 0,
+                }}
+                className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-center"
+              >
+                <AlertCircle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0" />
 
-              <p className="text-sm text-red-700">{serverError}</p>
-            </motion.div>
-          )}
+                <p className="text-sm text-red-700">{serverError}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Full Name
-              </label>
-
-              <input
-                type="text"
-                name="fullname"
-                value={formData.fullname}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
-              />
-
-              {errors.fullname && (
-                <p className="text-sm text-red-600 flex items-center mt-1">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.fullname}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Username
-              </label>
-
-              <input
-                type="text"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
-              />
-
-              {errors.username && (
-                <p className="text-sm text-red-600 flex items-center mt-1">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.username}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-
+          <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
+            <motion.div variants={itemVariants}>
               <div className="relative">
-                <Mail className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
 
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
+                  placeholder="Email"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 text-black"
                 />
               </div>
 
               {errors.email && (
-                <p className="text-sm text-red-600 flex items-center mt-1">
+                <motion.p
+                  initial={{
+                    opacity: 0,
+                    y: -10,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                  }}
+                  exit={{
+                    opacity: 0,
+                    y: -10,
+                  }}
+                  className="text-sm text-red-600 mt-1 flex items-center"
+                >
                   <AlertCircle className="w-4 h-4 mr-1" />
                   {errors.email}
-                </p>
+                </motion.p>
               )}
-            </div>
+            </motion.div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-
+            <motion.div variants={itemVariants}>
               <div className="relative">
-                <Lock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
 
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
+                  placeholder="Password"
+                  className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 text-black"
                 />
 
                 <button
                   type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-3.5"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5" />
                   )}
                 </button>
               </div>
 
               {errors.password && (
-                <p className="text-sm text-red-600 flex items-center mt-1">
+                <motion.p
+                  initial={{
+                    opacity: 0,
+                    y: -10,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                  }}
+                  exit={{
+                    opacity: 0,
+                    y: -10,
+                  }}
+                  className="text-sm text-red-600 mt-1 flex items-center"
+                >
                   <AlertCircle className="w-4 h-4 mr-1" />
                   {errors.password}
-                </p>
+                </motion.p>
               )}
-            </div>
+            </motion.div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Confirm Password
-              </label>
-
-              <div className="relative">
-                <Lock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
-
+            <motion.div
+              variants={itemVariants}
+              className="flex items-center justify-between text-sm"
+            >
+              <label className="flex items-center text-gray-700">
                 <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
+                  type="checkbox"
+                  name="rememberMe"
+                  checked={formData.rememberMe}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-300 text-black"
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
 
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  className="absolute right-3 top-3.5"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
-              </div>
+                <span className="ml-2">Remember me</span>
+              </label>
 
-              {errors.confirmPassword && (
-                <p className="text-sm text-red-600 flex items-center mt-1">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.confirmPassword}
-                </p>
-              )}
-            </div>
+              <Link
+                to="/forgot-password"
+                className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
+              >
+                Forgot password?
+              </Link>
+            </motion.div>
 
-            <button
+            <motion.button
+              variants={itemVariants}
+              whileHover={{
+                scale: 1.02,
+              }}
+              whileTap={{
+                scale: 0.98,
+              }}
               type="submit"
               disabled={isSubmitting || isGoogleSubmitting}
-              className="w-full py-3.5 mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-60"
+              className="w-full py-3.5 mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-shadow relative overflow-hidden disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? "Signing up..." : "Sign Up"}
-            </button>
+              {isSubmitting ? "Signing in..." : "Sign In"}
+            </motion.button>
           </form>
 
-          <div className="flex items-center my-6">
-            <div className="flex-grow border-t border-gray-300"></div>
+          <div className="relative flex items-center my-6">
+            <div className="flex-grow border-t border-gray-200"></div>
 
-            <span className="mx-4 text-gray-500">or</span>
+            <span className="flex-shrink mx-4 text-gray-400 text-sm">
+              or continue with
+            </span>
 
-            <div className="flex-grow border-t border-gray-300"></div>
+            <div className="flex-grow border-t border-gray-200"></div>
           </div>
 
           <div className="mt-4 flex justify-center">
             {isGoogleSubmitting ? (
               <div className="text-sm text-gray-600">
-                Processing Google signup...
+                Processing Google login...
               </div>
             ) : (
               <GoogleLogin
+                onSuccess={handleGoogleLoginSuccess}
+                onError={handleGoogleLoginError}
                 theme="filled_blue"
                 size="large"
                 shape="pill"
                 width="280"
                 useOneTap={false}
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
               />
             )}
           </div>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Already have an account?{" "}
-              <Link
-                to="/memberLogin"
-                className="font-semibold text-indigo-600 hover:text-indigo-500"
-              >
-                Login
-              </Link>
-            </p>
-          </div>
+          <motion.p
+            variants={itemVariants}
+            className="mt-6 text-center text-gray-600"
+          >
+            Don&apos;t have an account?{" "}
+
+            <Link
+              to="/register"
+              className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors"
+            >
+              Register
+            </Link>
+          </motion.p>
         </motion.div>
       </div>
     </div>
   );
 };
 
-export default UserRegister;
+export default UserLogin;
