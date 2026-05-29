@@ -39,7 +39,7 @@ const PAID_SESSIONS_KEY = "paid_sessions_map_v1";
  * https://gym-fitness-backend-d13i.onrender.com/api
  */
 const RAW_API_URL =
-  import.meta.env.VITE_API_URL || "https://gym-fitness-backend-d13i.onrender.com";
+  import.meta.env.VITE_API_URL || "https://gym-fitness-hgq7.onrender.com";
 
 const API_BASE = `${RAW_API_URL.replace(/\/+$/, "")}/api`;
 
