@@ -213,77 +213,124 @@ const UserRegister = () => {
   /**
    * Normal email/password signup.
    */
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!validateForm()) {
+  if (!validateForm()) {
+    return;
+  }
+
+  setIsSubmitting(true);
+  setServerError("");
+
+  try {
+    const safeEmail = formData.email.trim().toLowerCase();
+
+    console.log("REGISTER API URL:", `${API_BASE}/api/auth/register`);
+
+    const { data } = await axios.post(
+      `${API_BASE}/api/auth/register`,
+      {
+        fullname: formData.fullname.trim(),
+        username: formData.username.trim(),
+        email: safeEmail,
+        password: formData.password,
+      },
+      {
+        timeout: 60000,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    console.log("REGISTER RESPONSE:", data);
+
+    const responseEmail = String(
+      data?.user?.email || data?.email || safeEmail || ""
+    ).trim();
+
+    const requiresVerification =
+      data?.requiresVerification === true ||
+      data?.isNewUser === true ||
+      data?.needsVerification === true ||
+      data?.verificationRequired === true ||
+      (typeof data?.message === "string" &&
+        /verify|verification|otp|code/i.test(data.message));
+
+    console.log("REQUIRES VERIFICATION:", requiresVerification);
+    console.log("EMAIL TO VERIFY:", responseEmail);
+
+    if (requiresVerification) {
+      sessionStorage.setItem("registerEmail", responseEmail);
+      localStorage.setItem("pendingEmail", responseEmail);
+
+      navigate("/verify-email", {
+        replace: true,
+        state: {
+          email: responseEmail,
+        },
+      });
+
       return;
     }
 
-    setIsSubmitting(true);
-    setServerError("");
+    if (data?.token && data?.user) {
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
 
-    try {
-      const safeEmail = formData.email.trim().toLowerCase();
+      clearPendingEmail();
 
-      const { data } = await axios.post(
-        `${API_BASE}/api/auth/register`,
-        {
-          fullname: formData.fullname.trim(),
-          username: formData.username.trim(),
-          email: safeEmail,
-          password: formData.password,
-        },
-        {
-          timeout: 60000,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      redirectByRole(data.user);
 
-      handleRegisterResponse(data, safeEmail);
-    } catch (err) {
-      console.error("Register error:", err);
-
-      if (err.code === "ECONNABORTED") {
-        setServerError("Registration took too long. Please try again.");
-        return;
-      }
-
-      const data = err?.response?.data;
-      const msg = data?.message;
-      const safeEmail = data?.email || formData.email.trim().toLowerCase();
-
-      const requiresVerification =
-        data?.requiresVerification === true ||
-        data?.isNewUser === true ||
-        data?.needsVerification === true ||
-        data?.verificationRequired === true ||
-        (typeof msg === "string" &&
-          /verify|verification|otp|code/i.test(msg));
-
-      if (requiresVerification) {
-        cachePendingEmail(safeEmail);
-
-        navigate("/verify-email", {
-          state: {
-            email: safeEmail,
-          },
-        });
-
-        return;
-      }
-
-      if (msg === "User already exists" || msg === "User already exists.") {
-        setServerError("This email is already registered. Please log in instead.");
-      } else {
-        setServerError(msg || "Something went wrong. Try again!");
-      }
-    } finally {
-      setIsSubmitting(false);
+      return;
     }
-  };
+
+    setServerError("Register worked, but backend did not request verification.");
+  } catch (err) {
+    console.error("REGISTER ERROR FULL:", err);
+    console.error("REGISTER ERROR RESPONSE:", err?.response?.data);
+
+    if (err.code === "ECONNABORTED") {
+      setServerError("Registration took too long. Please try again.");
+      return;
+    }
+
+    const data = err?.response?.data;
+    const msg = data?.message;
+    const safeEmail = data?.email || formData.email.trim().toLowerCase();
+
+    const requiresVerification =
+      data?.requiresVerification === true ||
+      data?.isNewUser === true ||
+      data?.needsVerification === true ||
+      data?.verificationRequired === true ||
+      (typeof msg === "string" &&
+        /verify|verification|otp|code/i.test(msg));
+
+    if (requiresVerification) {
+      sessionStorage.setItem("registerEmail", safeEmail);
+      localStorage.setItem("pendingEmail", safeEmail);
+
+      navigate("/verify-email", {
+        replace: true,
+        state: {
+          email: safeEmail,
+        },
+      });
+
+      return;
+    }
+
+    if (msg === "User already exists" || msg === "User already exists.") {
+      setServerError("This email is already registered. Please log in instead.");
+    } else {
+      setServerError(msg || "Something went wrong. Try again!");
+    }
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   /**
    * Google signup/login.
