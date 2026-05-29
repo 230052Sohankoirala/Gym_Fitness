@@ -5,14 +5,8 @@ import nodemailer from "nodemailer";
 import { OAuth2Client } from "google-auth-library";
 import User from "../models/User.js";
 
-/**
- * Google OAuth Client
- */
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-/**
- * Generate JWT token.
- */
 const generateToken = (userId, rememberMe = false) => {
   return jwt.sign(
     {
@@ -25,57 +19,66 @@ const generateToken = (userId, rememberMe = false) => {
   );
 };
 
-/**
- * Generate 6 digit code.
- */
 const generateSixDigitCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-/**
- * Hash verification/reset code.
- */
 const hashCode = (code) => {
   return crypto.createHash("sha256").update(String(code)).digest("hex");
 };
 
 /**
- * Gmail SMTP transporter.
+ * Brevo SMTP transporter.
  *
- * Render env:
- * EMAIL_USER=yourgmail@gmail.com
- * EMAIL_PASS=your_google_app_password
+ * Render env required:
+ * EMAIL_HOST=smtp-relay.brevo.com
+ * EMAIL_PORT=587
+ * EMAIL_SECURE=false
+ * EMAIL_USER=your_brevo_smtp_login
+ * EMAIL_PASS=your_brevo_smtp_password
+ * EMAIL_FROM=FitTrack <your_verified_sender_email>
  */
 const createEmailTransporter = () => {
   return nodemailer.createTransport({
-    service: "gmail",
+    host: process.env.EMAIL_HOST || "smtp-relay.brevo.com",
+    port: Number(process.env.EMAIL_PORT || 587),
+    secure: process.env.EMAIL_SECURE === "true",
 
-    /**
-     * Important:
-     * These timeouts stop Render from hanging forever
-     * if Gmail SMTP is slow or blocked.
-     */
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 20000,
 
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+
+    tls: {
+      rejectUnauthorized: false,
+    },
   });
 };
 
-/**
- * Send verification email.
- */
+const getEmailFrom = () => {
+  return process.env.EMAIL_FROM || `"FitTrack" <${process.env.EMAIL_USER}>`;
+};
+
+const logEmailError = (label, error) => {
+  console.error(`${label} failed:`, {
+    message: error?.message,
+    code: error?.code,
+    command: error?.command,
+    response: error?.response,
+  });
+};
+
 const sendVerificationEmail = async ({ email, fullname, code }) => {
   const transporter = createEmailTransporter();
 
   await transporter.sendMail({
-    from: `"FitFlow" <${process.env.EMAIL_USER}>`,
+    from: getEmailFrom(),
     to: email,
-    subject: "Verify your FitFlow account",
+    subject: "Verify your FitTrack account",
     html: `
       <div style="font-family: Arial, sans-serif; background: #f4f4f5; padding: 30px;">
         <div style="max-width: 520px; margin: auto; background: #ffffff; padding: 28px; border-radius: 14px; border: 1px solid #e5e7eb;">
@@ -86,7 +89,7 @@ const sendVerificationEmail = async ({ email, fullname, code }) => {
           </p>
 
           <p style="font-size: 15px; color: #374151;">
-            Thank you for registering with FitFlow. Please use the code below to verify your account.
+            Thank you for registering with FitTrack. Please use the code below to verify your account.
           </p>
 
           <div style="text-align: center; margin: 28px 0;">
@@ -108,16 +111,13 @@ const sendVerificationEmail = async ({ email, fullname, code }) => {
   });
 };
 
-/**
- * Send password reset email.
- */
 const sendPasswordResetEmail = async ({ email, fullname, code }) => {
   const transporter = createEmailTransporter();
 
   await transporter.sendMail({
-    from: `"FitFlow" <${process.env.EMAIL_USER}>`,
+    from: getEmailFrom(),
     to: email,
-    subject: "Reset your FitFlow password",
+    subject: "Reset your FitTrack password",
     html: `
       <div style="font-family: Arial, sans-serif; background: #f4f4f5; padding: 30px;">
         <div style="max-width: 520px; margin: auto; background: #ffffff; padding: 28px; border-radius: 14px; border: 1px solid #e5e7eb;">
@@ -128,7 +128,7 @@ const sendPasswordResetEmail = async ({ email, fullname, code }) => {
           </p>
 
           <p style="font-size: 15px; color: #374151;">
-            Use the code below to reset your FitFlow password.
+            Use the code below to reset your FitTrack password.
           </p>
 
           <div style="text-align: center; margin: 28px 0;">
@@ -150,18 +150,6 @@ const sendPasswordResetEmail = async ({ email, fullname, code }) => {
   });
 };
 
-/**
- * REGISTER
- *
- * Route:
- * POST /api/auth/register
- *
- * Normal register will:
- * 1. Create user as unverified
- * 2. Generate verification code
- * 3. Return response immediately
- * 4. Send email in background
- */
 export const register = async (req, res) => {
   try {
     const { fullname, username, email, password } = req.body;
@@ -192,17 +180,12 @@ export const register = async (req, res) => {
 
         await existingUser.save();
 
-        /**
-         * Important:
-         * Do not await this.
-         * This prevents frontend timeout.
-         */
         sendVerificationEmail({
           email: existingUser.email,
           fullname: existingUser.fullname,
           code: plainCode,
-        }).catch((emailError) => {
-          console.error("Verification email failed:", emailError);
+        }).catch((error) => {
+          logEmailError("Verification email", error);
         });
 
         return res.status(200).json({
@@ -226,30 +209,19 @@ export const register = async (req, res) => {
       fullname: safeFullname,
       username: safeUsername,
       email: safeEmail,
-
-      /**
-       * Do not hash here.
-       * Your User model pre-save middleware hashes password.
-       */
       password,
-
       role: "member",
       isVerified: false,
       verificationCode: hashCode(plainCode),
       verificationCodeExpires: new Date(Date.now() + 10 * 60 * 1000),
     });
 
-    /**
-     * Important:
-     * Do not await this.
-     * Frontend should go to verification page immediately.
-     */
     sendVerificationEmail({
       email: user.email,
       fullname: user.fullname,
       code: plainCode,
-    }).catch((emailError) => {
-      console.error("Verification email failed:", emailError);
+    }).catch((error) => {
+      logEmailError("Verification email", error);
     });
 
     return res.status(201).json({
@@ -268,12 +240,6 @@ export const register = async (req, res) => {
   }
 };
 
-/**
- * LOGIN
- *
- * Route:
- * POST /api/auth/login
- */
 export const login = async (req, res) => {
   try {
     const { email, password, rememberMe } = req.body;
@@ -326,8 +292,8 @@ export const login = async (req, res) => {
         email: user.email,
         fullname: user.fullname,
         code: plainCode,
-      }).catch((emailError) => {
-        console.error("Verification email failed:", emailError);
+      }).catch((error) => {
+        logEmailError("Verification email", error);
       });
 
       return res.status(403).json({
@@ -358,20 +324,6 @@ export const login = async (req, res) => {
   }
 };
 
-/**
- * GOOGLE LOGIN
- *
- * Route:
- * POST /api/auth/google
- *
- * Google login will:
- * - Create account if new
- * - Mark Google user as verified
- * - Return redirectTo: "/userInfo"
- *
- * Backend cannot directly navigate the browser.
- * Frontend should read redirectTo and navigate there.
- */
 export const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
@@ -426,10 +378,6 @@ export const googleLogin = async (req, res) => {
         googleId,
         avatar,
         role: "member",
-
-        /**
-         * Google email is already verified by Google.
-         */
         isVerified: true,
         verificationCode: null,
         verificationCodeExpires: null,
@@ -457,10 +405,6 @@ export const googleLogin = async (req, res) => {
       message: "Google login successful.",
       token: jwtToken,
       user: user.toJSON(),
-
-      /**
-       * Frontend should navigate here.
-       */
       redirectTo: "/userInfo",
     });
   } catch (error) {
@@ -473,12 +417,6 @@ export const googleLogin = async (req, res) => {
   }
 };
 
-/**
- * VERIFY EMAIL
- *
- * Route:
- * POST /api/auth/verify-email
- */
 export const verifyEmail = async (req, res) => {
   try {
     const { email, code } = req.body;
@@ -564,12 +502,6 @@ export const verifyEmail = async (req, res) => {
   }
 };
 
-/**
- * RESEND VERIFICATION CODE
- *
- * Route:
- * POST /api/auth/resend-verification
- */
 export const resendVerificationCode = async (req, res) => {
   try {
     const { email } = req.body;
@@ -612,8 +544,8 @@ export const resendVerificationCode = async (req, res) => {
       email: user.email,
       fullname: user.fullname,
       code: plainCode,
-    }).catch((emailError) => {
-      console.error("Verification email failed:", emailError);
+    }).catch((error) => {
+      logEmailError("Verification email", error);
     });
 
     return res.status(200).json({
@@ -632,12 +564,6 @@ export const resendVerificationCode = async (req, res) => {
   }
 };
 
-/**
- * LOGOUT
- *
- * Route:
- * POST /api/auth/logout
- */
 export const logout = async (req, res) => {
   return res.status(200).json({
     success: true,
@@ -645,12 +571,6 @@ export const logout = async (req, res) => {
   });
 };
 
-/**
- * FORGOT PASSWORD
- *
- * Route:
- * POST /api/auth/forgot-password
- */
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -694,8 +614,8 @@ export const forgotPassword = async (req, res) => {
       email: user.email,
       fullname: user.fullname,
       code: plainCode,
-    }).catch((emailError) => {
-      console.error("Password reset email failed:", emailError);
+    }).catch((error) => {
+      logEmailError("Password reset email", error);
     });
 
     return res.status(200).json({
@@ -713,12 +633,6 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
-/**
- * VERIFY RESET CODE
- *
- * Route:
- * POST /api/auth/verify-reset-code
- */
 export const verifyResetCode = async (req, res) => {
   try {
     const { email, code } = req.body;
@@ -786,12 +700,6 @@ export const verifyResetCode = async (req, res) => {
   }
 };
 
-/**
- * RESET PASSWORD
- *
- * Route:
- * POST /api/auth/reset-password
- */
 export const resetPassword = async (req, res) => {
   try {
     const { email, newPassword, password } = req.body;
@@ -832,12 +740,7 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    /**
-     * Do not hash manually.
-     * User model will hash password.
-     */
     user.password = finalPassword;
-
     user.resetCode = null;
     user.resetCodeExpires = null;
     user.resetCodeVerified = false;
