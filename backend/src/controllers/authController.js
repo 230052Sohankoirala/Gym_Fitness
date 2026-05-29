@@ -179,16 +179,20 @@ export const register = async (req, res) => {
 
         await existingUser.save();
 
-        await sendVerificationEmail({
-          email: existingUser.email,
-          fullname: existingUser.fullname,
-          code: plainCode,
-        });
+        try {
+          await sendVerificationEmail({
+            email: existingUser.email,
+            fullname: existingUser.fullname,
+            code: plainCode,
+          });
+        } catch (emailError) {
+          console.error("Verification email failed:", emailError);
+        }
 
         return res.status(200).json({
           success: true,
           message:
-            "Account already exists but is not verified. A new verification code has been sent.",
+            "Account exists but is not verified. Please check your email or resend the code.",
           requiresVerification: true,
           email: existingUser.email,
         });
@@ -206,25 +210,22 @@ export const register = async (req, res) => {
       fullname: safeFullname,
       username: safeUsername,
       email: safeEmail,
-
-      /**
-       * Important:
-       * Give plain password here.
-       * User.js pre-save middleware will hash it.
-       */
       password,
-
       role: "member",
       isVerified: false,
       verificationCode: hashCode(plainCode),
       verificationCodeExpires: new Date(Date.now() + 10 * 60 * 1000),
     });
 
-    await sendVerificationEmail({
-      email: user.email,
-      fullname: user.fullname,
-      code: plainCode,
-    });
+    try {
+      await sendVerificationEmail({
+        email: user.email,
+        fullname: user.fullname,
+        code: plainCode,
+      });
+    } catch (emailError) {
+      console.error("Verification email failed:", emailError);
+    }
 
     return res.status(201).json({
       success: true,
