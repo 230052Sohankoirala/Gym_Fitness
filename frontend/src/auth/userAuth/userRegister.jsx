@@ -18,7 +18,7 @@ import axios from "axios";
  */
 const RAW_API_URL =
   import.meta.env.VITE_API_URL ||
-  "https://gym-fitness-backend-d13i.onrender.com";
+  "https://gym-fitness-hgq7.onrender.com";
 
 const API_BASE = RAW_API_URL.replace(/\/+$/, "");
 
