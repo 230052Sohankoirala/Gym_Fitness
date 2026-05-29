@@ -10,7 +10,7 @@ import { fileURLToPath } from "url";
 import http from "http";
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
-
+import nodemailer from "nodemailer";
 import connectDB from "./config/db.js";
 import { handleStripeWebhook } from "./controllers/paymentController.js";
 
