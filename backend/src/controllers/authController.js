@@ -1,12 +1,19 @@
 // controllers/authController.js
+
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
+import axios from "axios";
 import { OAuth2Client } from "google-auth-library";
 import User from "../models/User.js";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+/**
+ * Generate JWT token for authenticated users.
+ *
+ * rememberMe = true  -> 30 days
+ * rememberMe = false -> 7 days
+ */
 const generateToken = (userId, rememberMe = false) => {
   return jwt.sign(
     {
@@ -19,137 +26,224 @@ const generateToken = (userId, rememberMe = false) => {
   );
 };
 
+/**
+ * Generate a random six-digit verification/reset code.
+ */
 const generateSixDigitCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
+/**
+ * Hash verification/reset code before storing in database.
+ */
 const hashCode = (code) => {
   return crypto.createHash("sha256").update(String(code)).digest("hex");
 };
 
 /**
- * Brevo SMTP transporter.
- *
- * Render env required:
- * EMAIL_HOST=smtp-relay.brevo.com
- * EMAIL_PORT=587
- * EMAIL_SECURE=false
- * EMAIL_USER=your_brevo_smtp_login
- * EMAIL_PASS=your_brevo_smtp_password
- * EMAIL_FROM=FitTrack <your_verified_sender_email>
+ * Basic HTML escaping to prevent user-provided values from breaking email HTML.
  */
-const createEmailTransporter = () => {
-  return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || "smtp-relay.brevo.com",
-    port: Number(process.env.EMAIL_PORT || 587),
-    secure: process.env.EMAIL_SECURE === "true",
-
-    connectionTimeout: 20000,
-    greetingTimeout: 20000,
-    socketTimeout: 20000,
-
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-
-    tls: {
-      rejectUnauthorized: false,
-    },
-  });
+const escapeHtml = (value = "") => {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 };
 
+/**
+ * Get email sender.
+ *
+ * Required env:
+ * EMAIL_FROM=FitTrack <fittrackfitness001@gmail.com>
+ */
 const getEmailFrom = () => {
-  return process.env.EMAIL_FROM || `"FitTrack" <${process.env.EMAIL_USER}>`;
+  return process.env.EMAIL_FROM || "FitTrack <fittrackfitness001@gmail.com>";
 };
 
+/**
+ * Log Promailer/API email errors clearly.
+ */
 const logEmailError = (label, error) => {
   console.error(`${label} failed:`, {
     message: error?.message,
-    code: error?.code,
-    command: error?.command,
-    response: error?.response,
+    status: error?.response?.status,
+    data: error?.response?.data,
   });
 };
 
+/**
+ * Send email through Promailer API.
+ *
+ * Required env:
+ * API_MAIL_KEY=your_promailer_api_key
+ * PROMAILER_API_URL=https://mailserver.automationlounge.com/api/v1/messages/send
+ */
+const sendPromailerEmail = async ({ to, subject, html }) => {
+  const apiUrl =
+    process.env.PROMAILER_API_URL ||
+    "https://mailserver.automationlounge.com/api/v1/messages/send";
+
+  if (!process.env.API_MAIL_KEY) {
+    throw new Error("Missing API_MAIL_KEY in environment variables.");
+  }
+
+  const response = await axios.post(
+    apiUrl,
+    {
+      from: getEmailFrom(),
+      to,
+      subject,
+      html,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.API_MAIL_KEY}`,
+        "Content-Type": "application/json",
+      },
+      timeout: 20000,
+    }
+  );
+
+  return response.data;
+};
+
+/**
+ * Send account verification code email.
+ */
 const sendVerificationEmail = async ({ email, fullname, code }) => {
-  const transporter = createEmailTransporter();
+  const safeName = escapeHtml(fullname || "there");
+  const safeCode = escapeHtml(code);
 
-  await transporter.sendMail({
-    from: getEmailFrom(),
-    to: email,
-    subject: "Verify your FitTrack account",
-    html: `
-      <div style="font-family: Arial, sans-serif; background: #f4f4f5; padding: 30px;">
-        <div style="max-width: 520px; margin: auto; background: #ffffff; padding: 28px; border-radius: 14px; border: 1px solid #e5e7eb;">
-          <h2 style="margin-top: 0; color: #111827;">Verify your email</h2>
-
-          <p style="font-size: 15px; color: #374151;">
-            Hello ${fullname || "there"},
-          </p>
-
-          <p style="font-size: 15px; color: #374151;">
-            Thank you for registering with FitTrack. Please use the code below to verify your account.
-          </p>
-
-          <div style="text-align: center; margin: 28px 0;">
-            <div style="display: inline-block; font-size: 34px; letter-spacing: 8px; font-weight: bold; color: #4f46e5; background: #eef2ff; padding: 16px 26px; border-radius: 12px;">
-              ${code}
-            </div>
-          </div>
-
-          <p style="font-size: 14px; color: #6b7280;">
-            This code will expire in 10 minutes.
-          </p>
-
-          <p style="font-size: 14px; color: #6b7280;">
-            If you did not create this account, please ignore this email.
-          </p>
+  const html = `
+    <div style="font-family: Arial, sans-serif; background: #f4f4f5; padding: 30px;">
+      <div style="max-width: 540px; margin: auto; background: #ffffff; padding: 30px; border-radius: 16px; border: 1px solid #e5e7eb;">
+        
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img 
+            src="https://cdn-icons-png.flaticon.com/512/649/649604.png" 
+            alt="FitTrack Logo" 
+            width="72" 
+            height="72" 
+            style="display: block; margin: auto;"
+          />
         </div>
+
+        <h2 style="margin-top: 0; color: #111827; text-align: center;">
+          Verify Your FitTrack Account
+        </h2>
+
+        <p style="font-size: 15px; color: #374151;">
+          Hello ${safeName},
+        </p>
+
+        <p style="font-size: 15px; color: #374151;">
+          Welcome to <b>FitTrack</b>. Please use the code below to verify your account.
+        </p>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <div style="display: inline-block; font-size: 34px; letter-spacing: 8px; font-weight: bold; color: #4f46e5; background: #eef2ff; padding: 16px 26px; border-radius: 12px;">
+            ${safeCode}
+          </div>
+        </div>
+
+        <p style="font-size: 14px; color: #6b7280;">
+          This code will expire in 10 minutes.
+        </p>
+
+        <p style="font-size: 14px; color: #6b7280;">
+          If you did not create this account, please ignore this email.
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+
+        <p style="font-size: 12px; color: #9ca3af; text-align: center;">
+          FitTrack Fitness Management System
+        </p>
       </div>
-    `,
+    </div>
+  `;
+
+  return sendPromailerEmail({
+    to: email,
+    subject: "Verify Your FitTrack Account",
+    html,
   });
 };
 
+/**
+ * Send password reset code email.
+ */
 const sendPasswordResetEmail = async ({ email, fullname, code }) => {
-  const transporter = createEmailTransporter();
+  const safeName = escapeHtml(fullname || "there");
+  const safeCode = escapeHtml(code);
 
-  await transporter.sendMail({
-    from: getEmailFrom(),
-    to: email,
-    subject: "Reset your FitTrack password",
-    html: `
-      <div style="font-family: Arial, sans-serif; background: #f4f4f5; padding: 30px;">
-        <div style="max-width: 520px; margin: auto; background: #ffffff; padding: 28px; border-radius: 14px; border: 1px solid #e5e7eb;">
-          <h2 style="margin-top: 0; color: #111827;">Password Reset Code</h2>
-
-          <p style="font-size: 15px; color: #374151;">
-            Hello ${fullname || "there"},
-          </p>
-
-          <p style="font-size: 15px; color: #374151;">
-            Use the code below to reset your FitTrack password.
-          </p>
-
-          <div style="text-align: center; margin: 28px 0;">
-            <div style="display: inline-block; font-size: 34px; letter-spacing: 8px; font-weight: bold; color: #4f46e5; background: #eef2ff; padding: 16px 26px; border-radius: 12px;">
-              ${code}
-            </div>
-          </div>
-
-          <p style="font-size: 14px; color: #6b7280;">
-            This code will expire in 10 minutes.
-          </p>
-
-          <p style="font-size: 14px; color: #6b7280;">
-            If you did not request this, please ignore this email.
-          </p>
+  const html = `
+    <div style="font-family: Arial, sans-serif; background: #f4f4f5; padding: 30px;">
+      <div style="max-width: 540px; margin: auto; background: #ffffff; padding: 30px; border-radius: 16px; border: 1px solid #e5e7eb;">
+        
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img 
+            src="https://cdn-icons-png.flaticon.com/512/649/649604.png" 
+            alt="FitTrack Logo" 
+            width="72" 
+            height="72" 
+            style="display: block; margin: auto;"
+          />
         </div>
+
+        <h2 style="margin-top: 0; color: #111827; text-align: center;">
+          Reset Your FitTrack Password
+        </h2>
+
+        <p style="font-size: 15px; color: #374151;">
+          Hello ${safeName},
+        </p>
+
+        <p style="font-size: 15px; color: #374151;">
+          Use the code below to reset your FitTrack password.
+        </p>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <div style="display: inline-block; font-size: 34px; letter-spacing: 8px; font-weight: bold; color: #dc2626; background: #fee2e2; padding: 16px 26px; border-radius: 12px;">
+            ${safeCode}
+          </div>
+        </div>
+
+        <p style="font-size: 14px; color: #6b7280;">
+          This code will expire in 10 minutes.
+        </p>
+
+        <p style="font-size: 14px; color: #6b7280;">
+          If you did not request this password reset, please ignore this email.
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+
+        <p style="font-size: 12px; color: #9ca3af; text-align: center;">
+          FitTrack Fitness Management System
+        </p>
       </div>
-    `,
+    </div>
+  `;
+
+  return sendPromailerEmail({
+    to: email,
+    subject: "Reset Your FitTrack Password",
+    html,
   });
 };
 
+/**
+ * Register normal user.
+ *
+ * Normal registration:
+ * - Creates member account
+ * - Saves hashed verification code
+ * - Sends verification code using Promailer API
+ * - User must verify email before login
+ */
 export const register = async (req, res) => {
   try {
     const { fullname, username, email, password } = req.body;
@@ -180,26 +274,35 @@ export const register = async (req, res) => {
 
         await existingUser.save();
 
-        sendVerificationEmail({
-          email: existingUser.email,
-          fullname: existingUser.fullname,
-          code: plainCode,
-        }).catch((error) => {
+        try {
+          await sendVerificationEmail({
+            email: existingUser.email,
+            fullname: existingUser.fullname,
+            code: plainCode,
+          });
+        } catch (error) {
           logEmailError("Verification email", error);
-        });
+
+          return res.status(500).json({
+            success: false,
+            message:
+              "Account exists but verification email could not be sent. Please try again.",
+          });
+        }
 
         return res.status(200).json({
           success: true,
           message:
-            "Account exists but is not verified. A verification code has been generated.",
+            "Account exists but is not verified. A new verification code has been sent.",
           requiresVerification: true,
           email: existingUser.email,
+          redirectTo: "/verify-email",
         });
       }
 
       return res.status(400).json({
         success: false,
-        message: "User already exists",
+        message: "User already exists.",
       });
     }
 
@@ -216,19 +319,31 @@ export const register = async (req, res) => {
       verificationCodeExpires: new Date(Date.now() + 10 * 60 * 1000),
     });
 
-    sendVerificationEmail({
-      email: user.email,
-      fullname: user.fullname,
-      code: plainCode,
-    }).catch((error) => {
+    try {
+      await sendVerificationEmail({
+        email: user.email,
+        fullname: user.fullname,
+        code: plainCode,
+      });
+    } catch (error) {
       logEmailError("Verification email", error);
-    });
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Registration created, but verification email could not be sent. Please try resend verification.",
+        requiresVerification: true,
+        email: user.email,
+        redirectTo: "/verify-email",
+      });
+    }
 
     return res.status(201).json({
       success: true,
-      message: "Registration successful. Verification code generated.",
+      message: "Registration successful. Verification code has been sent.",
       requiresVerification: true,
       email: user.email,
+      redirectTo: "/verify-email",
     });
   } catch (error) {
     console.error("Register error:", error);
@@ -240,6 +355,9 @@ export const register = async (req, res) => {
   }
 };
 
+/**
+ * Normal email/password login.
+ */
 export const login = async (req, res) => {
   try {
     const { email, password, rememberMe } = req.body;
@@ -288,20 +406,32 @@ export const login = async (req, res) => {
 
       await user.save();
 
-      sendVerificationEmail({
-        email: user.email,
-        fullname: user.fullname,
-        code: plainCode,
-      }).catch((error) => {
+      try {
+        await sendVerificationEmail({
+          email: user.email,
+          fullname: user.fullname,
+          code: plainCode,
+        });
+      } catch (error) {
         logEmailError("Verification email", error);
-      });
+
+        return res.status(500).json({
+          success: false,
+          message:
+            "Please verify your email first, but a new verification email could not be sent.",
+          requiresVerification: true,
+          email: user.email,
+          redirectTo: "/verify-email",
+        });
+      }
 
       return res.status(403).json({
         success: false,
         message:
-          "Please verify your email first. A new verification code has been generated.",
+          "Please verify your email first. A new verification code has been sent.",
         requiresVerification: true,
         email: user.email,
+        redirectTo: "/verify-email",
       });
     }
 
@@ -324,6 +454,22 @@ export const login = async (req, res) => {
   }
 };
 
+/**
+ * Google login.
+ *
+ * New Google user:
+ * - Create account with googleId
+ * - Set isVerified = false
+ * - Send FitTrack verification code
+ * - Return requiresVerification = true
+ *
+ * Existing Google user but not verified:
+ * - Send new verification code
+ * - Return requiresVerification = true
+ *
+ * Existing verified Google user:
+ * - Login normally
+ */
 export const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
@@ -356,7 +502,9 @@ export const googleLogin = async (req, res) => {
 
     const safeEmail = String(email).trim().toLowerCase();
 
-    let user = await User.findOne({ email: safeEmail });
+    let user = await User.findOne({ email: safeEmail }).select(
+      "+verificationCode +verificationCodeExpires"
+    );
 
     if (!user) {
       const baseUsername =
@@ -371,6 +519,8 @@ export const googleLogin = async (req, res) => {
         username = `${baseUsername}${Date.now()}`;
       }
 
+      const plainCode = generateSixDigitCode();
+
       user = await User.create({
         fullname,
         username,
@@ -378,25 +528,93 @@ export const googleLogin = async (req, res) => {
         googleId,
         avatar,
         role: "member",
-        isVerified: true,
-        verificationCode: null,
-        verificationCodeExpires: null,
+        isVerified: false,
+        verificationCode: hashCode(plainCode),
+        verificationCodeExpires: new Date(Date.now() + 10 * 60 * 1000),
       });
-    } else {
-      if (!user.googleId) {
-        user.googleId = googleId;
+
+      try {
+        await sendVerificationEmail({
+          email: user.email,
+          fullname: user.fullname,
+          code: plainCode,
+        });
+      } catch (error) {
+        logEmailError("Google verification email", error);
+
+        return res.status(500).json({
+          success: false,
+          message:
+            "Google account created, but verification email could not be sent. Please try resend verification.",
+          requiresVerification: true,
+          email: user.email,
+          loginProvider: "google",
+          redirectTo: "/verify-email",
+        });
       }
 
-      if (!user.avatar && avatar) {
-        user.avatar = avatar;
-      }
+      return res.status(201).json({
+        success: true,
+        message:
+          "Google account created. Please verify your email using the code sent to your inbox.",
+        requiresVerification: true,
+        email: user.email,
+        loginProvider: "google",
+        redirectTo: "/verify-email",
+      });
+    }
 
-      user.isVerified = true;
-      user.verificationCode = null;
-      user.verificationCodeExpires = null;
+    if (!user.googleId) {
+      user.googleId = googleId;
+    }
+
+    if (!user.avatar && avatar) {
+      user.avatar = avatar;
+    }
+
+    if (!user.isVerified) {
+      const plainCode = generateSixDigitCode();
+
+      user.verificationCode = hashCode(plainCode);
+      user.verificationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
       await user.save();
+
+      try {
+        await sendVerificationEmail({
+          email: user.email,
+          fullname: user.fullname,
+          code: plainCode,
+        });
+      } catch (error) {
+        logEmailError("Google verification email", error);
+
+        return res.status(500).json({
+          success: false,
+          message:
+            "Google login requires email verification, but verification email could not be sent.",
+          requiresVerification: true,
+          email: user.email,
+          loginProvider: "google",
+          redirectTo: "/verify-email",
+        });
+      }
+
+      return res.status(403).json({
+        success: false,
+        message:
+          "Please verify your email first. A verification code has been sent.",
+        requiresVerification: true,
+        email: user.email,
+        loginProvider: "google",
+        redirectTo: "/verify-email",
+      });
     }
+
+    user.verificationCode = null;
+    user.verificationCodeExpires = null;
+
+    await user.save();
 
     const jwtToken = generateToken(user._id, true);
 
@@ -417,6 +635,11 @@ export const googleLogin = async (req, res) => {
   }
 };
 
+/**
+ * Verify email for both:
+ * - normal registration
+ * - Google registration/login verification
+ */
 export const verifyEmail = async (req, res) => {
   try {
     const { email, code } = req.body;
@@ -450,7 +673,7 @@ export const verifyEmail = async (req, res) => {
         message: "Email is already verified.",
         token,
         user: user.toJSON(),
-        redirectTo: "/home",
+        redirectTo: user.googleId ? "/userInfo" : "/home",
       });
     }
 
@@ -490,7 +713,7 @@ export const verifyEmail = async (req, res) => {
       message: "Email verified successfully.",
       token,
       user: user.toJSON(),
-      redirectTo: "/home",
+      redirectTo: user.googleId ? "/userInfo" : "/home",
     });
   } catch (error) {
     console.error("Verify email error:", error);
@@ -502,6 +725,9 @@ export const verifyEmail = async (req, res) => {
   }
 };
 
+/**
+ * Resend verification code for both normal and Google users.
+ */
 export const resendVerificationCode = async (req, res) => {
   try {
     const { email } = req.body;
@@ -540,19 +766,28 @@ export const resendVerificationCode = async (req, res) => {
 
     await user.save();
 
-    sendVerificationEmail({
-      email: user.email,
-      fullname: user.fullname,
-      code: plainCode,
-    }).catch((error) => {
-      logEmailError("Verification email", error);
-    });
+    try {
+      await sendVerificationEmail({
+        email: user.email,
+        fullname: user.fullname,
+        code: plainCode,
+      });
+    } catch (error) {
+      logEmailError("Resend verification email", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Verification code created but email could not be sent.",
+      });
+    }
 
     return res.status(200).json({
       success: true,
-      message: "New verification code generated.",
+      message: "New verification code has been sent.",
       requiresVerification: true,
       email: user.email,
+      loginProvider: user.googleId ? "google" : "normal",
+      redirectTo: "/verify-email",
     });
   } catch (error) {
     console.error("Resend verification error:", error);
@@ -564,6 +799,9 @@ export const resendVerificationCode = async (req, res) => {
   }
 };
 
+/**
+ * Logout.
+ */
 export const logout = async (req, res) => {
   return res.status(200).json({
     success: true,
@@ -571,6 +809,11 @@ export const logout = async (req, res) => {
   });
 };
 
+/**
+ * Forgot password.
+ *
+ * Sends reset code only to normal email/password users.
+ */
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -585,7 +828,7 @@ export const forgotPassword = async (req, res) => {
     const safeEmail = String(email).trim().toLowerCase();
 
     const user = await User.findOne({ email: safeEmail }).select(
-      "+resetCode +resetCodeExpires +resetCodeVerified"
+      "+password +resetCode +resetCodeExpires +resetCodeVerified"
     );
 
     if (!user) {
@@ -610,17 +853,24 @@ export const forgotPassword = async (req, res) => {
 
     await user.save();
 
-    sendPasswordResetEmail({
-      email: user.email,
-      fullname: user.fullname,
-      code: plainCode,
-    }).catch((error) => {
+    try {
+      await sendPasswordResetEmail({
+        email: user.email,
+        fullname: user.fullname,
+        code: plainCode,
+      });
+    } catch (error) {
       logEmailError("Password reset email", error);
-    });
+
+      return res.status(500).json({
+        success: false,
+        message: "Password reset code created but email could not be sent.",
+      });
+    }
 
     return res.status(200).json({
       success: true,
-      message: "Password reset code generated.",
+      message: "Password reset code has been sent.",
       email: user.email,
     });
   } catch (error) {
@@ -633,6 +883,9 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
+/**
+ * Verify password reset code.
+ */
 export const verifyResetCode = async (req, res) => {
   try {
     const { email, code } = req.body;
@@ -700,6 +953,9 @@ export const verifyResetCode = async (req, res) => {
   }
 };
 
+/**
+ * Reset password after reset code is verified.
+ */
 export const resetPassword = async (req, res) => {
   try {
     const { email, newPassword, password } = req.body;
