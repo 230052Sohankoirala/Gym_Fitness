@@ -2,7 +2,7 @@
 
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import axios from "axios";
+import nodemailer from "nodemailer";
 import { OAuth2Client } from "google-auth-library";
 import User from "../models/User.js";
 
@@ -41,7 +41,7 @@ const hashCode = (code) => {
 };
 
 /**
- * Basic HTML escaping to prevent user-provided values from breaking email HTML.
+ * Escape user-provided values before placing them inside email HTML.
  */
 const escapeHtml = (value = "") => {
   return String(value)
@@ -55,58 +55,75 @@ const escapeHtml = (value = "") => {
 /**
  * Get email sender.
  *
- * Required env:
- * EMAIL_FROM=FitTrack <fittrackfitness001@gmail.com>
+ * For Brevo:
+ * EMAIL_FROM="FitTrack <fittrackfitness001@gmail.com>"
  */
 const getEmailFrom = () => {
   return process.env.EMAIL_FROM || "FitTrack <fittrackfitness001@gmail.com>";
 };
 
 /**
- * Log Promailer/API email errors clearly.
+ * Create reusable SMTP transporter.
+ *
+ * For Brevo .env:
+ * EMAIL_HOST=smtp-relay.brevo.com
+ * EMAIL_PORT=587
+ * EMAIL_SECURE=false
+ * EMAIL_USER=ace332001@smtp-brevo.com
+ * EMAIL_PASS=your_brevo_smtp_key
+ * EMAIL_FROM="FitTrack <fittrackfitness001@gmail.com>"
  */
-const logEmailError = (label, error) => {
-  console.error(`${label} failed:`, {
-    message: error?.message,
-    status: error?.response?.status,
-    data: error?.response?.data,
+const createMailTransporter = () => {
+  if (!process.env.EMAIL_HOST) {
+    throw new Error("Missing EMAIL_HOST in environment variables.");
+  }
+
+  if (!process.env.EMAIL_USER) {
+    throw new Error("Missing EMAIL_USER in environment variables.");
+  }
+
+  if (!process.env.EMAIL_PASS) {
+    throw new Error("Missing EMAIL_PASS in environment variables.");
+  }
+
+  return nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: Number(process.env.EMAIL_PORT || 587),
+    secure: process.env.EMAIL_SECURE === "true",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
   });
 };
 
 /**
- * Send email through Promailer API.
- *
- * Required env:
- * API_MAIL_KEY=your_promailer_api_key
- * PROMAILER_API_URL=https://mailserver.automationlounge.com/api/v1/messages/send
+ * Log email errors clearly.
  */
-const sendPromailerEmail = async ({ to, subject, html }) => {
-  const apiUrl =
-    process.env.PROMAILER_API_URL ||
-    "https://mailserver.automationlounge.com/api/v1/messages/send";
+const logEmailError = (label, error) => {
+  console.error(`${label} failed:`, {
+    message: error?.message,
+    code: error?.code,
+    command: error?.command,
+    response: error?.response,
+    responseCode: error?.responseCode,
+  });
+};
 
-  if (!process.env.API_MAIL_KEY) {
-    throw new Error("Missing API_MAIL_KEY in environment variables.");
-  }
+/**
+ * Send email using SMTP.
+ */
+const sendSmtpEmail = async ({ to, subject, html }) => {
+  const transporter = createMailTransporter();
 
-  const response = await axios.post(
-    apiUrl,
-    {
-      from: getEmailFrom(),
-      to,
-      subject,
-      html,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.API_MAIL_KEY}`,
-        "Content-Type": "application/json",
-      },
-      timeout: 20000,
-    }
-  );
+  const info = await transporter.sendMail({
+    from: getEmailFrom(),
+    to,
+    subject,
+    html,
+  });
 
-  return response.data;
+  return info;
 };
 
 /**
@@ -165,7 +182,7 @@ const sendVerificationEmail = async ({ email, fullname, code }) => {
     </div>
   `;
 
-  return sendPromailerEmail({
+  return sendSmtpEmail({
     to: email,
     subject: "Verify Your FitTrack Account",
     html,
@@ -228,7 +245,7 @@ const sendPasswordResetEmail = async ({ email, fullname, code }) => {
     </div>
   `;
 
-  return sendPromailerEmail({
+  return sendSmtpEmail({
     to: email,
     subject: "Reset Your FitTrack Password",
     html,
@@ -237,12 +254,6 @@ const sendPasswordResetEmail = async ({ email, fullname, code }) => {
 
 /**
  * Register normal user.
- *
- * Normal registration:
- * - Creates member account
- * - Saves hashed verification code
- * - Sends verification code using Promailer API
- * - User must verify email before login
  */
 export const register = async (req, res) => {
   try {
@@ -435,7 +446,7 @@ export const login = async (req, res) => {
       });
     }
 
-    const token = generateToken(user._id, rememberMe);
+    const token = generateToken(user._id, Boolean(rememberMe));
 
     return res.status(200).json({
       success: true,
@@ -456,19 +467,6 @@ export const login = async (req, res) => {
 
 /**
  * Google login.
- *
- * New Google user:
- * - Create account with googleId
- * - Set isVerified = false
- * - Send FitTrack verification code
- * - Return requiresVerification = true
- *
- * Existing Google user but not verified:
- * - Send new verification code
- * - Return requiresVerification = true
- *
- * Existing verified Google user:
- * - Login normally
  */
 export const googleLogin = async (req, res) => {
   try {
@@ -636,9 +634,7 @@ export const googleLogin = async (req, res) => {
 };
 
 /**
- * Verify email for both:
- * - normal registration
- * - Google registration/login verification
+ * Verify email for normal and Google users.
  */
 export const verifyEmail = async (req, res) => {
   try {
@@ -726,7 +722,7 @@ export const verifyEmail = async (req, res) => {
 };
 
 /**
- * Resend verification code for both normal and Google users.
+ * Resend verification code.
  */
 export const resendVerificationCode = async (req, res) => {
   try {
@@ -800,7 +796,7 @@ export const resendVerificationCode = async (req, res) => {
 };
 
 /**
- * Logout.
+ * Logout user.
  */
 export const logout = async (req, res) => {
   return res.status(200).json({
@@ -811,8 +807,6 @@ export const logout = async (req, res) => {
 
 /**
  * Forgot password.
- *
- * Sends reset code only to normal email/password users.
  */
 export const forgotPassword = async (req, res) => {
   try {
@@ -954,7 +948,7 @@ export const verifyResetCode = async (req, res) => {
 };
 
 /**
- * Reset password after reset code is verified.
+ * Reset password after reset code verification.
  */
 export const resetPassword = async (req, res) => {
   try {
