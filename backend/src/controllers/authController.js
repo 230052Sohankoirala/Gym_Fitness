@@ -62,6 +62,12 @@ const getEmailFrom = () => {
   return process.env.EMAIL_FROM || "FitTrack <fittrackfitness001@gmail.com>";
 };
 
+const getEmailTimeoutMs = () => {
+  const timeout = Number(process.env.EMAIL_TIMEOUT_MS || 10000);
+
+  return Number.isFinite(timeout) && timeout > 0 ? timeout : 10000;
+};
+
 /**
  * Create reusable SMTP transporter.
  *
@@ -90,6 +96,9 @@ const createMailTransporter = () => {
     host: process.env.EMAIL_HOST,
     port: Number(process.env.EMAIL_PORT || 587),
     secure: process.env.EMAIL_SECURE === "true",
+    connectionTimeout: getEmailTimeoutMs(),
+    greetingTimeout: getEmailTimeoutMs(),
+    socketTimeout: getEmailTimeoutMs(),
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
